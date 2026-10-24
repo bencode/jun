@@ -1,0 +1,7 @@
+{
+  "name": "Jun",
+  "identifier": "io.github.bencode.jun",
+  "version": "0.1.0",
+  "main": "./cmd/jun",
+  "out": "build"
+}
