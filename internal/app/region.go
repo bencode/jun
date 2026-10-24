@@ -46,7 +46,11 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
 		tabs := ui.TabsBase(c, &selected, len(views))
 		tabs.List.Height(40).Gap(0).OnChange(func() {
 			if selected >= 0 && selected < len(views) {
-				a.report(a.state.SelectView(r.ID, views[selected].ID))
+				if err := a.state.SelectView(r.ID, views[selected].ID); err != nil {
+					a.report(err)
+				} else {
+					a.layoutChanged()
+				}
 			}
 		}).Children(func() {
 			for i, v := range views {

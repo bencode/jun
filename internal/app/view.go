@@ -22,7 +22,7 @@ func (a *app) view(c *ui.Context) {
 			center := func() { a.center(c, (width-1)*a.state.CenterPercent/100) }
 			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, minimumRegionWidth, center, func() {
 				a.region(c, a.state.Global, false)
-			}).Grow(1).MinWidth(0).FillHeight()
+			}, a.layoutChanged).Grow(1).MinWidth(0).FillHeight()
 		} else {
 			ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() { a.center(c, width) })
 		}
@@ -33,6 +33,8 @@ func (a *app) view(c *ui.Context) {
 		ui.Text(c, a.errorMessage)
 		ui.Button(c, a.text("OK", "确定")).OnClick(func() { a.errorOpen = false })
 	})
+	a.persistenceDialog(c)
+	a.autosave(c)
 }
 
 func (a *app) center(c *ui.Context, width float32) {
@@ -56,5 +58,5 @@ func (a *app) globalToggle(c *ui.Context) {
 		label = a.text("Hide Global", "收起 Global")
 	}
 	ui.Button(c, globalIcon).Label(label).Tooltip(label).Width(36).Height(32).
-		OnClick(func() { a.state.GlobalVisible = !a.state.GlobalVisible })
+		OnClick(a.toggleGlobal)
 }

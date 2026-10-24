@@ -10,12 +10,18 @@ func project(t *testing.T, s *State, name string) *Project {
 	if err := s.AddProject(name, "/"+name); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.AddColumn(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.OpenView(s.CurrentPerspective().Columns[1].ID, ViewTerminal, name); err != nil {
+		t.Fatal(err)
+	}
 	return s.CurrentProject()
 }
 
 func TestProjectPerspectiveAndGlobalIsolation(t *testing.T) {
 	s := New()
-	if s.CurrentProject() != nil || len(s.Global.Views) != 1 {
+	if s.CurrentProject() != nil || len(s.Global.Views) != 0 {
 		t.Fatal("unexpected initial state")
 	}
 	a := project(t, s, "Jun")
@@ -208,5 +214,26 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 		if !reflect.DeepEqual(r.Views, views) || r.Active != active || s.ActiveProject != "Jun" || s.CurrentProject().ActivePerspective != PerspectiveWork {
 			t.Fatalf("operation %d partially mutated state", i)
 		}
+	}
+}
+
+func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
+	s := New()
+	if s.GlobalVisible || len(s.Global.Views) != 0 {
+		t.Fatal("Global should start empty and hidden")
+	}
+	if err := s.AddProject("Jun", "/Jun"); err != nil {
+		t.Fatal(err)
+	}
+	work := s.CurrentPerspective()
+	review := s.CurrentProject().Perspectives[PerspectiveReview]
+	if len(work.Columns) != 1 || len(work.Columns[0].Views) != 1 || work.Columns[0].Views[0].Kind != ViewTerminal || work.BottomVisible || len(work.Bottom.Views) != 0 {
+		t.Fatal("Work should contain just one Terminal view")
+	}
+	if len(review.Columns) != 1 || len(review.Columns[0].Views) != 0 || review.BottomVisible || len(review.Bottom.Views) != 0 {
+		t.Fatal("Review should start empty")
+	}
+	if err := s.Validate(); err != nil {
+		t.Fatal(err)
 	}
 }

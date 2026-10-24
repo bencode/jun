@@ -11,7 +11,7 @@ func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
 	ui.Column(c).Key(a.state.ActiveProject + "/" + string(a.state.CurrentProject().ActivePerspective)).Fill().Children(func() {
 		top := func() { a.columns(c, slices.Clone(p.Columns), p.ColumnSplits, 0, width) }
 		if p.BottomVisible {
-			ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom, false) }).Fill()
+			ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom, false) }).Fill().OnChange(a.layoutChanged)
 		} else {
 			top()
 		}
@@ -28,7 +28,7 @@ func (a *app) columns(c *ui.Context, columns []*layout.Region, splits []float32,
 	constrainedSplit(c, &splits[index], width, minimumRegionWidth, columnsMinimum(len(columns)-1),
 		func() { a.region(c, columns[0], index == 0) }, func() {
 			a.columns(c, columns[1:], splits, index+1, (width-1)*(1-splits[index]/100))
-		})
+		}, a.layoutChanged)
 }
 
 func (a *app) perspectiveSelect(c *ui.Context) {
@@ -40,7 +40,11 @@ func (a *app) perspectiveSelect(c *ui.Context) {
 		if selected == options[1] {
 			kind = layout.PerspectiveReview
 		}
-		a.report(a.state.SelectPerspective(kind))
+		if err := a.state.SelectPerspective(kind); err != nil {
+			a.report(err)
+		} else {
+			a.layoutChanged()
+		}
 	})
 }
 
@@ -51,15 +55,19 @@ func columnsMinimum(count int) float32 {
 	return float32(count)*minimumRegionWidth + float32(count-1)
 }
 
-func constrainedSplit(c *ui.Context, percent *float32, width, firstMinimum, secondMinimum float32, first, second func()) ui.Element {
+func constrainedSplit(c *ui.Context, percent *float32, width, firstMinimum, secondMinimum float32, first, second, changed func()) ui.Element {
 	constrain := func() {
+		previous := *percent
 		room := max(0, width-1)
 		if room <= firstMinimum+secondMinimum {
 			*percent = 100 * firstMinimum / (firstMinimum + secondMinimum)
-			return
+		} else {
+			*percent = min(max(*percent, 100*firstMinimum/room), 100*(room-secondMinimum)/room)
 		}
-		*percent = min(max(*percent, 100*firstMinimum/room), 100*(room-secondMinimum)/room)
+		if *percent != previous {
+			changed()
+		}
 	}
 	constrain()
-	return ui.SplitPercent(c, percent, first, second).Fill().OnChange(constrain)
+	return ui.SplitPercent(c, percent, first, second).Fill().OnChange(func() { constrain(); changed() })
 }

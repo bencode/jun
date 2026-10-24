@@ -29,6 +29,31 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	if err := a.state.AddProject("Jun", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
+	addColumn := func() {
+		if _, err := a.state.AddColumn(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	open := func(region *layout.Region, kind layout.ViewKind) {
+		if _, err := a.state.OpenView(region.ID, kind, "Jun"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	addColumn()
+	open(a.state.CurrentPerspective().Columns[1], layout.ViewTerminal)
+	if err := a.state.SelectPerspective(layout.PerspectiveReview); err != nil {
+		t.Fatal(err)
+	}
+	addColumn()
+	review := a.state.CurrentPerspective()
+	open(review.Columns[0], layout.ViewTree)
+	open(review.Columns[1], layout.ViewFile)
+	open(review.Columns[1], layout.ViewDiff)
+	open(review.Bottom, layout.ViewTerminal)
+	if err := a.state.SelectPerspective(layout.PerspectiveWork); err != nil {
+		t.Fatal(err)
+	}
+	open(a.state.Global, layout.ViewAgents)
 	return a, ui.NewTester(a.view, 1440, 900)
 }
 

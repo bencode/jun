@@ -17,42 +17,41 @@ const (
 )
 
 type View struct {
-	ID          ViewID
-	Kind        ViewKind
-	ProjectName string
+	ID          ViewID   `json:"id"`
+	Kind        ViewKind `json:"kind"`
+	ProjectName string   `json:"projectName"`
 }
 type Region struct {
-	ID     RegionID
-	Views  []*View
-	Active ViewID
+	ID     RegionID `json:"id"`
+	Views  []*View  `json:"views"`
+	Active ViewID   `json:"activeView"`
 }
 type Perspective struct {
-	Columns       []*Region
-	Bottom        *Region
-	BottomVisible bool
-	ColumnSplits  []float32
-	TopPercent    float32
+	Columns       []*Region `json:"columns"`
+	Bottom        *Region   `json:"bottom"`
+	BottomVisible bool      `json:"bottomVisible"`
+	ColumnSplits  []float32 `json:"columnSplits"`
+	TopPercent    float32   `json:"topPercent"`
 }
 type Project struct {
-	Name              string
-	CWD               string
-	ActivePerspective PerspectiveKind
-	Perspectives      map[PerspectiveKind]*Perspective
+	Name              string                           `json:"name"`
+	CWD               string                           `json:"cwd"`
+	ActivePerspective PerspectiveKind                  `json:"activePerspective"`
+	Perspectives      map[PerspectiveKind]*Perspective `json:"perspectives"`
 }
 type State struct {
-	Projects      []*Project
-	ActiveProject string
-	Global        *Region
-	GlobalVisible bool
-	RailExpanded  bool
-	CenterPercent float32
+	Projects      []*Project `json:"projects"`
+	ActiveProject string     `json:"activeProject"`
+	Global        *Region    `json:"global"`
+	GlobalVisible bool       `json:"globalVisible"`
+	RailExpanded  bool       `json:"railExpanded"`
+	CenterPercent float32    `json:"centerPercent"`
 	nextID        uint64
 }
 
 func New() *State {
-	s := &State{GlobalVisible: true, CenterPercent: 76}
+	s := &State{CenterPercent: 76}
 	s.Global = s.newRegion()
-	s.appendView(s.Global, ViewAgents, "")
 	return s
 }
 

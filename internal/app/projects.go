@@ -23,7 +23,7 @@ func (a *app) projectRail(c *ui.Context) {
 		Background(a.theme.Surface).Children(func() {
 		ui.Button(c, logo).Height(36).FillWidth().Label(a.text("Toggle project names", "展开或收起项目名称")).
 			Tooltip(a.text("Toggle project names", "展开或收起项目名称")).
-			OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded })
+			OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
 		ui.Scroll(c).Grow(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Gap(6).Children(func() {
 				for _, p := range a.state.Projects {
@@ -35,7 +35,7 @@ func (a *app) projectRail(c *ui.Context) {
 					if p.Name == a.state.ActiveProject {
 						b.Background(a.theme.Selection).TextColor(a.theme.Text)
 					}
-					b.OnClick(func() { a.report(a.state.SelectProject(p.Name)) })
+					b.OnClick(func() { a.selectProject(p.Name) })
 				}
 				ui.Button(c, "+").Height(36).FillWidth().Label(a.text("Add Project", "添加项目")).
 					Tooltip(a.text("Add Project", "添加项目")).OnClick(a.chooseProject)
@@ -117,6 +117,7 @@ func (a *app) submitProject() {
 		return
 	}
 	a.projectForm.open = false
+	a.layoutChanged()
 }
 
 func (a *app) projectFailure(err error) {

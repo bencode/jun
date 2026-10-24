@@ -30,7 +30,7 @@ func (a *app) applicationMenu() *mygo.Menu {
 		}},
 		{Role: mygo.RoleEditMenu},
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
-			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(func() { a.state.GlobalVisible = !a.state.GlobalVisible })},
+			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -66,10 +66,14 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 			if m.Item(a.text("Open Agents", "打开 Agents")).Disabled(hasAgents).Chosen() {
 				_, err := a.state.OpenView(r.ID, layout.ViewAgents, "")
 				a.report(err)
-				a.pendingFocus = r.ID
+				if err == nil {
+					a.layoutChanged()
+					a.pendingFocus = r.ID
+				}
 			}
 			if m.Item(a.text("Hide Global", "收起 Global")).Chosen() {
 				a.state.GlobalVisible = false
+				a.layoutChanged()
 			}
 		}
 	})
@@ -80,6 +84,7 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 		id, err := a.state.AddColumn()
 		a.report(err)
 		if err == nil {
+			a.layoutChanged()
 			a.pendingFocus = id
 		}
 	}
@@ -89,6 +94,7 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 		err := a.state.RemoveColumn(r.ID)
 		a.report(err)
 		if err == nil {
+			a.layoutChanged()
 			a.pendingFocus = p.Columns[max(0, index-1)].ID
 		}
 	}
@@ -98,6 +104,7 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 	}
 	if m.Item(label).Chosen() {
 		p.BottomVisible = !p.BottomVisible
+		a.layoutChanged()
 	}
 }
 
