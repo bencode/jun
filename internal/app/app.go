@@ -21,6 +21,12 @@ type app struct {
 		open              bool
 		name, path, error string
 	}
+	perspectiveForm struct {
+		open        bool
+		project     string
+		id          layout.PerspectiveID
+		name, error string
+	}
 	terminals      *terminal.Store
 	bindings       map[layout.ViewID]terminal.ID
 	terminalErrors map[layout.ViewID]error

@@ -56,7 +56,18 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 			click(t, tt, "Jun")
 		},
 		"perspective": func(t *testing.T, a *app, tt *ui.Tester) { perspectiveMenu(t, tt, "Review") },
-		"global":      func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
+		"new perspective": func(t *testing.T, a *app, tt *ui.Tester) {
+			perspectiveMenu(t, tt, "New Perspective…")
+			tt.Type("Investigation")
+			tt.Key(0, ui.KeyEnter)
+		},
+		"rename perspective": func(t *testing.T, a *app, tt *ui.Tester) {
+			perspectiveMenu(t, tt, "Rename Perspective…")
+			tt.Key(ui.Super, ui.KeyA)
+			tt.Type("Development")
+			tt.Key(0, ui.KeyEnter)
+		},
+		"global": func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
 			perspectiveMenu(t, tt, "Show Bottom Region")
 		},

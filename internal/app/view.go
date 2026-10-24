@@ -14,14 +14,10 @@ func (a *app) view(c *ui.Context) {
 			centerMinimum := minimumRegionWidth
 			if p := a.state.CurrentPerspective(); p != nil {
 				centerMinimum = columnsMinimum(len(p.Columns))
-				if len(p.Columns) == 1 {
-					// A single header holds both Perspective and the Global toggle.
-					centerMinimum += 40
-				}
 			}
 			center := func() { a.center(c, (width-1)*a.state.CenterPercent/100) }
 			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, minimumRegionWidth, center, func() {
-				a.region(c, a.state.Global, false)
+				a.region(c, a.state.Global)
 			}, a.layoutChanged).Grow(1).MinWidth(0).FillHeight()
 		} else {
 			ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() { a.center(c, width) })
@@ -29,6 +25,7 @@ func (a *app) view(c *ui.Context) {
 	})
 	a.shortcuts(c)
 	a.projectDialog(c)
+	a.perspectiveDialog(c)
 	ui.Modal(c, &a.errorOpen, func() {
 		ui.Text(c, a.text("Unable to complete action", "无法完成操作")).Bold()
 		ui.Text(c, a.errorMessage)

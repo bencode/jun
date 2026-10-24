@@ -26,7 +26,7 @@ func (a *app) moveMenu(m *ui.Menu, source *layout.Region, view layout.ViewID) {
 	}
 	if p := a.state.CurrentPerspective(); p != nil {
 		project := a.state.CurrentProject()
-		prefix := project.Name + " / " + a.perspectiveName(project.ActivePerspective) + " / "
+		prefix := project.Name + " / " + p.Name + " / "
 		for i, r := range p.Columns {
 			target(r, prefix+fmt.Sprintf(a.text("Column %d", "第 %d 列"), i+1))
 		}

@@ -24,7 +24,7 @@ func decodedLayout(t *testing.T) *State {
 
 func TestRestoreContinuesIDsAcrossHiddenRegions(t *testing.T) {
 	s := decodedLayout(t)
-	hidden := s.CurrentProject().Perspectives[PerspectiveReview].Bottom
+	hidden := s.CurrentPerspective().Bottom
 	hidden.ID = 500
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
@@ -44,12 +44,22 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"missing source":      func(s *State) { s.CurrentPerspective().Columns[0].Views[0].ProjectName = "missing" },
 		"missing active":      func(s *State) { s.CurrentPerspective().Columns[0].Active = 999 },
 		"empty region active": func(s *State) { s.Global.Active = 999 },
-		"missing perspective": func(s *State) { delete(s.CurrentProject().Perspectives, PerspectiveReview) },
-		"nil region":          func(s *State) { s.CurrentPerspective().Bottom = nil },
-		"invalid ratio":       func(s *State) { s.CenterPercent = 100 },
-		"invalid splits":      func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
-		"unknown kind":        func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
-		"duplicate name":      func(s *State) { p := *s.CurrentProject(); p.Name = "JUN"; s.Projects = append(s.Projects, &p) },
+		"missing perspective": func(s *State) { s.CurrentProject().ActivePerspective = 999 },
+		"no perspectives":     func(s *State) { s.CurrentProject().Perspectives = nil },
+		"nil perspective":     func(s *State) { s.CurrentProject().Perspectives[0] = nil },
+		"perspective ID":      func(s *State) { s.CurrentPerspective().ID = PerspectiveID(s.Global.ID) },
+		"blank perspective":   func(s *State) { s.CurrentPerspective().Name = "  " },
+		"padded perspective":  func(s *State) { s.CurrentPerspective().Name = " Work " },
+		"duplicate perspective": func(s *State) {
+			p := *s.CurrentPerspective()
+			p.ID, p.Name = 999, "work"
+			s.CurrentProject().Perspectives = append(s.CurrentProject().Perspectives, &p)
+		},
+		"nil region":     func(s *State) { s.CurrentPerspective().Bottom = nil },
+		"invalid ratio":  func(s *State) { s.CenterPercent = 100 },
+		"invalid splits": func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
+		"unknown kind":   func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
+		"duplicate name": func(s *State) { p := *s.CurrentProject(); p.Name = "JUN"; s.Projects = append(s.Projects, &p) },
 	}
 	for name, modify := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 )
 
 func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
-	ui.Column(c).Key(a.state.ActiveProject + "/" + string(a.state.CurrentProject().ActivePerspective)).Fill().Children(func() {
+	ui.Column(c).Key(p.ID).Fill().Children(func() {
 		top := func() { a.columns(c, slices.Clone(p.Columns), p.ColumnSplits, 0, width) }
 		if p.BottomVisible {
-			ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom, false) }).Fill().OnChange(a.layoutChanged)
+			ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom) }).Fill().OnChange(a.layoutChanged)
 		} else {
 			top()
 		}
@@ -22,13 +22,13 @@ func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
 
 func (a *app) columns(c *ui.Context, columns []*layout.Region, splits []float32, index int, width float32) {
 	if len(columns) == 1 {
-		a.region(c, columns[0], index == 0)
+		a.region(c, columns[0])
 		return
 	}
 	p := a.state.CurrentPerspective()
 	count, bottom := len(p.Columns), p.BottomVisible
 	constrainedSplit(c, &splits[index], width, minimumRegionWidth, columnsMinimum(len(columns)-1),
-		func() { a.region(c, columns[0], index == 0) }, func() {
+		func() { a.region(c, columns[0]) }, func() {
 			if a.state.CurrentPerspective() != p || len(p.Columns) != count || p.BottomVisible != bottom {
 				return
 			}
@@ -36,35 +36,7 @@ func (a *app) columns(c *ui.Context, columns []*layout.Region, splits []float32,
 		}, a.layoutChanged)
 }
 
-func (a *app) perspectiveSelect(c *ui.Context) ui.Element {
-	p := a.state.CurrentProject()
-	return ui.MenuButton(c, a.perspectiveName(p.ActivePerspective), a.perspectiveMenu).
-		Width(110).Height(32).Shrink(0).Justify(ui.SpaceBetween).
-		Label(a.text("Perspective", "视角")).Tooltip(a.text("Perspective and layout", "视角与布局"))
-}
-
-func (a *app) perspectiveMenu(m *ui.Menu) {
-	project := a.state.CurrentProject()
-	if project == nil {
-		return
-	}
-	for _, kind := range []layout.PerspectiveKind{layout.PerspectiveWork, layout.PerspectiveReview} {
-		if m.Item(a.perspectiveName(kind)).Checked(project.ActivePerspective == kind).Chosen() {
-			a.selectPerspective(kind)
-		}
-	}
-	p := a.state.CurrentPerspective()
-	label := a.text("Show Bottom Region", "展开底部区域")
-	if p.BottomVisible {
-		label = a.text("Hide Bottom Region", "收起底部区域")
-	}
-	m.Separator()
-	if m.Item(label).Chosen() {
-		a.setBottomVisible(p.Bottom.ID, !p.BottomVisible)
-	}
-}
-
-// 200 DIPs keeps the perspective selector and region menu usable.
+// 200 DIPs keeps tab and region actions usable in narrow columns.
 const minimumRegionWidth float32 = 200
 
 func columnsMinimum(count int) float32 {

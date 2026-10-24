@@ -2,9 +2,9 @@
 
 A native, GPU-rendered workspace for working with terminal agents. Built with Go and [MyGo](https://github.com/egoist/mygo), without a WebView.
 
-Jun currently provides the macOS terminal workflow and configuration recovery: projects rooted at local directories, Work/Review perspectives, one to three columns, a shared bottom region, and an independent Global region. Each region holds movable, closable tabs.
+Jun currently provides the macOS terminal workflow and configuration recovery: projects rooted at local directories, named perspectives, one to three columns, a shared bottom region, and an independent Global region. Each region holds movable, closable tabs.
 
-Opening a new project starts Work with one real terminal, running your login shell in the project directory. Review starts with one empty column; the bottom and Global regions start empty and hidden. Command entrypoints arrive in I03, Agent overview in I04, and file/diff Review in I05.
+Opening a new project creates one perspective named Work with one real terminal, running your login shell in the project directory. Additional perspectives start with one empty column; the bottom and Global regions start empty and hidden. Command entrypoints arrive in I03, Agent overview in I04, and file/diff Review in I05.
 
 ## Development
 
@@ -17,9 +17,15 @@ go vet ./...
 go tool mygo build -platform darwin/arm64 -skip-dmg
 ```
 
-Open a project through the rail’s **+** button or **File → Open Project…**. Confirm the directory’s name, switch Work/Review using the framed Perspective menu in the first tab strip, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
+Open a project through the rail’s **+** button or **File → Open Project…**. Confirm the directory’s name, switch perspectives using the layers button near the bottom of the project rail, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
 
-The **Language** menu switches between English (default) and Simplified Chinese for the current session. Repeated launches of the same build focus its existing window; New Window is deferred to a separate iteration.
+The gear button below Perspective opens **Settings**, offering the same English (default) and Simplified Chinese choices as the native **Language** menu. Language applies to the current session. Perspective names retain their spelling when the UI language changes. Repeated launches of the same build focus its existing window; New Window is deferred to a separate iteration.
+
+## Perspectives
+
+The **Perspective** menu lists the current project’s perspectives in creation order. **New Perspective…** asks for a name, then selects a new empty perspective without starting a terminal. **Rename Perspective…** changes the current name while preserving its tabs, layout and terminal sessions. Names must be nonempty and unique within the project, ignoring case. Other projects can reuse the same names.
+
+The rail shows icons when collapsed and the current perspective name when expanded; its tooltip includes the project and full perspective name. Perspective is disabled without an open project. Switching projects restores that project’s selected perspective. Global remains independent. Deleting, duplicating and reordering perspectives are deferred.
 
 ## Opening views
 
@@ -31,7 +37,7 @@ Opening the same preview type and source project again in a region selects its e
 
 Each column’s **⋯** offers **Add Column to Right** and **Remove This Column**, with one to three columns allowed. Removing a column transfers its tabs to the left neighbor (the right neighbor for the first column) and keeps the removed column’s active tab selected. Empty-column removal preserves the destination’s selection. These actions never terminate terminal sessions.
 
-The **Perspective** menu switches Work/Review and shows or hides the shared bottom region. The bottom and Global menus open/reopen views and hide their own region; they do not change center columns or another region’s layout. Showing bottom returns focus to the previously active region; hiding an active region returns focus to the first center column.
+The **Perspective** menu switches perspectives and shows or hides the shared bottom region. The bottom and Global menus open/reopen views and hide their own region; they do not change center columns or another region’s layout. Showing bottom returns focus to the previously active region; hiding an active region returns focus to the first center column.
 
 Click a tab to select it, use its **×** to close it, or right-click it for **Close Tab** and **Move Tab To**. Right-clicking an inactive tab does not select it; the chosen action targets that tab. Move destinations include the project, perspective and column/bottom name. Closing an inactive tab preserves the group’s selection; closing the active tab selects its right neighbor, then its left neighbor. An empty region stays open. Window controls operate on the application window.
 
@@ -51,7 +57,9 @@ The packaged app includes `libghostty-vt`; development commands may download the
 
 The default macOS file is `~/Library/Application Support/Jun/config.json`. `JUN_CONFIG_PATH` overrides the file location; relative paths resolve against the launch directory. MyGo distinguishes development and packaged builds for its single-instance behavior, so use the override when running them alongside each other.
 
-The JSON document contains `version: 1` and a `layout` snapshot. It saves the ordered projects, names/CWDs, selected project by name, each perspective’s columns and bottom region, tab order and selection, split percentages, project rail expansion, and the independent Global region. Global views retain their source project when switching projects. Hidden regions are saved too.
+The JSON document contains `version: 2` and a `layout` snapshot. It saves the ordered projects, names/CWDs, selected project by name, ordered perspectives with stable IDs and names, the selected perspective, each perspective’s columns and bottom region, tab order and selection, split percentages, project rail expansion, and the independent Global region. Global views retain their source project when switching projects. Hidden regions are saved too.
+
+Version 1 configurations are converted in memory, retaining both Work and Review, all tab/region IDs, selections, source projects, and hidden layouts. Loading does not rewrite the file; the next normal save writes version 2. Older Jun versions cannot load version 2. Quit the previous Jun before using the upgraded app with the same configuration.
 
 Changes save after 300 ms of idle time, and pending changes flush when the window loses focus, hides, or closes. Writes use a same-directory temporary file and atomic replacement. Startup restores an existing snapshot instead of replacing it with defaults. A missing project directory preserves the project and layout and reports the problem when entering that project.
 

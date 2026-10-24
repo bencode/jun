@@ -1,11 +1,9 @@
 package config
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -33,26 +31,18 @@ func Load(path string) (*layout.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read config %q: %w", path, err)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var doc document
-	if err := decoder.Decode(&doc); err != nil {
+	var doc struct {
+		Version int             `json:"version"`
+		Layout  json.RawMessage `json:"layout"`
+	}
+	if err := decodeJSON(data, &doc); err != nil {
 		return nil, fmt.Errorf("decode config %q: %w", path, err)
 	}
-	var trailing json.RawMessage
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		if err == nil {
-			err = fmt.Errorf("expected one JSON document")
-		}
-		return nil, fmt.Errorf("decode config %q: %w", path, err)
-	}
-	if doc.Version != 1 {
-		return nil, fmt.Errorf("config %q: unsupported version %d", path, doc.Version)
-	}
-	if err := doc.Layout.Restore(); err != nil {
+	state, err := decodeLayout(doc.Version, doc.Layout)
+	if err != nil {
 		return nil, fmt.Errorf("config %q: %w", path, err)
 	}
-	return doc.Layout, nil
+	return state, nil
 }
 
 // Save replaces the file only after a complete snapshot is written and synced.
@@ -60,7 +50,7 @@ func Save(path string, state *layout.State) (err error) {
 	if err := state.Validate(); err != nil {
 		return fmt.Errorf("save config %q: %w", path, err)
 	}
-	data, err := json.MarshalIndent(document{Version: 1, Layout: state}, "", "  ")
+	data, err := json.MarshalIndent(document{Version: 2, Layout: state}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode config %q: %w", path, err)
 	}

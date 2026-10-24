@@ -24,7 +24,7 @@ func snapshot(t *testing.T) *layout.State {
 	if err := s.AddProject("Brain", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SelectPerspective(layout.PerspectiveReview); err != nil {
+	if _, err := s.AddPerspective("Review"); err != nil {
 		t.Fatal(err)
 	}
 	p := s.CurrentPerspective()
@@ -74,7 +74,7 @@ func TestLoadRejectsBrokenAndUnsupportedDocuments(t *testing.T) {
 	if _, err := Load(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("missing config: %v", err)
 	}
-	for _, data := range []string{`{`, `{"version":2}`, `{"version":1}`, `{"version":1,"layout":{},"extra":true}`, `{"version":1} {}`} {
+	for _, data := range []string{`{`, `{"version":99}`, `{"version":1}`, `{"version":2}`, `{"version":2,"layout":null}`, `{"version":1,"layout":{},"extra":true}`, `{"version":1} {}`} {
 		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
 			t.Fatal(err)
 		}

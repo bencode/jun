@@ -78,23 +78,34 @@ func (c *restoreCheck) projectNames(s *State) error {
 }
 
 func (c *restoreCheck) project(p *Project) error {
-	kinds := []PerspectiveKind{PerspectiveWork, PerspectiveReview}
-	if len(p.Perspectives) != len(kinds) || !slices.Contains(kinds, p.ActivePerspective) {
+	if len(p.Perspectives) == 0 {
 		return fmt.Errorf("invalid perspectives or activePerspective")
 	}
-	for _, kind := range kinds {
-		perspective := p.Perspectives[kind]
-		if perspective == nil {
-			return fmt.Errorf("perspective %q is missing", kind)
+	active := false
+	for i, perspective := range p.Perspectives {
+		if perspective == nil || perspective.Name == "" || strings.TrimSpace(perspective.Name) != perspective.Name {
+			return fmt.Errorf("invalid perspective name")
+		}
+		for _, previous := range p.Perspectives[:i] {
+			if strings.EqualFold(previous.Name, perspective.Name) {
+				return fmt.Errorf("duplicate perspective name %q", perspective.Name)
+			}
 		}
 		if err := c.perspective(perspective); err != nil {
-			return fmt.Errorf("perspective %q: %w", kind, err)
+			return fmt.Errorf("perspective %q: %w", perspective.Name, err)
 		}
+		active = active || perspective.ID == p.ActivePerspective
+	}
+	if !active {
+		return fmt.Errorf("activePerspective %d does not exist", p.ActivePerspective)
 	}
 	return nil
 }
 
 func (c *restoreCheck) perspective(p *Perspective) error {
+	if err := c.identifier(uint64(p.ID)); err != nil {
+		return err
+	}
 	count := len(p.Columns)
 	if count < 1 || count > 3 {
 		return fmt.Errorf("column count must be between 1 and 3")

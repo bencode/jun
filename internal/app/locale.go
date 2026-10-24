@@ -35,13 +35,6 @@ func (a *app) title(v *layout.View) string {
 	return fmt.Sprintf("%s %d", a.kindName(v.Kind), v.ID)
 }
 
-func (a *app) perspectiveName(kind layout.PerspectiveKind) string {
-	if kind == layout.PerspectiveReview {
-		return a.text("Review", "审阅")
-	}
-	return a.text("Work", "工作")
-}
-
 func (a *app) sessionTitle(s *terminal.Session) string {
 	title := strings.TrimSpace(s.Terminal.Title())
 	if title == "" {

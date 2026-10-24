@@ -8,7 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-func (a *app) region(c *ui.Context, r *layout.Region, first bool) {
+func (a *app) region(c *ui.Context, r *layout.Region) {
 	views := slices.Clone(r.Views)
 	p := a.state.CurrentPerspective()
 	count, bottom := 0, false
@@ -23,18 +23,11 @@ func (a *app) region(c *ui.Context, r *layout.Region, first bool) {
 		return p != nil && a.state.CurrentPerspective() == p && len(p.Columns) == count && p.BottomVisible == bottom &&
 			(slices.Contains(p.Columns, r) || r == p.Bottom && bottom)
 	}
-	var selector ui.Element
 	region := ui.Column(c.Key(r.ID)).Fill().MinWidth(0).Clip().Children(func() {
 		if !current() {
 			return
 		}
 		ui.Row(c).Height(40).FillWidth().AlignItems(ui.Center).Background(a.theme.Surface).Gap(2).Children(func() {
-			if first {
-				selector = a.perspectiveSelect(c)
-			}
-			if !current() {
-				return
-			}
 			a.tabs(c, r, views)
 			a.regionMenu(c, r)
 			if p := a.state.CurrentPerspective(); p != nil && r == p.Columns[len(p.Columns)-1] {
@@ -60,7 +53,7 @@ func (a *app) region(c *ui.Context, r *layout.Region, first bool) {
 			}
 		})
 	})
-	if current() && region.FocusWithin() && !selector.FocusWithin() {
+	if current() && region.FocusWithin() {
 		a.activeRegion = r.ID
 	}
 }

@@ -86,7 +86,7 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	}
 	addColumn()
 	open(a.state.CurrentPerspective().Columns[1], layout.ViewTerminal)
-	if err := a.state.SelectPerspective(layout.PerspectiveReview); err != nil {
+	if _, err := a.state.AddPerspective("Review"); err != nil {
 		t.Fatal(err)
 	}
 	addColumn()
@@ -95,7 +95,7 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	open(review.Columns[1], layout.ViewFile)
 	open(review.Columns[1], layout.ViewDiff)
 	open(review.Bottom, layout.ViewTerminal)
-	if err := a.state.SelectPerspective(layout.PerspectiveWork); err != nil {
+	if err := a.state.SelectPerspective(a.state.CurrentProject().Perspectives[0].ID); err != nil {
 		t.Fatal(err)
 	}
 	open(a.state.Global, layout.ViewAgents)
@@ -182,11 +182,11 @@ func TestTabDragAndKeyboardSelection(t *testing.T) {
 func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	a, tt := testApp(t)
 	before, _ := tt.Find("Perspective")
-	if before.Y >= 40 {
-		t.Fatalf("perspective has an extra top row: y=%v", before.Y)
+	if before.X >= 56 || before.Y < 800 {
+		t.Fatalf("perspective should be at the rail bottom: %+v", before)
 	}
 	perspectiveMenu(t, tt, "Review")
-	if a.state.CurrentProject().ActivePerspective != layout.PerspectiveReview || !tt.HasText("Diff") {
+	if a.state.CurrentProject().ActivePerspective != a.state.CurrentProject().Perspectives[1].ID || !tt.HasText("Diff") {
 		t.Fatal("Review did not render")
 	}
 	global := a.state.Global
@@ -200,7 +200,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	}
 	a.chinese = true
 	tt.Frame()
-	if !tt.HasText("审阅") || !tt.HasText("布局预览") {
+	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("布局预览") {
 		t.Fatal("Chinese labels missing")
 	}
 	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "打开视图", "新建终端")
@@ -212,8 +212,12 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 func TestEmptyStartupAndColumnControls(t *testing.T) {
 	empty := testNewApp(t)
 	tt := ui.NewTester(empty.view, 1000, 640)
-	if !tt.HasText("Open Project…") || tt.HasText("Perspective") {
+	if !tt.HasText("Open Project…") || len(empty.state.Projects) != 0 {
 		t.Fatal("startup is not an empty project picker")
+	}
+	click(t, tt, "Perspective")
+	if tt.Menu() != nil {
+		t.Fatal("Perspective should be disabled without a project")
 	}
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
@@ -283,7 +287,7 @@ func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 		t.Fatal("Global toggle overlaps region menu")
 	}
 	perspectiveMenu(t, tt, "Review")
-	if a.state.CurrentProject().ActivePerspective != layout.PerspectiveReview {
+	if a.state.CurrentProject().ActivePerspective != a.state.CurrentProject().Perspectives[1].ID {
 		t.Fatal("narrow perspective selector did not work")
 	}
 	click(t, tt, "Hide Global")

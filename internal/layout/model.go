@@ -3,17 +3,15 @@ package layout
 // IDs are stable for a view's lifetime, including moves between regions.
 type ViewID uint64
 type RegionID uint64
+type PerspectiveID uint64
 type ViewKind string
-type PerspectiveKind string
 
 const (
-	ViewTerminal      ViewKind        = "terminal"
-	ViewTree          ViewKind        = "tree"
-	ViewDiff          ViewKind        = "diff"
-	ViewFile          ViewKind        = "file"
-	ViewAgents        ViewKind        = "agents"
-	PerspectiveWork   PerspectiveKind = "work"
-	PerspectiveReview PerspectiveKind = "review"
+	ViewTerminal ViewKind = "terminal"
+	ViewTree     ViewKind = "tree"
+	ViewDiff     ViewKind = "diff"
+	ViewFile     ViewKind = "file"
+	ViewAgents   ViewKind = "agents"
 )
 
 type View struct {
@@ -27,17 +25,19 @@ type Region struct {
 	Active ViewID   `json:"activeView"`
 }
 type Perspective struct {
-	Columns       []*Region `json:"columns"`
-	Bottom        *Region   `json:"bottom"`
-	BottomVisible bool      `json:"bottomVisible"`
-	ColumnSplits  []float32 `json:"columnSplits"`
-	TopPercent    float32   `json:"topPercent"`
+	ID            PerspectiveID `json:"id"`
+	Name          string        `json:"name"`
+	Columns       []*Region     `json:"columns"`
+	Bottom        *Region       `json:"bottom"`
+	BottomVisible bool          `json:"bottomVisible"`
+	ColumnSplits  []float32     `json:"columnSplits"`
+	TopPercent    float32       `json:"topPercent"`
 }
 type Project struct {
-	Name              string                           `json:"name"`
-	CWD               string                           `json:"cwd"`
-	ActivePerspective PerspectiveKind                  `json:"activePerspective"`
-	Perspectives      map[PerspectiveKind]*Perspective `json:"perspectives"`
+	Name              string         `json:"name"`
+	CWD               string         `json:"cwd"`
+	ActivePerspective PerspectiveID  `json:"activePerspective"`
+	Perspectives      []*Perspective `json:"perspectives"`
 }
 type State struct {
 	Projects      []*Project `json:"projects"`
@@ -71,8 +71,7 @@ func (s *State) appendView(r *Region, kind ViewKind, project string) ViewID {
 func (s *State) regions() []*Region {
 	result := []*Region{s.Global}
 	for _, p := range s.Projects {
-		for _, kind := range []PerspectiveKind{PerspectiveWork, PerspectiveReview} {
-			perspective := p.Perspectives[kind]
+		for _, perspective := range p.Perspectives {
 			result = append(result, perspective.Columns...)
 			result = append(result, perspective.Bottom)
 		}
@@ -100,7 +99,16 @@ func (s *State) CurrentProject() *Project {
 
 func (s *State) CurrentPerspective() *Perspective {
 	if p := s.CurrentProject(); p != nil {
-		return p.Perspectives[p.ActivePerspective]
+		return p.Perspective(p.ActivePerspective)
+	}
+	return nil
+}
+
+func (p *Project) Perspective(id PerspectiveID) *Perspective {
+	for _, perspective := range p.Perspectives {
+		if perspective.ID == id {
+			return perspective
+		}
 	}
 	return nil
 }

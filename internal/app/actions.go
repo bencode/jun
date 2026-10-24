@@ -82,14 +82,14 @@ func (a *app) toggleGlobal() {
 	a.layoutChanged()
 }
 
-func (a *app) selectPerspective(kind layout.PerspectiveKind) {
-	if p := a.state.CurrentProject(); p != nil && p.ActivePerspective == kind {
+func (a *app) selectPerspective(id layout.PerspectiveID) {
+	if p := a.state.CurrentProject(); p != nil && p.ActivePerspective == id {
 		if r := a.targetRegion(); r != nil {
 			a.focusRegion(r.ID)
 		}
 		return
 	}
-	if err := a.state.SelectPerspective(kind); err != nil {
+	if err := a.state.SelectPerspective(id); err != nil {
 		a.report(err)
 		return
 	}

@@ -18,6 +18,12 @@ func project(t *testing.T, s *State, name string) *Project {
 	if _, err := s.OpenView(s.CurrentPerspective().Columns[1].ID, ViewTerminal, name); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.AddPerspective("Review"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SelectPerspective(p.ID); err != nil {
+		t.Fatal(err)
+	}
 	return s.CurrentProject()
 }
 
@@ -29,7 +35,7 @@ func TestProjectPerspectiveAndGlobalIsolation(t *testing.T) {
 	a := project(t, s, "Jun")
 	work := s.CurrentPerspective()
 	work.TopPercent = 61
-	if err := s.SelectPerspective(PerspectiveReview); err != nil {
+	if err := s.SelectPerspective(s.CurrentProject().Perspectives[1].ID); err != nil {
 		t.Fatal(err)
 	}
 	review := s.CurrentPerspective()
@@ -47,7 +53,7 @@ func TestProjectPerspectiveAndGlobalIsolation(t *testing.T) {
 	if s.CurrentPerspective() != review || review.BottomVisible {
 		t.Fatal("review state lost")
 	}
-	if err := s.SelectPerspective(PerspectiveWork); err != nil {
+	if err := s.SelectPerspective(s.CurrentProject().Perspectives[0].ID); err != nil {
 		t.Fatal(err)
 	}
 	if s.CurrentPerspective() != work || work.TopPercent != 61 {
@@ -209,7 +215,7 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 		func() error { return s.CloseView(9999) },
 		func() error { _, err := s.RemoveColumn(s.Global.ID); return err },
 		func() error { return s.SelectProject("missing") },
-		func() error { return s.SelectPerspective("missing") },
+		func() error { return s.SelectPerspective(999999) },
 		func() error { _, err := s.OpenView(r.ID, ViewTerminal, "missing"); return err },
 		func() error { _, err := s.OpenView(r.ID, "missing", "Jun"); return err },
 	}
@@ -217,7 +223,7 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 		if operation() == nil {
 			t.Fatalf("operation %d accepted invalid input", i)
 		}
-		if !reflect.DeepEqual(r.Views, views) || r.Active != active || s.ActiveProject != "Jun" || s.CurrentProject().ActivePerspective != PerspectiveWork {
+		if !reflect.DeepEqual(r.Views, views) || r.Active != active || s.ActiveProject != "Jun" || s.CurrentProject().ActivePerspective != s.CurrentProject().Perspectives[0].ID {
 			t.Fatalf("operation %d partially mutated state", i)
 		}
 	}
@@ -232,12 +238,11 @@ func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 		t.Fatal(err)
 	}
 	work := s.CurrentPerspective()
-	review := s.CurrentProject().Perspectives[PerspectiveReview]
+	if len(s.CurrentProject().Perspectives) != 1 || work.Name != "Work" {
+		t.Fatal("new project should have one Work perspective")
+	}
 	if len(work.Columns) != 1 || len(work.Columns[0].Views) != 1 || work.Columns[0].Views[0].Kind != ViewTerminal || work.BottomVisible || len(work.Bottom.Views) != 0 {
 		t.Fatal("Work should contain just one Terminal view")
-	}
-	if len(review.Columns) != 1 || len(review.Columns[0].Views) != 0 || review.BottomVisible || len(review.Bottom.Views) != 0 {
-		t.Fatal("Review should start empty")
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatal(err)
@@ -248,8 +253,8 @@ func TestAddColumnUsesAndValidatesAnchor(t *testing.T) {
 	s := New()
 	project(t, s, "A")
 	p := s.CurrentPerspective()
-	review := s.CurrentProject().Perspectives[PerspectiveReview]
-	other := project(t, s, "B").Perspectives[PerspectiveWork].Columns[0].ID
+	review := s.CurrentProject().Perspectives[1]
+	other := project(t, s, "B").Perspectives[0].Columns[0].ID
 	if err := s.SelectProject("A"); err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +282,7 @@ func TestRemovingEmptyColumnPreservesDestinationSelection(t *testing.T) {
 		if err := s.AddProject("A", "/A"); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.SelectPerspective(PerspectiveReview); err != nil {
+		if _, err := s.AddPerspective("Review"); err != nil {
 			t.Fatal(err)
 		}
 		p := s.CurrentPerspective()

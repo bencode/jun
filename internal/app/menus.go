@@ -19,10 +19,6 @@ func (a *app) applicationMenu() *mygo.Menu {
 			}
 		}
 	}
-	language := func(chinese bool) {
-		a.chinese = chinese
-		mygo.App.SetMenu(a.applicationMenu())
-	}
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Label: "Jun", Submenu: []*mygo.MenuItem{{Role: mygo.RoleAbout}, mygo.Separator(), {Role: mygo.RoleQuit}}},
 		{Label: a.text("File", "文件"), Submenu: []*mygo.MenuItem{
@@ -34,8 +30,8 @@ func (a *app) applicationMenu() *mygo.Menu {
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
-			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.chinese, Click: action(func() { language(false) })},
-			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.chinese, Click: action(func() { language(true) })},
+			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.chinese, Click: action(func() { a.setLanguage(false) })},
+			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.chinese, Click: action(func() { a.setLanguage(true) })},
 		}},
 		{Role: mygo.RoleWindowMenu},
 	})

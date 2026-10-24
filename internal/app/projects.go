@@ -41,6 +41,8 @@ func (a *app) projectRail(c *ui.Context) {
 					Tooltip(a.text("Add Project", "添加项目")).OnClick(a.chooseProject)
 			})
 		})
+		a.perspectiveButton(c)
+		a.settingsButton(c)
 	})
 }
 

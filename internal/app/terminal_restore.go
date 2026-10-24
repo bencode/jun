@@ -39,8 +39,7 @@ func (a *app) startTerminal(v *layout.View) error {
 func (a *app) restoreTerminals() {
 	regions := []*layout.Region{a.state.Global}
 	for _, project := range a.state.Projects {
-		for _, kind := range []layout.PerspectiveKind{layout.PerspectiveWork, layout.PerspectiveReview} {
-			p := project.Perspectives[kind]
+		for _, p := range project.Perspectives {
 			regions = append(regions, p.Columns...)
 			regions = append(regions, p.Bottom)
 		}

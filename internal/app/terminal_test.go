@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bencode/jun/internal/config"
-	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -64,11 +63,11 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 	if reopened.ID == view.ID || a.sessionFor(reopened.ID) != session || !tt.Focused(contentLabel(a, reopened)) {
 		t.Fatal("reopen did not reuse the session and focus its content")
 	}
-	a.selectPerspective(layout.PerspectiveReview)
+	a.selectPerspective(a.state.CurrentProject().Perspectives[1].ID)
 	tt.Frame()
 	session.Terminal.Send([]byte("printf '\\nREVIEW_ALIVE\\n'\n"))
 	waitTerminal(t, tt, func() bool { return strings.Contains(session.Terminal.Text(), "\nREVIEW_ALIVE\n") })
-	a.selectPerspective(layout.PerspectiveWork)
+	a.selectPerspective(a.state.CurrentProject().Perspectives[0].ID)
 	a.closeView(r.ID, reopened.ID)
 	a.reopenTerminal(r.ID, session.ID)
 	reopened = r.Views[len(r.Views)-1]
@@ -82,6 +81,11 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 func TestRestoresAllSavedTerminalViewsAsFreshSessions(t *testing.T) {
 	a, _ := testApp(t)
 	a.newTerminal(a.state.Global.ID)
+	if _, err := a.state.AddPerspective("Investigation"); err != nil {
+		t.Fatal(err)
+	}
+	a.newTerminal(a.state.CurrentPerspective().Bottom.ID)
+	a.state.CurrentPerspective().BottomVisible = false
 	if err := a.state.AddProject("Brain", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
