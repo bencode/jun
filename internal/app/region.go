@@ -10,10 +10,30 @@ import (
 
 func (a *app) region(c *ui.Context, r *layout.Region, first bool) {
 	views := slices.Clone(r.Views)
-	ui.Column(c.Key(r.ID)).Fill().MinWidth(0).Clip().Children(func() {
+	p := a.state.CurrentPerspective()
+	count, bottom := 0, false
+	if p != nil {
+		count, bottom = len(p.Columns), p.BottomVisible
+	}
+	// A menu choice can replace the layout during this build; keep focus pending for its next frame.
+	current := func() bool {
+		if r == a.state.Global {
+			return a.state.GlobalVisible
+		}
+		return p != nil && a.state.CurrentPerspective() == p && len(p.Columns) == count && p.BottomVisible == bottom &&
+			(slices.Contains(p.Columns, r) || r == p.Bottom && bottom)
+	}
+	var selector ui.Element
+	region := ui.Column(c.Key(r.ID)).Fill().MinWidth(0).Clip().Children(func() {
+		if !current() {
+			return
+		}
 		ui.Row(c).Height(40).FillWidth().AlignItems(ui.Center).Background(a.theme.Surface).Gap(2).Children(func() {
 			if first {
-				a.perspectiveSelect(c)
+				selector = a.perspectiveSelect(c)
+			}
+			if !current() {
+				return
 			}
 			a.tabs(c, r, views)
 			a.regionMenu(c, r)
@@ -21,23 +41,28 @@ func (a *app) region(c *ui.Context, r *layout.Region, first bool) {
 				ui.Box(c).Width(38).Shrink(0)
 			}
 		})
+		if !current() {
+			return
+		}
 		body := ui.Column(c).Key("body").Grow(1).FillWidth().MinHeight(0)
 		a.drop(body, r.ID, 0)
 		body.Children(func() {
 			if len(views) == 0 {
 				ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(12).Children(func() {
 					ui.Text(c, a.text("Drop a view here", "将视图拖到这里")).TextColor(a.theme.TextMuted)
-					ui.Button(c, a.text("New Terminal", "新建终端")).Disabled(a.state.CurrentProject() == nil).
-						OnClick(func() { a.newTerminal(r.ID) })
+					ui.Button(c, a.text("Open View", "打开视图")).Menu(func(m *ui.Menu) { a.openViewMenu(m, r.ID) })
 				})
 			}
 			for _, v := range views {
 				if v.ID == r.Active {
-					a.placeholder(c, v)
+					a.viewContent(c, v)
 				}
 			}
 		})
 	})
+	if current() && region.FocusWithin() && !selector.FocusWithin() {
+		a.activeRegion = r.ID
+	}
 }
 
 func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
@@ -59,7 +84,12 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
 				if v.ID == r.Active {
 					tab.Background(a.theme.Background)
 				}
-				if a.pendingFocus == r.ID && v.ID == r.Active {
+				tab.OnClick(func() { a.focusRegion(r.ID) })
+				tab.ContextMenu(func(m *ui.Menu) { a.tabMenu(m, r.ID, v.ID) })
+				if session := a.sessionFor(v.ID); session != nil {
+					tab.Tooltip(session.ProjectName + "\n" + session.CWD)
+				}
+				if a.pendingFocus == r.ID && v.ID == r.Active && v.Kind != layout.ViewTerminal {
 					tab.Focus()
 					a.pendingFocus = 0
 				}
@@ -68,7 +98,7 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
 					ui.Text(c, a.title(v)).SingleLine()
 					if v.ID == r.Active || tab.Hovered() || tab.FocusWithin() {
 						ui.Button(c, closeIcon).Padding(2, 4).Label(fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v))).
-							Tooltip(a.text("Close View", "关闭视图")).OnClick(func() { a.closeView(r.ID, v.ID) })
+							Tooltip(a.text("Close Tab", "关闭标签")).OnClick(func() { a.closeView(r.ID, v.ID) })
 					}
 				})
 			}

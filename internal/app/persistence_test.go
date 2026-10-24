@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestAutosaveWaitsForIdle(t *testing.T) {
 	a, tt := testApp(t)
 	path := filepath.Join(t.TempDir(), "config.json")
 	a.restoreConfig(path)
-	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "New Terminal")
+	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Open View", "New Terminal")
 	tt.Advance(200 * time.Millisecond)
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("saved before idle: %v", err)
@@ -54,25 +55,25 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 			tt.Frame()
 			click(t, tt, "Jun")
 		},
-		"perspective": func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Perspective"); click(t, tt, "Review") },
+		"perspective": func(t *testing.T, a *app, tt *ui.Tester) { perspectiveMenu(t, tt, "Review") },
 		"global":      func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Show Bottom Region")
+			perspectiveMenu(t, tt, "Show Bottom Region")
 		},
 		"add column": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Add Column")
+			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Add Column to Right")
 		},
 		"remove column": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[1], "Remove Column")
+			menu(t, tt, a, a.state.CurrentPerspective().Columns[1], "Remove This Column")
 		},
 		"new terminal": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "New Terminal")
+			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Open View", "New Terminal")
 		},
 		"close view": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Close View")
+			chooseTabMenu(t, tt, a, a.state.CurrentPerspective().Columns[0].Views[0], "Close Tab")
 		},
 		"move view": func(t *testing.T, a *app, tt *ui.Tester) {
-			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Move View To", "Global")
+			chooseTabMenu(t, tt, a, a.state.CurrentPerspective().Columns[0].Views[0], "Move Tab To", "Global")
 		},
 		"select tab": func(t *testing.T, a *app, tt *ui.Tester) {
 			region := a.state.CurrentPerspective().Columns[0]
@@ -93,7 +94,7 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 		},
 		"bottom height": func(t *testing.T, a *app, tt *ui.Tester) {
 			p := a.state.CurrentPerspective()
-			if err := a.state.RemoveColumn(p.Columns[1].ID); err != nil {
+			if _, err := a.state.RemoveColumn(p.Columns[1].ID); err != nil {
 				t.Fatal(err)
 			}
 			p.BottomVisible = true
@@ -125,7 +126,7 @@ func TestDamagedConfigStaysUntouchedWhileEditing(t *testing.T) {
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	a := newApp()
+	a := testNewApp(t)
 	a.restoreConfig(path)
 	tt := ui.NewTester(a.view, 1440, 900)
 	if !a.errorOpen {
@@ -157,7 +158,7 @@ func TestSaveFailureCanCancelQuitAndRetry(t *testing.T) {
 	if err := os.WriteFile(parent, []byte("blocker"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "New Terminal")
+	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Open View", "New Terminal")
 	tt.Advance(400 * time.Millisecond)
 	if !tt.HasText("Layout could not be saved") {
 		t.Fatal("save failure not visible")
@@ -174,6 +175,9 @@ func TestSaveFailureCanCancelQuitAndRetry(t *testing.T) {
 		t.Fatal("failed save did not retain the window with exit choices")
 	}
 	click(t, tt, "Cancel Quit")
+	session := a.sessionFor(a.state.CurrentPerspective().Columns[0].Active)
+	session.Terminal.Send([]byte("printf '\\nCANCEL_ALIVE\\n'\n"))
+	waitTerminal(t, tt, func() bool { return strings.Contains(session.Terminal.Text(), "\nCANCEL_ALIVE\n") })
 	if err := os.Remove(parent); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +230,7 @@ func TestRetryAndQuitWithoutSavingActions(t *testing.T) {
 
 func TestMissingProjectDirectoryDoesNotInvalidateSnapshot(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
-	a := newApp()
+	a := testNewApp(t)
 	cwd := filepath.Join(t.TempDir(), "missing")
 	if err := a.state.AddProject("Jun", cwd); err != nil {
 		t.Fatal(err)
@@ -234,7 +238,7 @@ func TestMissingProjectDirectoryDoesNotInvalidateSnapshot(t *testing.T) {
 	if err := config.Save(path, a.state); err != nil {
 		t.Fatal(err)
 	}
-	restored := newApp()
+	restored := testNewApp(t)
 	restored.restoreConfig(path)
 	restored.checkCurrentDirectory()
 	if restored.state.ActiveProject != "Jun" || !restored.errorOpen || !restored.persistence.enabled {
@@ -244,7 +248,7 @@ func TestMissingProjectDirectoryDoesNotInvalidateSnapshot(t *testing.T) {
 
 func TestProjectSubmissionIsSavedAndRestored(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
-	a := newApp()
+	a := testNewApp(t)
 	a.restoreConfig(path)
 	tt := ui.NewTester(a.view, 1440, 900)
 	tt.Advance(time.Second)
@@ -257,7 +261,7 @@ func TestProjectSubmissionIsSavedAndRestored(t *testing.T) {
 	a.submitProject()
 	tt.Frame()
 	tt.Advance(400 * time.Millisecond)
-	restored := newApp()
+	restored := testNewApp(t)
 	restored.restoreConfig(path)
 	if restored.state.ActiveProject != "Jun" || restored.state.CurrentProject().CWD != cwd || restored.state.GlobalVisible || len(restored.state.Global.Views) != 0 {
 		t.Fatal("project/default layout did not survive restart")

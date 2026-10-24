@@ -7,7 +7,7 @@ import (
 )
 
 func TestSubmitProject(t *testing.T) {
-	a := newApp()
+	a := testNewApp(t)
 	cwd := t.TempDir()
 	a.projectForm.open = true
 	a.projectForm.name = "  Jun  "
@@ -15,6 +15,10 @@ func TestSubmitProject(t *testing.T) {
 	a.submitProject()
 	if a.projectForm.open || a.projectForm.error != "" || a.state.ActiveProject != "Jun" || a.state.CurrentProject().CWD != cwd {
 		t.Fatalf("failed submission: %+v", a.projectForm)
+	}
+	r := a.state.CurrentPerspective().Columns[0]
+	if len(r.Views) != 1 || len(a.bindings) != 1 || len(a.terminals.ForProject("Jun")) != 1 || a.sessionFor(r.Active) == nil {
+		t.Fatal("project did not start exactly one terminal")
 	}
 	a.projectForm.open = true
 	a.projectForm.name = "jun"
@@ -32,12 +36,12 @@ func TestFailedProjectSubmissionDoesNotAddProject(t *testing.T) {
 	}
 	cases := []struct{ name, path string }{{"", root}, {"Jun", file}, {"Jun", filepath.Join(root, "deleted")}}
 	for _, tc := range cases {
-		a := newApp()
+		a := testNewApp(t)
 		a.projectForm.open = true
 		a.projectForm.name = tc.name
 		a.projectForm.path = tc.path
 		a.submitProject()
-		if !a.projectForm.open || a.projectForm.error == "" || len(a.state.Projects) != 0 {
+		if !a.projectForm.open || a.projectForm.error == "" || len(a.state.Projects) != 0 || len(a.bindings) != 0 {
 			t.Fatalf("accepted %+v", tc)
 		}
 	}

@@ -5,7 +5,9 @@ import (
 
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/terminal"
 	"github.com/egoist/mygo"
+	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -19,14 +21,19 @@ type app struct {
 		open              bool
 		name, path, error string
 	}
-	pendingFocus layout.RegionID
-	scroll       map[layout.ViewID]*ui.ScrollState
-	errorMessage string
-	errorOpen    bool
+	terminals      *terminal.Store
+	bindings       map[layout.ViewID]terminal.ID
+	terminalErrors map[layout.ViewID]error
+	activeRegion   layout.RegionID
+	pendingFocus   layout.RegionID
+	scroll         map[layout.ViewID]*ui.ScrollState
+	errorMessage   string
+	errorOpen      bool
 }
 
 func newApp() *app {
-	return &app{state: layout.New(), theme: ui.DarkTheme(), scroll: map[layout.ViewID]*ui.ScrollState{}}
+	return &app{state: layout.New(), theme: ui.DarkTheme(), scroll: map[layout.ViewID]*ui.ScrollState{},
+		terminals: terminal.NewStore(), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{}}
 }
 
 func Run() error {
@@ -35,6 +42,10 @@ func Run() error {
 	if !mygo.App.RequestSingleInstanceLock() {
 		return nil
 	}
+	if err := ghostty.Load(); err != nil {
+		return fmt.Errorf("load terminal library: %w", err)
+	}
+	defer a.closeTerminals()
 	path, err := config.DefaultPath()
 	if err != nil {
 		a.persistence = &persistence{}
@@ -60,8 +71,12 @@ func Run() error {
 			Content: ui.View(a.view),
 		})
 		a.window.OnClose(a.beforeClose)
+		a.window.OnClosed(a.closeTerminals)
 		a.window.OnBlur(a.saveInBackground)
 		a.window.OnHide(a.saveInBackground)
+		a.restoreTerminals()
+		a.focusCurrentPerspective()
+		a.window.Invalidate()
 		a.checkCurrentDirectory()
 	})
 	return mygo.App.Run()

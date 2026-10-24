@@ -118,6 +118,11 @@ func (a *app) submitProject() {
 	}
 	a.projectForm.open = false
 	a.layoutChanged()
+	a.focusCurrentPerspective()
+	view := a.state.CurrentPerspective().Columns[0].Views[0]
+	if err := a.startTerminal(view); err != nil {
+		a.report(err)
+	}
 }
 
 func (a *app) projectFailure(err error) {

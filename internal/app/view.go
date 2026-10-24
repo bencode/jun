@@ -27,6 +27,7 @@ func (a *app) view(c *ui.Context) {
 			ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() { a.center(c, width) })
 		}
 	})
+	a.shortcuts(c)
 	a.projectDialog(c)
 	ui.Modal(c, &a.errorOpen, func() {
 		ui.Text(c, a.text("Unable to complete action", "无法完成操作")).Bold()

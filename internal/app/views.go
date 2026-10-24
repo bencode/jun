@@ -7,6 +7,14 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+func (a *app) viewContent(c *ui.Context, v *layout.View) {
+	if v.Kind == layout.ViewTerminal {
+		a.terminalView(c, v)
+		return
+	}
+	a.placeholder(c, v)
+}
+
 func (a *app) placeholder(c *ui.Context, v *layout.View) {
 	if a.scroll[v.ID] == nil {
 		a.scroll[v.ID] = &ui.ScrollState{}
@@ -24,9 +32,6 @@ func (a *app) placeholder(c *ui.Context, v *layout.View) {
 				}
 			}
 			stage := "I05"
-			if v.Kind == layout.ViewTerminal {
-				stage = "I02"
-			}
 			if v.Kind == layout.ViewAgents {
 				stage = "I04"
 			}

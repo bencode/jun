@@ -2,8 +2,10 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/terminal"
 )
 
 func (a *app) text(en, zh string) string {
@@ -24,6 +26,9 @@ func (a *app) kindName(kind layout.ViewKind) string {
 }
 
 func (a *app) title(v *layout.View) string {
+	if session := a.sessionFor(v.ID); session != nil {
+		return a.sessionTitle(session)
+	}
 	if v.Kind == layout.ViewAgents {
 		return a.kindName(v.Kind)
 	}
@@ -35,4 +40,17 @@ func (a *app) perspectiveName(kind layout.PerspectiveKind) string {
 		return a.text("Review", "审阅")
 	}
 	return a.text("Work", "工作")
+}
+
+func (a *app) sessionTitle(s *terminal.Session) string {
+	title := strings.TrimSpace(s.Terminal.Title())
+	if title == "" {
+		title = fmt.Sprintf("%s %d", a.text("Terminal", "终端"), s.ID)
+	}
+	select {
+	case <-s.Terminal.Done():
+		title += fmt.Sprintf(a.text(" [exited %d]", " [已退出 %d]"), s.Terminal.ExitCode())
+	default:
+	}
+	return title
 }

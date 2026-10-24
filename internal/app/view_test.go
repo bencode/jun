@@ -2,11 +2,37 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo/ui"
 )
+
+func testNewApp(t *testing.T) *app {
+	t.Helper()
+	shell := filepath.Join(t.TempDir(), "shell")
+	if err := os.WriteFile(shell, []byte("#!/bin/sh\nexec /bin/sh -i\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", shell)
+	t.Setenv("ENV", "")
+	a := newApp()
+	t.Cleanup(func() {
+		if err := a.terminals.CloseAll(); err != nil {
+			t.Error(err)
+		}
+	})
+	return a
+}
+
+func contentLabel(a *app, v *layout.View) string {
+	if session := a.sessionFor(v.ID); session != nil {
+		return fmt.Sprintf("%s %d", a.text("Terminal content", "终端内容"), session.ID)
+	}
+	return a.title(v)
+}
 
 func click(t *testing.T, tt *ui.Tester, label string) {
 	t.Helper()
@@ -23,14 +49,33 @@ func menu(t *testing.T, tt *ui.Tester, a *app, r *layout.Region, path ...string)
 	}
 }
 
+func chooseTabMenu(t *testing.T, tt *ui.Tester, a *app, view *layout.View, path ...string) {
+	t.Helper()
+	if err := tt.RightClick(a.title(view)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem(path...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func perspectiveMenu(t *testing.T, tt *ui.Tester, path ...string) {
+	t.Helper()
+	click(t, tt, "Perspective")
+	if err := tt.ChooseMenuItem(path...); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func testApp(t *testing.T) (*app, *ui.Tester) {
 	t.Helper()
-	a := newApp()
+	a := testNewApp(t)
 	if err := a.state.AddProject("Jun", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 	addColumn := func() {
-		if _, err := a.state.AddColumn(); err != nil {
+		p := a.state.CurrentPerspective()
+		if _, err := a.state.AddColumn(p.Columns[len(p.Columns)-1].ID); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -54,6 +99,7 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 		t.Fatal(err)
 	}
 	open(a.state.Global, layout.ViewAgents)
+	a.restoreTerminals()
 	return a, ui.NewTester(a.view, 1440, 900)
 }
 
@@ -62,20 +108,20 @@ func TestRegionOpenMoveCloseAndFocus(t *testing.T) {
 	p := a.state.CurrentPerspective()
 	left := p.Columns[0]
 	right := p.Columns[1]
-	menu(t, tt, a, left, "New Terminal")
+	menu(t, tt, a, left, "Open View", "New Terminal")
 	opened := left.Views[len(left.Views)-1]
-	if len(left.Views) != 2 || left.Active != opened.ID || !tt.Focused(a.title(opened)) {
-		t.Fatal("New Terminal did not select/focus its tab")
+	if len(left.Views) != 2 || left.Active != opened.ID || !tt.Focused(contentLabel(a, opened)) {
+		t.Fatal("New Terminal did not select/focus its content")
 	}
-	menu(t, tt, a, left, "Move View To", "Bottom Region")
-	if !p.BottomVisible || p.Bottom.Active != opened.ID || !tt.Focused(a.title(opened)) {
+	chooseTabMenu(t, tt, a, opened, "Move Tab To", "Jun / Work / Bottom Region")
+	if !p.BottomVisible || p.Bottom.Active != opened.ID || !tt.Focused(contentLabel(a, opened)) {
 		t.Fatal("move did not reveal/focus bottom")
 	}
-	menu(t, tt, a, p.Bottom, "Move View To", "Global")
-	if a.state.Global.Active != opened.ID || !tt.Focused(a.title(opened)) {
+	chooseTabMenu(t, tt, a, opened, "Move Tab To", "Global")
+	if a.state.Global.Active != opened.ID || !tt.Focused(contentLabel(a, opened)) {
 		t.Fatal("move to Global lost focus")
 	}
-	menu(t, tt, a, a.state.Global, "Close View")
+	chooseTabMenu(t, tt, a, opened, "Close Tab")
 	if len(a.state.Global.Views) != 1 || !tt.Focused("Agents") {
 		t.Fatal("close did not focus adjacent tab")
 	}
@@ -107,10 +153,10 @@ func TestTabDragAndKeyboardSelection(t *testing.T) {
 		tt.Move(x+(dx-x)*f, y+(dy-y)*f)
 	}
 	tt.Release(dx, dy)
-	if len(left.Views) != 0 || len(right.Views) != 2 || right.Views[0] != view || !tt.Focused(a.title(view)) {
+	if len(left.Views) != 0 || len(right.Views) != 2 || right.Views[0] != view || !tt.Focused(contentLabel(a, view)) {
 		t.Fatal("drag did not move/select/focus tab")
 	}
-	tt.Key(0, ui.KeyRight)
+	tt.Key(ui.Ctrl, ui.KeyTab)
 	if right.Active != right.Views[1].ID {
 		t.Fatal("arrow key did not select next tab")
 	}
@@ -139,8 +185,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	if before.Y >= 40 {
 		t.Fatalf("perspective has an extra top row: y=%v", before.Y)
 	}
-	click(t, tt, "Perspective")
-	click(t, tt, "Review")
+	perspectiveMenu(t, tt, "Review")
 	if a.state.CurrentProject().ActivePerspective != layout.PerspectiveReview || !tt.HasText("Diff") {
 		t.Fatal("Review did not render")
 	}
@@ -158,21 +203,21 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	if !tt.HasText("审阅") || !tt.HasText("布局预览") {
 		t.Fatal("Chinese labels missing")
 	}
-	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "新建终端")
+	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "打开视图", "新建终端")
 	if a.state.CurrentPerspective().Columns[0].Views[1].Kind != layout.ViewTerminal {
 		t.Fatal("translated action failed")
 	}
 }
 
 func TestEmptyStartupAndColumnControls(t *testing.T) {
-	empty := newApp()
+	empty := testNewApp(t)
 	tt := ui.NewTester(empty.view, 1000, 640)
 	if !tt.HasText("Open Project…") || tt.HasText("Perspective") {
 		t.Fatal("startup is not an empty project picker")
 	}
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
-	menu(t, tt, a, p.Columns[0], "Add Column")
+	menu(t, tt, a, p.Columns[0], "Add Column to Right")
 	if len(p.Columns) != 3 {
 		t.Fatal("column not added")
 	}
@@ -186,12 +231,12 @@ func TestEmptyStartupAndColumnControls(t *testing.T) {
 	click(t, tt, "Show Global")
 	p.ColumnSplits[1] = 50
 	tt.Frame()
-	menu(t, tt, a, p.Columns[2], "Remove Column")
+	menu(t, tt, a, p.Columns[2], "Remove This Column")
 	if len(p.Columns) != 2 || len(p.Columns[1].Views) != 13 {
 		t.Fatal("column removal lost tabs")
 	}
 	for _, v := range p.Columns[1].Views {
-		if v.ID == p.Columns[1].Active && !tt.Focused(a.title(v)) {
+		if v.ID == p.Columns[1].Active && !tt.Focused(contentLabel(a, v)) {
 			t.Fatal("removed column did not focus its destination")
 		}
 	}
@@ -200,7 +245,7 @@ func TestEmptyStartupAndColumnControls(t *testing.T) {
 func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
-	if _, err := a.state.AddColumn(); err != nil {
+	if _, err := a.state.AddColumn(p.Columns[len(p.Columns)-1].ID); err != nil {
 		t.Fatal(err)
 	}
 	a.state.RailExpanded = true
@@ -217,18 +262,18 @@ func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 	tt.Release(0, 100)
 	for _, r := range p.Columns {
 		previous := len(r.Views)
-		menu(t, tt, a, r, "New Terminal")
+		menu(t, tt, a, r, "Open View", "New Terminal")
 		if len(r.Views) != previous+1 {
 			t.Fatal("narrow region menu did not create a View")
 		}
 	}
-	menu(t, tt, a, a.state.Global, "New Terminal")
+	menu(t, tt, a, a.state.Global, "Open View", "New Terminal")
 	for len(p.Columns) > 1 {
-		menu(t, tt, a, p.Columns[len(p.Columns)-1], "Remove Column")
+		menu(t, tt, a, p.Columns[len(p.Columns)-1], "Remove This Column")
 	}
 	a.state.CenterPercent = 1
 	tt.Frame()
-	menu(t, tt, a, p.Columns[0], "New Terminal")
+	menu(t, tt, a, p.Columns[0], "Open View", "New Terminal")
 	regionMenu, ok := tt.Find(fmt.Sprintf("Region menu %d", p.Columns[0].ID))
 	if !ok {
 		t.Fatal("missing region menu")
@@ -237,8 +282,7 @@ func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 	if !ok || regionMenu.X+regionMenu.W > globalToggle.X {
 		t.Fatal("Global toggle overlaps region menu")
 	}
-	click(t, tt, "Perspective")
-	click(t, tt, "Review")
+	perspectiveMenu(t, tt, "Review")
 	if a.state.CurrentProject().ActivePerspective != layout.PerspectiveReview {
 		t.Fatal("narrow perspective selector did not work")
 	}

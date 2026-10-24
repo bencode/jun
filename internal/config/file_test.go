@@ -27,10 +27,10 @@ func snapshot(t *testing.T) *layout.State {
 	if err := s.SelectPerspective(layout.PerspectiveReview); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.AddColumn(); err != nil {
+	p := s.CurrentPerspective()
+	if _, err := s.AddColumn(p.Columns[0].ID); err != nil {
 		t.Fatal(err)
 	}
-	p := s.CurrentPerspective()
 	p.TopPercent = 62
 	p.ColumnSplits[0] = 39
 	p.BottomVisible = true

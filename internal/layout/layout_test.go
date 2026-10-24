@@ -2,6 +2,7 @@ package layout
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -10,7 +11,8 @@ func project(t *testing.T, s *State, name string) *Project {
 	if err := s.AddProject(name, "/"+name); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.AddColumn(); err != nil {
+	p := s.CurrentPerspective()
+	if _, err := s.AddColumn(p.Columns[len(p.Columns)-1].ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.OpenView(s.CurrentPerspective().Columns[1].ID, ViewTerminal, name); err != nil {
@@ -156,33 +158,37 @@ func TestColumnBoundsAndRemovalPreserveViews(t *testing.T) {
 	s := New()
 	project(t, s, "Jun")
 	p := s.CurrentPerspective()
-	id, err := s.AddColumn()
+	id, err := s.AddColumn(p.Columns[len(p.Columns)-1].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(p.Columns) != 3 || p.ColumnSplits[1] != 50 {
 		t.Fatal("three-column sizing")
 	}
-	if _, err := s.AddColumn(); err == nil {
+	if _, err := s.AddColumn(p.Columns[len(p.Columns)-1].ID); err == nil {
 		t.Fatal("accepted fourth column")
 	}
 	view, err := s.OpenView(id, ViewDiff, "Jun")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RemoveColumn(id); err != nil {
+	target, err := s.RemoveColumn(id)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if target != p.Columns[1].ID || p.Columns[1].Active != view {
+		t.Fatal("removal did not preserve the source selection")
 	}
 	if p.Columns[1].Views[1].ID != view {
 		t.Fatal("remove lost views")
 	}
-	if err := s.RemoveColumn(p.Columns[0].ID); err != nil {
+	if _, err := s.RemoveColumn(p.Columns[0].ID); err != nil {
 		t.Fatal(err)
 	}
 	if len(p.Columns[0].Views) != 3 {
 		t.Fatal("first column removal lost views")
 	}
-	if err := s.RemoveColumn(p.Columns[0].ID); err == nil {
+	if _, err := s.RemoveColumn(p.Columns[0].ID); err == nil {
 		t.Fatal("removed last column")
 	}
 }
@@ -201,7 +207,7 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 		func() error { return s.MoveView(9999, other.ID, 0) },
 		func() error { return s.SelectView(r.ID, other.Active) },
 		func() error { return s.CloseView(9999) },
-		func() error { return s.RemoveColumn(s.Global.ID) },
+		func() error { _, err := s.RemoveColumn(s.Global.ID); return err },
 		func() error { return s.SelectProject("missing") },
 		func() error { return s.SelectPerspective("missing") },
 		func() error { _, err := s.OpenView(r.ID, ViewTerminal, "missing"); return err },
@@ -235,5 +241,63 @@ func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAddColumnUsesAndValidatesAnchor(t *testing.T) {
+	s := New()
+	project(t, s, "A")
+	p := s.CurrentPerspective()
+	review := s.CurrentProject().Perspectives[PerspectiveReview]
+	other := project(t, s, "B").Perspectives[PerspectiveWork].Columns[0].ID
+	if err := s.SelectProject("A"); err != nil {
+		t.Fatal(err)
+	}
+	columns, splits, next := slices.Clone(p.Columns), slices.Clone(p.ColumnSplits), s.nextID
+	for _, id := range []RegionID{0, s.Global.ID, p.Bottom.ID, review.Columns[0].ID, other} {
+		if _, err := s.AddColumn(id); err == nil {
+			t.Fatalf("accepted invalid anchor %d", id)
+		}
+		if !slices.Equal(columns, p.Columns) || !slices.Equal(splits, p.ColumnSplits) || s.nextID != next {
+			t.Fatal("invalid anchor mutated layout")
+		}
+	}
+	id, err := s.AddColumn(columns[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Columns[0] != columns[0] || p.Columns[1].ID != id || p.Columns[2] != columns[1] || len(p.Columns[1].Views) != 0 {
+		t.Fatal("new empty column did not appear after anchor")
+	}
+}
+
+func TestRemovingEmptyColumnPreservesDestinationSelection(t *testing.T) {
+	for _, first := range []bool{false, true} {
+		s := New()
+		if err := s.AddProject("A", "/A"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SelectPerspective(PerspectiveReview); err != nil {
+			t.Fatal(err)
+		}
+		p := s.CurrentPerspective()
+		if _, err := s.AddColumn(p.Columns[0].ID); err != nil {
+			t.Fatal(err)
+		}
+		source, target := p.Columns[1], p.Columns[0]
+		if first {
+			source, target = target, source
+		}
+		view, err := s.OpenView(target.ID, ViewFile, "A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		destination, err := s.RemoveColumn(source.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if destination != target.ID || target.Active != view || len(p.Columns) != 1 {
+			t.Fatal("empty removal changed destination selection")
+		}
 	}
 }

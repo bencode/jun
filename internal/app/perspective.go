@@ -25,27 +25,43 @@ func (a *app) columns(c *ui.Context, columns []*layout.Region, splits []float32,
 		a.region(c, columns[0], index == 0)
 		return
 	}
+	p := a.state.CurrentPerspective()
+	count, bottom := len(p.Columns), p.BottomVisible
 	constrainedSplit(c, &splits[index], width, minimumRegionWidth, columnsMinimum(len(columns)-1),
 		func() { a.region(c, columns[0], index == 0) }, func() {
+			if a.state.CurrentPerspective() != p || len(p.Columns) != count || p.BottomVisible != bottom {
+				return
+			}
 			a.columns(c, columns[1:], splits, index+1, (width-1)*(1-splits[index]/100))
 		}, a.layoutChanged)
 }
 
-func (a *app) perspectiveSelect(c *ui.Context) {
+func (a *app) perspectiveSelect(c *ui.Context) ui.Element {
 	p := a.state.CurrentProject()
-	selected := a.perspectiveName(p.ActivePerspective)
-	options := []string{a.perspectiveName(layout.PerspectiveWork), a.perspectiveName(layout.PerspectiveReview)}
-	ui.Select(c, &selected, options).Width(110).Shrink(0).Label(a.text("Perspective", "视角")).OnChange(func() {
-		kind := layout.PerspectiveWork
-		if selected == options[1] {
-			kind = layout.PerspectiveReview
+	return ui.MenuButton(c, a.perspectiveName(p.ActivePerspective), a.perspectiveMenu).
+		Width(110).Height(32).Shrink(0).Justify(ui.SpaceBetween).
+		Label(a.text("Perspective", "视角")).Tooltip(a.text("Perspective and layout", "视角与布局"))
+}
+
+func (a *app) perspectiveMenu(m *ui.Menu) {
+	project := a.state.CurrentProject()
+	if project == nil {
+		return
+	}
+	for _, kind := range []layout.PerspectiveKind{layout.PerspectiveWork, layout.PerspectiveReview} {
+		if m.Item(a.perspectiveName(kind)).Checked(project.ActivePerspective == kind).Chosen() {
+			a.selectPerspective(kind)
 		}
-		if err := a.state.SelectPerspective(kind); err != nil {
-			a.report(err)
-		} else {
-			a.layoutChanged()
-		}
-	})
+	}
+	p := a.state.CurrentPerspective()
+	label := a.text("Show Bottom Region", "展开底部区域")
+	if p.BottomVisible {
+		label = a.text("Hide Bottom Region", "收起底部区域")
+	}
+	m.Separator()
+	if m.Item(label).Chosen() {
+		a.setBottomVisible(p.Bottom.ID, !p.BottomVisible)
+	}
 }
 
 // 200 DIPs keeps the perspective selector and region menu usable.
