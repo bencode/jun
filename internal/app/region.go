@@ -88,7 +88,7 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
 				}
 				a.drop(tab, r.ID, v.ID)
 				tab.Children(func() {
-					ui.Text(c, a.title(v)).SingleLine()
+					ui.Text(c, a.title(v)).MinWidth(0).MaxWidth(160).SingleLine().Ellipsis("…")
 					if v.ID == r.Active || tab.Hovered() || tab.FocusWithin() {
 						ui.Button(c, closeIcon).Padding(2, 4).Label(fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v))).
 							Tooltip(a.text("Close Tab", "关闭标签")).OnClick(func() { a.closeView(r.ID, v.ID) })
