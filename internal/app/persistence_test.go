@@ -28,6 +28,39 @@ func persistedMatches(t *testing.T, a *app, path string) {
 	}
 }
 
+func TestSaveRemovesSuccessfulExitBeforeNextFrame(t *testing.T) {
+	a := testNewApp(t)
+	path := filepath.Join(t.TempDir(), "config.json")
+	a.restoreConfig(path)
+	if err := a.state.AddProject("Jun", t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	a.restoreTerminals()
+	a.layoutChanged()
+	if err := a.saveLayout(); err != nil {
+		t.Fatal(err)
+	}
+	r := a.state.CurrentPerspective().Columns[0]
+	session := a.sessionFor(r.Active)
+	session.Terminal.Send([]byte("exit 0\n"))
+	waitTerminal(t, nil, func() bool {
+		select {
+		case <-session.Terminal.Done():
+			return true
+		default:
+			return false
+		}
+	})
+	event := &mygo.CloseEvent{}
+	a.beforeClose(event)
+	restored := testNewApp(t)
+	restored.restoreConfig(path)
+	restored.restoreTerminals()
+	if event.DefaultPrevented() || len(restored.state.CurrentPerspective().Columns[0].Views) != 0 || len(restored.bindings) != 0 {
+		t.Fatal("saving restored a successfully exited terminal")
+	}
+}
+
 func TestAutosaveWaitsForIdle(t *testing.T) {
 	a, tt := testApp(t)
 	path := filepath.Join(t.TempDir(), "config.json")

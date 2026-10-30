@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 )
@@ -71,6 +72,27 @@ func (s *Store) ForProject(projectName string) []*Session {
 		}
 	}
 	return result
+}
+
+func (s *Store) ReapSuccessful() ([]ID, error) {
+	var closed []ID
+	var errs []error
+	s.sessions = slices.DeleteFunc(s.sessions, func(session *Session) bool {
+		select {
+		case <-session.Terminal.Done():
+			if session.Terminal.ExitCode() != 0 {
+				return false
+			}
+			if err := session.Terminal.Close(); err != nil {
+				errs = append(errs, fmt.Errorf("terminal %d: %w", session.ID, err))
+			}
+			closed = append(closed, session.ID)
+			return true
+		default:
+			return false
+		}
+	})
+	return closed, errors.Join(errs...)
 }
 
 func (s *Store) CloseAll() error {

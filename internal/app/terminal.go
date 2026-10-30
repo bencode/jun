@@ -17,6 +17,13 @@ func (a *app) sessionFor(view layout.ViewID) *terminal.Session {
 
 func (a *app) hiddenTerminals(projectName string) []*terminal.Session {
 	return slices.DeleteFunc(a.terminals.ForProject(projectName), func(session *terminal.Session) bool {
+		select {
+		case <-session.Terminal.Done():
+			if session.Terminal.ExitCode() == 0 {
+				return true
+			}
+		default:
+		}
 		for _, id := range a.bindings {
 			if id == session.ID {
 				return true
@@ -55,6 +62,9 @@ func (a *app) terminalView(c *ui.Context, v *layout.View) {
 		if requested {
 			element.Focus()
 			a.pendingFocus = 0
+		}
+		if element.FocusWithin() {
+			a.focusedTerminal = v.ID
 		}
 		return
 	}

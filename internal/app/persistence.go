@@ -66,6 +66,7 @@ func (a *app) autosave(c *ui.Context) {
 }
 
 func (a *app) saveLayout() error {
+	a.reapExitedTerminals(a.focusedTerminal)
 	p := a.persistence
 	if p == nil || !p.enabled || !p.dirty {
 		return nil

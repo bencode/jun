@@ -94,3 +94,51 @@ func TestInvalidDirectoryDoesNotCreateSession(t *testing.T) {
 		t.Fatal("failed creation registered a session")
 	}
 }
+
+func TestReapOnlySuccessfulExits(t *testing.T) {
+	shell := filepath.Join(t.TempDir(), "shell")
+	if err := os.WriteFile(shell, []byte("#!/bin/sh\nexec /bin/sh -i\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", shell)
+	t.Setenv("ENV", "")
+	store := NewStore()
+	t.Cleanup(func() {
+		if err := store.CloseAll(); err != nil {
+			t.Error(err)
+		}
+	})
+	var sessions []*Session
+	for range 3 {
+		session, err := store.Create("Jun", t.TempDir(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sessions = append(sessions, session)
+	}
+	sessions[0].Terminal.Send([]byte("exit 0\n"))
+	sessions[1].Terminal.Send([]byte("printf '\\nFAILED_OUTPUT\\n'; exit 9\n"))
+	sessions[2].Terminal.Send([]byte("/bin/sh -c 'exit 0'; printf '\\nSHELL_ALIVE\\n'\n"))
+	for _, session := range sessions[:2] {
+		waitFor(t, func() bool {
+			select {
+			case <-session.Terminal.Done():
+				return true
+			default:
+				return false
+			}
+		})
+	}
+	waitFor(t, func() bool { return strings.Contains(sessions[2].Terminal.Text(), "\nSHELL_ALIVE\n") })
+	closed, err := store.ReapSuccessful()
+	if err != nil || len(closed) != 1 || closed[0] != sessions[0].ID || store.Get(sessions[0].ID) != nil {
+		t.Fatalf("successful session not reaped: %v, %v", closed, err)
+	}
+	if store.Get(sessions[1].ID) == nil || sessions[1].Terminal.ExitCode() != 9 ||
+		!strings.Contains(sessions[1].Terminal.Text(), "\nFAILED_OUTPUT\n") || store.Get(sessions[2].ID) == nil {
+		t.Fatal("reaping discarded a failure or a running shell")
+	}
+	if closed, err := store.ReapSuccessful(); len(closed) != 0 || err != nil {
+		t.Fatalf("repeated reaping changed sessions: %v, %v", closed, err)
+	}
+}

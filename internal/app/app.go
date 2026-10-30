@@ -27,14 +27,15 @@ type app struct {
 		id          layout.PerspectiveID
 		name, error string
 	}
-	terminals      *terminal.Store
-	bindings       map[layout.ViewID]terminal.ID
-	terminalErrors map[layout.ViewID]error
-	activeRegion   layout.RegionID
-	pendingFocus   layout.RegionID
-	scroll         map[layout.ViewID]*ui.ScrollState
-	errorMessage   string
-	errorOpen      bool
+	terminals       *terminal.Store
+	bindings        map[layout.ViewID]terminal.ID
+	terminalErrors  map[layout.ViewID]error
+	activeRegion    layout.RegionID
+	pendingFocus    layout.RegionID
+	focusedTerminal layout.ViewID
+	scroll          map[layout.ViewID]*ui.ScrollState
+	errorMessage    string
+	errorOpen       bool
 }
 
 func newApp() *app {

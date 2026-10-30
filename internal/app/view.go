@@ -5,6 +5,7 @@ import (
 )
 
 func (a *app) view(c *ui.Context) {
+	a.focusedTerminal = 0
 	c.SetTheme(a.theme)
 	ui.Row(c).Fill().Gap(0).AlignItems(ui.Stretch).Children(func() {
 		a.projectRail(c)
@@ -32,6 +33,9 @@ func (a *app) view(c *ui.Context) {
 		ui.Button(c, a.text("OK", "确定")).OnClick(func() { a.errorOpen = false })
 	})
 	a.persistenceDialog(c)
+	if a.reapExitedTerminals(a.focusedTerminal) {
+		c.Invalidate()
+	}
 	a.autosave(c)
 }
 
