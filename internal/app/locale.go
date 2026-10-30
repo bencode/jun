@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"path"
+	"regexp"
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
@@ -36,7 +38,7 @@ func (a *app) title(v *layout.View) string {
 }
 
 func (a *app) sessionTitle(s *terminal.Session) string {
-	title := strings.TrimSpace(s.Terminal.Title())
+	title := shortTitle(strings.TrimSpace(s.Terminal.Title()))
 	if title == "" {
 		title = fmt.Sprintf("%s %d", a.text("Terminal", "终端"), s.ID)
 	}
@@ -44,6 +46,17 @@ func (a *app) sessionTitle(s *terminal.Session) string {
 	case <-s.Terminal.Done():
 		title += fmt.Sprintf(a.text(" [exited %d]", " [已退出 %d]"), s.Terminal.ExitCode())
 	default:
+	}
+	return title
+}
+
+var shellPrompt = regexp.MustCompile(`^[^@\s]+@[^:\s]+:(.+)$`)
+
+// shortTitle keeps only the directory of a shell's "user@host:path" title;
+// titles that programs set are kept as they are.
+func shortTitle(title string) string {
+	if m := shellPrompt.FindStringSubmatch(title); m != nil {
+		return path.Base(m[1])
 	}
 	return title
 }

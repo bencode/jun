@@ -28,7 +28,7 @@ func persistedMatches(t *testing.T, a *app, path string) {
 	}
 }
 
-func TestSaveRemovesSuccessfulExitBeforeNextFrame(t *testing.T) {
+func TestSaveRemovesExitedTerminalBeforeNextFrame(t *testing.T) {
 	a := testNewApp(t)
 	path := filepath.Join(t.TempDir(), "config.json")
 	a.restoreConfig(path)
@@ -57,7 +57,7 @@ func TestSaveRemovesSuccessfulExitBeforeNextFrame(t *testing.T) {
 	restored.restoreConfig(path)
 	restored.restoreTerminals()
 	if event.DefaultPrevented() || len(restored.state.CurrentPerspective().Columns[0].Views) != 0 || len(restored.bindings) != 0 {
-		t.Fatal("saving restored a successfully exited terminal")
+		t.Fatal("saving restored an exited terminal")
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -72,9 +73,9 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 	a.reopenTerminal(r.ID, session.ID)
 	reopened = r.Views[len(r.Views)-1]
 	session.Terminal.Send([]byte("exit 9\n"))
-	waitTerminal(t, tt, func() bool { return strings.Contains(a.title(reopened), "exited 9") })
-	if !strings.Contains(session.Terminal.Text(), "STILL_ALIVE") {
-		t.Fatal("natural exit discarded output")
+	waitTerminal(t, tt, func() bool { return a.terminals.Get(session.ID) == nil })
+	if slices.Contains(r.Views, reopened) {
+		t.Fatal("nonzero exit kept the reopened tab")
 	}
 }
 

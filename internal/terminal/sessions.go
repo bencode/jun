@@ -74,23 +74,30 @@ func (s *Store) ForProject(projectName string) []*Session {
 	return result
 }
 
-func (s *Store) ReapSuccessful() ([]ID, error) {
+// Exited reports whether the shell ran and has ended, whatever its exit code:
+// a shell's code is only the status of its last command. A shell that could
+// not start (-1) does not count, so its error stays visible.
+func (s *Session) Exited() bool {
+	select {
+	case <-s.Terminal.Done():
+		return s.Terminal.ExitCode() != -1
+	default:
+		return false
+	}
+}
+
+func (s *Store) ReapExited() ([]ID, error) {
 	var closed []ID
 	var errs []error
 	s.sessions = slices.DeleteFunc(s.sessions, func(session *Session) bool {
-		select {
-		case <-session.Terminal.Done():
-			if session.Terminal.ExitCode() != 0 {
-				return false
-			}
-			if err := session.Terminal.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("terminal %d: %w", session.ID, err))
-			}
-			closed = append(closed, session.ID)
-			return true
-		default:
+		if !session.Exited() {
 			return false
 		}
+		if err := session.Terminal.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("terminal %d: %w", session.ID, err))
+		}
+		closed = append(closed, session.ID)
+		return true
 	})
 	return closed, errors.Join(errs...)
 }

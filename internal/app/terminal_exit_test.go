@@ -7,7 +7,7 @@ import (
 	"github.com/bencode/jun/internal/layout"
 )
 
-func TestSuccessfulExitSelectsNeighborAndEmptyRegion(t *testing.T) {
+func TestExitSelectsNeighborAndEmptyRegion(t *testing.T) {
 	a, tt := testApp(t)
 	r := a.state.CurrentPerspective().Columns[0]
 	left := r.Views[0]
@@ -22,19 +22,19 @@ func TestSuccessfulExitSelectsNeighborAndEmptyRegion(t *testing.T) {
 	tt.Frame()
 	for _, pair := range [][2]*layout.View{{middle, right}, {right, left}, {left, nil}} {
 		session := a.sessionFor(pair[0].ID)
-		session.Terminal.Send([]byte("exit 0\n"))
+		session.Terminal.Send([]byte("false; exit\n"))
 		waitTerminal(t, tt, func() bool { return a.terminals.Get(session.ID) == nil })
 		tt.Frame()
 		if pair[1] != nil {
 			if r.Active != pair[1].ID || !tt.Focused(contentLabel(a, pair[1])) {
-				t.Fatal("successful exit did not focus the adjacent surviving tab")
+				t.Fatal("exit did not focus the adjacent surviving tab")
 			}
 		} else if len(r.Views) != 0 || !tt.Focused(fmt.Sprintf("Region menu %d", r.ID)) {
 			t.Fatal("last exit did not preserve and focus the empty region")
 		}
 	}
 	if len(a.hiddenTerminals("Jun")) != 0 {
-		t.Fatal("successful exits can be reopened")
+		t.Fatal("exited sessions can be reopened")
 	}
 }
 
@@ -85,7 +85,7 @@ func TestBackgroundExitDoesNotChangeCurrentWork(t *testing.T) {
 	}
 }
 
-func TestNormallyExitedHiddenSessionCannotBeReopened(t *testing.T) {
+func TestExitedHiddenSessionCannotBeReopened(t *testing.T) {
 	a, tt := testApp(t)
 	r := a.state.CurrentPerspective().Columns[0]
 	view := r.Views[0]
@@ -94,7 +94,7 @@ func TestNormallyExitedHiddenSessionCannotBeReopened(t *testing.T) {
 	if len(a.hiddenTerminals("Jun")) != 1 {
 		t.Fatal("manual close did not preserve the running session")
 	}
-	session.Terminal.Send([]byte("exit 0\n"))
+	session.Terminal.Send([]byte("false; exit\n"))
 	waitTerminal(t, nil, func() bool {
 		select {
 		case <-session.Terminal.Done():
@@ -104,7 +104,7 @@ func TestNormallyExitedHiddenSessionCannotBeReopened(t *testing.T) {
 		}
 	})
 	if len(a.hiddenTerminals("Jun")) != 0 {
-		t.Fatal("successful exit offered for reopening before the next frame")
+		t.Fatal("exit offered for reopening before the next frame")
 	}
 	tt.Frame()
 	if a.terminals.Get(session.ID) != nil {
