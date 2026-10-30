@@ -17,12 +17,8 @@ func (a *app) sessionFor(view layout.ViewID) *terminal.Session {
 
 func (a *app) hiddenTerminals(projectName string) []*terminal.Session {
 	return slices.DeleteFunc(a.terminals.ForProject(projectName), func(session *terminal.Session) bool {
-		select {
-		case <-session.Terminal.Done():
-			if session.Terminal.ExitCode() == 0 {
-				return true
-			}
-		default:
+		if session.Exited() {
+			return true
 		}
 		for _, id := range a.bindings {
 			if id == session.ID {

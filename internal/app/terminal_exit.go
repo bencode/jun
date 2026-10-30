@@ -8,7 +8,7 @@ import (
 )
 
 func (a *app) reapExitedTerminals(focused layout.ViewID) bool {
-	closed, cleanupErr := a.terminals.ReapSuccessful()
+	closed, cleanupErr := a.terminals.ReapExited()
 	if len(closed) == 0 && cleanupErr == nil {
 		return false
 	}

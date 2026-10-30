@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func TestInvalidDirectoryDoesNotCreateSession(t *testing.T) {
 	}
 }
 
-func TestReapOnlySuccessfulExits(t *testing.T) {
+func TestReapExitedShellsRegardlessOfCode(t *testing.T) {
 	shell := filepath.Join(t.TempDir(), "shell")
 	if err := os.WriteFile(shell, []byte("#!/bin/sh\nexec /bin/sh -i\n"), 0700); err != nil {
 		t.Fatal(err)
@@ -116,10 +117,15 @@ func TestReapOnlySuccessfulExits(t *testing.T) {
 		}
 		sessions = append(sessions, session)
 	}
+	t.Setenv("SHELL", filepath.Join(t.TempDir(), "missing"))
+	broken, err := store.Create("Jun", t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sessions[0].Terminal.Send([]byte("exit 0\n"))
-	sessions[1].Terminal.Send([]byte("printf '\\nFAILED_OUTPUT\\n'; exit 9\n"))
+	sessions[1].Terminal.Send([]byte("false; exit\n"))
 	sessions[2].Terminal.Send([]byte("/bin/sh -c 'exit 0'; printf '\\nSHELL_ALIVE\\n'\n"))
-	for _, session := range sessions[:2] {
+	for _, session := range []*Session{sessions[0], sessions[1], broken} {
 		waitFor(t, func() bool {
 			select {
 			case <-session.Terminal.Done():
@@ -130,15 +136,14 @@ func TestReapOnlySuccessfulExits(t *testing.T) {
 		})
 	}
 	waitFor(t, func() bool { return strings.Contains(sessions[2].Terminal.Text(), "\nSHELL_ALIVE\n") })
-	closed, err := store.ReapSuccessful()
-	if err != nil || len(closed) != 1 || closed[0] != sessions[0].ID || store.Get(sessions[0].ID) != nil {
-		t.Fatalf("successful session not reaped: %v, %v", closed, err)
+	closed, err := store.ReapExited()
+	if err != nil || !slices.Equal(closed, []ID{sessions[0].ID, sessions[1].ID}) {
+		t.Fatalf("exited sessions not reaped: %v, %v", closed, err)
 	}
-	if store.Get(sessions[1].ID) == nil || sessions[1].Terminal.ExitCode() != 9 ||
-		!strings.Contains(sessions[1].Terminal.Text(), "\nFAILED_OUTPUT\n") || store.Get(sessions[2].ID) == nil {
-		t.Fatal("reaping discarded a failure or a running shell")
+	if store.Get(sessions[2].ID) == nil || store.Get(broken.ID) == nil || broken.Terminal.ExitCode() != -1 {
+		t.Fatal("reaping discarded a running shell or a start failure")
 	}
-	if closed, err := store.ReapSuccessful(); len(closed) != 0 || err != nil {
+	if closed, err := store.ReapExited(); len(closed) != 0 || err != nil {
 		t.Fatalf("repeated reaping changed sessions: %v, %v", closed, err)
 	}
 }
