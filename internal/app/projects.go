@@ -64,8 +64,9 @@ func (a *app) chooseProject() {
 			}
 			a.projectForm.path = paths[0]
 			a.projectForm.name = filepath.Base(filepath.Clean(paths[0]))
-			a.projectForm.error = ""
-			a.projectForm.open = true
+			// Ask for a name only when the directory name cannot be used as is.
+			a.submitProject()
+			a.projectForm.open = a.projectForm.error != ""
 		})
 	}()
 }
