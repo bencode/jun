@@ -8,7 +8,7 @@ Opening a new project creates one perspective named Work with one real terminal,
 
 ## Development
 
-Requires macOS 13 or newer, Xcode command line tools, and Go 1.27.1 or newer. Use an isolated development config so development and packaged builds do not share saved layouts:
+Requires macOS 13 or newer, Xcode command line tools, and Go 1.27.3 or newer. Use an isolated development config so development and packaged builds do not share saved layouts:
 
 ```sh
 JUN_CONFIG_PATH="$PWD/priv/config.dev.json" go run ./cmd/jun
