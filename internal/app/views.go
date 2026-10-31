@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -23,7 +24,7 @@ func (a *app) placeholder(c *ui.Context, v *layout.View) {
 	}
 	ui.Scroll(c.Key(v.ID)).Fill().TrackScroll(a.scroll[v.ID]).Children(func() {
 		ui.Column(c).Padding(28).Gap(12).FillWidth().Children(func() {
-			ui.Text(c, a.kindName(v.Kind)).FontSize(22).Bold()
+			ui.Text(c, a.kindName(v.Kind)).FontSize(theme.Heading).Bold()
 			ui.Text(c, a.text("Layout preview", "布局预览")).TextColor(a.theme.Accent)
 			if v.ProjectName != "" {
 				ui.Text(c, v.ProjectName).Bold()

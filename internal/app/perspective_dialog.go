@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -38,7 +39,7 @@ func (a *app) perspectiveDialog(c *ui.Context) {
 			title, action = a.text("Rename Perspective", "重命名视角"), a.text("Rename", "重命名")
 		}
 		ui.Column(c).Width(400).Gap(12).Children(func() {
-			ui.Text(c, title).FontSize(18).Bold()
+			ui.Text(c, title).FontSize(theme.Title).Bold()
 			ui.Text(c, f.project).TextColor(a.theme.TextMuted)
 			ui.TextInput(c, &f.name).Label(a.text("Perspective name", "视角名称")).AutoFocus().FillWidth().OnSubmit(a.submitPerspective)
 			if f.error != "" {
