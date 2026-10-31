@@ -16,7 +16,6 @@ type app struct {
 	persistence *persistence
 	window      *mygo.Window
 	theme       *ui.Theme
-	chinese     bool
 	projectForm struct {
 		open              bool
 		name, path, error string

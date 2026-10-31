@@ -45,6 +45,7 @@ type State struct {
 	Global        *Region    `json:"global"`
 	GlobalVisible bool       `json:"globalVisible"`
 	RailExpanded  bool       `json:"railExpanded"`
+	Chinese       bool       `json:"chinese,omitempty"`
 	CenterPercent float32    `json:"centerPercent"`
 	nextID        uint64
 }

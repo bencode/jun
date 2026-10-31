@@ -165,7 +165,7 @@ func TestOpenViewWithoutProject(t *testing.T) {
 	if len(global.Views) != 1 || global.Views[0].Kind != layout.ViewAgents || global.Views[0].ProjectName != "" || len(a.bindings) != 0 {
 		t.Fatal("Agents preview required a project or started a shell")
 	}
-	a.chinese = true
+	a.state.Chinese = true
 	tt.Frame()
 	menu(t, tt, a, global, "打开视图", "Agents（预览）")
 	if len(global.Views) != 1 || !tt.HasText("布局预览") {

@@ -30,8 +30,8 @@ func (a *app) applicationMenu() *mygo.Menu {
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
-			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.chinese, Click: action(func() { a.setLanguage(false) })},
-			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.chinese, Click: action(func() { a.setLanguage(true) })},
+			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.state.Chinese, Click: action(func() { a.setLanguage(false) })},
+			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.state.Chinese, Click: action(func() { a.setLanguage(true) })},
 		}},
 		{Role: mygo.RoleWindowMenu},
 	})
