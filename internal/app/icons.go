@@ -14,8 +14,11 @@ var settingsIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/sv
 
 var downIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>`))
 
+// logoIcon is Jun's mark: a stretch of the Euler spiral, the curve whose
+// curvature grows evenly along it, from straight into a hook.
+var logoIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="442" height="656" viewBox="275 184 442 656" fill="none" stroke="currentColor" stroke-width="96" stroke-linecap="round"><path d="M669 232C658.1 263 652.1 295.6 649 328.3 645.8 361 645.4 394 645.4 426.8 645.4 459.7 645.6 492.6 643.8 525.4 641.9 558.3 637.9 591.1 629.4 622.8 620.9 654.6 607.8 685.3 588.8 712.1 569.8 739 544.7 761.8 515.1 776.1 485.5 790.4 451.3 795.8 419.1 789.1 386.9 782.4 357.1 763.2 339.6 735.4 322.1 707.5 317.8 671.2 330.4 640.9"/></svg>`))
+
 const (
-	logo       = "J"
 	moreIcon   = "⋯"
 	closeIcon  = "×"
 	globalIcon = "◧"

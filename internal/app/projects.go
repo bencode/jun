@@ -27,9 +27,11 @@ func (a *app) projectRail(c *ui.Context) {
 		background = a.theme.Selection
 	}
 	rail.Background(background).Children(func() {
-		ui.Button(c, logo).Height(36).FillWidth().Label(a.text("Toggle project names", "展开或收起项目名称")).
-			Tooltip(a.text("Toggle project names", "展开或收起项目名称")).
-			OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
+		toggle := a.text("Toggle project names", "展开或收起项目名称")
+		ui.ButtonBase(c.Key("logo")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
+			Label(toggle).Tooltip(toggle).Children(func() {
+			ui.Icon(c, logoIcon).Height(20).Shrink(0)
+		}).OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
 		ui.Scroll(c).Grow(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Gap(6).Children(func() {
 				// Without a home, paths show in full.
