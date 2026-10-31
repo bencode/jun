@@ -18,11 +18,20 @@ var downIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" w
 // curvature grows evenly along it, from straight into a hook.
 var logoIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="442" height="656" viewBox="275 184 442 656" fill="none" stroke="currentColor" stroke-width="96" stroke-linecap="round"><path d="M669 232C658.1 263 652.1 295.6 649 328.3 645.8 361 645.4 394 645.4 426.8 645.4 459.7 645.6 492.6 643.8 525.4 641.9 558.3 637.9 591.1 629.4 622.8 620.9 654.6 607.8 685.3 588.8 712.1 569.8 739 544.7 761.8 515.1 776.1 485.5 790.4 451.3 795.8 419.1 789.1 386.9 782.4 357.1 763.2 339.6 735.4 322.1 707.5 317.8 671.2 330.4 640.9"/></svg>`))
 
-const (
-	moreIcon   = "⋯"
-	closeIcon  = "×"
-	globalIcon = "◧"
-)
+var moreIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>`))
+
+var globalIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg>`))
+
+var closeIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>`))
+
+var addIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`))
+
+// iconButton is a square button of an icon, labeled for assistive
+// technology and its tooltip.
+func iconButton(c *ui.Context, icon *ui.SVG, label string, size, iconSize float32) ui.Element {
+	return ui.ButtonBase(c).Width(size).Height(size).Shrink(0).Justify(ui.Center).
+		Label(label).Tooltip(label).Children(func() { ui.Icon(c, icon).Size(iconSize, iconSize) })
+}
 
 // projectAbbrev tells projects apart in the collapsed rail with two
 // characters: the initials of the name's first two words, words parted by

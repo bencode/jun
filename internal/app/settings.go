@@ -7,8 +7,8 @@ import (
 
 func (a *app) settingsButton(c *ui.Context) {
 	label := a.text("Settings", "设置")
-	ui.ButtonBase(c.Key("settings")).Height(36).FillWidth().Shrink(0).Padding(0, 10).Gap(8).Justify(ui.Start).
-		Label(label).Tooltip(label).Children(func() {
+	a.railAction(ui.ButtonBase(c.Key("settings")).Height(36).FillWidth().Shrink(0).Padding(0, 10).Gap(8).Justify(ui.Start).
+		Label(label).Tooltip(label)).Children(func() {
 		ui.Icon(c, settingsIcon).Size(18, 18).Shrink(0)
 		if a.state.RailExpanded {
 			ui.Text(c, label).SingleLine()

@@ -8,6 +8,7 @@ import (
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
@@ -50,7 +51,7 @@ type app struct {
 }
 
 func newApp(runtimeDir string) *app {
-	return &app{state: layout.New(), theme: ui.DarkTheme(), scroll: map[layout.ViewID]*ui.ScrollState{},
+	return &app{state: layout.New(), theme: theme.UI(), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
 		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
 		agentWide: map[layout.ViewID]bool{}}
