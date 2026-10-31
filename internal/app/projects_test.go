@@ -104,3 +104,21 @@ func TestDropDirectoryOnRailOpensProject(t *testing.T) {
 		t.Fatal("a dropped file opened as a project")
 	}
 }
+
+func TestProjectAbbrevAndShortPath(t *testing.T) {
+	for name, want := range map[string]string{
+		"jun": "Ju", "jun2": "J2", "youshu": "Yo", "cc-mission-control": "CM", "myApp": "MA", "有数": "有数", "x": "X",
+	} {
+		if got := projectAbbrev(name); got != want {
+			t.Errorf("projectAbbrev(%q) = %q, want %q", name, got, want)
+		}
+	}
+	for cwd, want := range map[string]string{
+		"/Users/me": "~", "/Users/me/work/lesscap/jun": "~/work/lesscap/jun", "/Users/me/a/b/c/d": "~/…/c/d",
+		"/opt/a/b/c/d": "/…/c/d", "/Users/meta/x": "/Users/meta/x",
+	} {
+		if got := shortPath(cwd, "/Users/me"); got != want {
+			t.Errorf("shortPath(%q) = %q, want %q", cwd, got, want)
+		}
+	}
+}

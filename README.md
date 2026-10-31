@@ -27,7 +27,7 @@ The **Perspective** menu lists the current project’s perspectives in creation 
 
 The rail shows icons when collapsed and the current perspective name when expanded; its tooltip includes the project and full perspective name. Perspective is disabled without an open project. Switching projects restores that project’s selected perspective. Global remains independent. Duplicating and reordering perspectives are deferred.
 
-Right-click a project in the rail for **Rename Project…** and **Remove Project…**. Renaming keeps its perspectives, tabs and terminal sessions, with the same name rules as opening a project. Removing always asks first; it closes all of the project’s terminals, including closed tabs’ sessions and any agents running in them, and its views moved into Global or other projects. The directory stays on disk.
+In the rail, each project shows as a colored tile of a two-character abbreviation: the initials of its name’s first two words, words parted by separators, camelCase and digits (`cc-mission-control` → CM, `jun2` → J2), or else its first two letters (`jun` → Ju). The color follows the name. Expanded, the rail adds the project’s name and its directory, with home as `~` and long paths cut to their last two parts. A project with agents waiting for you shows an orange dot on its tile, or their number when expanded. Right-click a project in the rail for **Rename Project…** and **Remove Project…**. Renaming keeps its perspectives, tabs and terminal sessions, with the same name rules as opening a project. Removing always asks first; it closes all of the project’s terminals, including closed tabs’ sessions and any agents running in them, and its views moved into Global or other projects. The directory stays on disk.
 
 ## Opening views
 
