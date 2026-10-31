@@ -32,6 +32,7 @@ func (a *app) projectRail(c *ui.Context) {
 			Label(toggle).Tooltip(toggle).Children(func() {
 			ui.Icon(c, logoIcon).Height(20).Shrink(0)
 		}).OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
+		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
 		ui.Scroll(c).Grow(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Gap(6).Children(func() {
 				// Without a home, paths show in full.
@@ -40,10 +41,14 @@ func (a *app) projectRail(c *ui.Context) {
 				for _, p := range a.state.Projects {
 					a.projectButton(c, p, waiting[p.Name], home)
 				}
-				ui.Button(c, "+").Height(36).FillWidth().Label(a.text("Add Project", "添加项目")).
-					Tooltip(a.text("Add Project", "添加项目")).OnClick(a.chooseProject)
+				add := a.text("Add Project", "添加项目")
+				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
+					Label(add).Tooltip(add)).Children(func() {
+					ui.Icon(c, addIcon).Size(18, 18).Shrink(0)
+				}).OnClick(a.chooseProject)
 			})
 		})
+		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
 		a.perspectiveButton(c)
 		a.settingsButton(c)
 	})
@@ -63,8 +68,12 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home 
 		height = 44
 	}
 	waitingLabel := fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), waiting)
+	active := p.Name == a.state.ActiveProject
 	b := ui.ButtonBase(c.Key(p.Name)).Height(height).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
 		Label(p.Name).Tooltip(p.Name + " " + p.CWD).Children(func() {
+		if active {
+			ui.Box(c).Absolute().Left(0).Top((height - 16) / 2).Width(2).Height(16).Radius(1).Background(a.theme.Accent)
+		}
 		ui.Box(c).Width(32).Height(32).Shrink(0).Radius(8).Background(projectColor(p.Name)).Center().Children(func() {
 			ui.Text(c, projectAbbrev(p.Name)).Bold().TextColor(ui.RGB(255, 255, 255))
 			if waiting > 0 && !expanded {
@@ -83,10 +92,18 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home 
 			ui.Text(c, fmt.Sprintf("●%d", waiting)).FontSize(11).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
 		}
 	})
-	if p.Name == a.state.ActiveProject {
-		b.Background(a.theme.Selection)
+	if active {
+		b.Background(a.theme.SurfaceHover)
 	}
 	b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
+}
+
+// railAction quiets a secondary rail button until it is hovered.
+func (a *app) railAction(b ui.Element) ui.Element {
+	if b.Hovered() {
+		return b.TextColor(a.theme.Text)
+	}
+	return b.TextColor(a.theme.TextMuted)
 }
 
 // shortPath shows home as "~" and keeps the last two parts of a long path.

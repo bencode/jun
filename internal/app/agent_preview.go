@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bencode/jun/internal/terminal"
+	"github.com/bencode/jun/internal/theme"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -74,7 +75,7 @@ type preview struct {
 // for a frame once its view fits a new grid.
 func newPreview(invalidate func()) (*preview, error) {
 	p := &preview{conn: &discardConn{done: make(chan struct{})}, seen: time.Now()}
-	term, err := ghostty.New(ghostty.Options{Conn: p.conn, ResizeByConn: true, Theme: ghostty.DarkTheme(), Scrollback: -1})
+	term, err := ghostty.New(ghostty.Options{Conn: p.conn, ResizeByConn: true, Theme: theme.Terminal(), Scrollback: -1})
 	if err != nil {
 		return nil, err
 	}

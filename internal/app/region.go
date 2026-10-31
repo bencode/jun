@@ -27,12 +27,16 @@ func (a *app) region(c *ui.Context, r *layout.Region) {
 		if !current() {
 			return
 		}
-		ui.Row(c).Height(40).FillWidth().AlignItems(ui.Center).Background(a.theme.Surface).Gap(2).Children(func() {
-			a.tabs(c, r, views)
-			a.regionMenu(c, r)
-			if p := a.state.CurrentPerspective(); p != nil && r == p.Columns[len(p.Columns)-1] {
-				ui.Box(c).Width(38).Shrink(0)
-			}
+		// The tabs paint over the line under them, so the active tab opens onto its content.
+		ui.Box(c).Height(40).FillWidth().Shrink(0).Background(a.theme.Surface).Children(func() {
+			ui.Box(c).Absolute().Left(0).Right(0).Bottom(0).Height(1).Background(a.theme.Border)
+			ui.Row(c).Absolute().Left(0).Top(0).Right(0).Bottom(0).AlignItems(ui.Center).Gap(2).Children(func() {
+				a.tabs(c, r, views)
+				a.regionMenu(c, r)
+				if p := a.state.CurrentPerspective(); p != nil && r == p.Columns[len(p.Columns)-1] {
+					ui.Box(c).Width(36).Shrink(0)
+				}
+			})
 		})
 		if !current() {
 			return
@@ -88,10 +92,17 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View) {
 				}
 				a.drop(tab, r.ID, v.ID)
 				tab.Children(func() {
-					ui.Text(c, a.title(v)).MinWidth(0).MaxWidth(160).SingleLine().Ellipsis("…")
+					title := ui.Text(c, a.title(v)).MinWidth(0).MaxWidth(160).SingleLine().Ellipsis("…")
+					if v.ID != r.Active {
+						title.TextColor(a.theme.TextMuted)
+					}
 					if v.ID == r.Active || tab.Hovered() || tab.FocusWithin() {
-						ui.Button(c, closeIcon).Padding(2, 4).Label(fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v))).
+						iconButton(c, closeIcon, fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v)), 20, 12).
 							Tooltip(a.text("Close Tab", "关闭标签")).OnClick(func() { a.closeView(r.ID, v.ID) })
+					}
+					// Last, so that coming and going it leaves the title and close button in place.
+					if v.ID == r.Active && r.ID == a.activeRegion {
+						ui.Box(c).Absolute().Top(0).Left(0).Right(0).Height(2).Background(a.theme.Accent)
 					}
 				})
 			}

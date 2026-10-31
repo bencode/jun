@@ -38,8 +38,8 @@ func (a *app) applicationMenu() *mygo.Menu {
 }
 
 func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
-	button := ui.Button(c, moreIcon).Width(30).Height(32).Shrink(0).
-		Label(fmt.Sprintf("%s %d", a.text("Region menu", "区域菜单"), r.ID)).Tooltip(a.text("Region actions", "区域操作"))
+	button := iconButton(c, moreIcon, fmt.Sprintf("%s %d", a.text("Region menu", "区域菜单"), r.ID), 32, 16).
+		Tooltip(a.text("Region actions", "区域操作"))
 	if a.pendingFocus == r.ID && r.Active == 0 {
 		button.Focus()
 		a.pendingFocus = 0
