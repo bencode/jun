@@ -4,7 +4,7 @@ A native, GPU-rendered workspace for working with terminal agents. Built with Go
 
 Jun currently provides the macOS terminal workflow and configuration recovery: projects rooted at local directories, named perspectives, one to three columns, a shared bottom region, and an independent Global region. Each region holds movable, closable tabs.
 
-Opening a new project creates one perspective named Work with one real terminal, running your login shell in the project directory. Additional perspectives start with one empty column; the bottom and Global regions start empty and hidden. Command entrypoints arrive in I03, Agent overview in I04, and file/diff Review in I05.
+Opening a new project creates one perspective named Work with one real terminal, running your login shell in the project directory. Additional perspectives start with one empty column; the bottom and Global regions start empty and hidden. Command entrypoints arrive in I03 and file/diff Review in I05.
 
 ## Development
 
@@ -29,9 +29,11 @@ The rail shows icons when collapsed and the current perspective name when expand
 
 ## Opening views
 
-Columns, the shared bottom region, and Global all offer the same **Open View** menu: **New Terminal**, **Agents (Preview)**, and **Files (Preview)**. New projects still start with one terminal. Agents and Files currently show explicitly labeled layout previews; Agent data and file reading arrive in later iterations. There is no file-opening action yet.
+Columns, the shared bottom region, and Global all offer the same **Open View** menu: **New Terminal**, **Agents**, and **Files (Preview)**. New projects still start with one terminal. Files currently shows an explicitly labeled layout preview; file reading arrives in a later iteration. There is no file-opening action yet.
 
-Opening the same preview type and source project again in a region selects its existing tab. Other regions can hold independent views. Files previews retain the project they were opened from when moved into Global or when switching projects. Without a selected project, Global can open an Agents preview; New Terminal and Files are disabled.
+**Agents** shows every Claude Code, Codex and Pi running in Jun’s terminals, across all projects, with the most in need of you first: waiting, then working, then idle. A narrow region such as Global lists them; a wide one shows a wall of cards with a read-only, live copy of each agent’s screen. Clicking an agent shows its tab, switching project and perspective as needed; when its tab was closed, the terminal reopens in the Agents view’s region. Jun recognizes an agent by the terminal’s foreground process, checked every second, and reads its status from its title and screen, as heuristics that can miss what a new agent version shows.
+
+Opening the same preview type and source project again in a region selects its existing tab. Other regions can hold independent views. Files previews retain the project they were opened from when moved into Global or when switching projects. Without a selected project, Global can open Agents; New Terminal and Files are disabled.
 
 ## Layout and tab actions
 

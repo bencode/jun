@@ -13,3 +13,5 @@ require (
 )
 
 tool github.com/egoist/mygo/cmd/mygo
+
+replace github.com/egoist/mygo => github.com/bencode/mygo v0.7.4-0.20261030154123-e78dff14b2cb

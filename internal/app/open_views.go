@@ -13,7 +13,7 @@ func (a *app) openViewMenu(m *ui.Menu, target layout.RegionID) {
 	if m.Item(a.text("New Terminal", "新建终端")).Shortcut(ui.Super, ui.KeyT).Disabled(noProject).Chosen() {
 		a.newTerminal(target)
 	}
-	if m.Item(a.text("Agents (Preview)", "Agents（预览）")).Chosen() {
+	if m.Item("Agents").Chosen() {
 		a.openPreview(target, layout.ViewAgents)
 	}
 	if m.Item(a.text("Files (Preview)", "文件树（预览）")).Disabled(noProject).Chosen() {

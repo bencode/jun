@@ -68,12 +68,13 @@ func TestOpenViewEntrypoints(t *testing.T) {
 					label  string
 					kind   layout.ViewKind
 					source string
+					text   string
 				}{
-					{"Agents (Preview)", layout.ViewAgents, ""}, {"Files (Preview)", layout.ViewTree, "Jun"},
+					{"Agents", layout.ViewAgents, "", "No agents running"}, {"Files (Preview)", layout.ViewTree, "Jun", "Layout preview"},
 				} {
 					menu(t, tt, a, r, "Open View", option.label)
 					view := r.Views[len(r.Views)-1]
-					if view.Kind != option.kind || view.ProjectName != option.source || !tt.Focused(a.title(view)) || !tt.HasText("Layout preview") {
+					if view.Kind != option.kind || view.ProjectName != option.source || !tt.Focused(a.title(view)) || !tt.HasText(option.text) {
 						t.Fatal("preview did not retain type/source or focus its tab")
 					}
 					menu(t, tt, a, r, "Open View", "New Terminal")
@@ -99,7 +100,7 @@ func TestPreviewSourceAndPersistence(t *testing.T) {
 	global := a.state.Global
 	menu(t, tt, a, global, "Open View", "Files (Preview)")
 	fromA := global.Views[0]
-	menu(t, tt, a, global, "Open View", "Agents (Preview)")
+	menu(t, tt, a, global, "Open View", "Agents")
 	agents := global.Active
 	a.projectForm.name, a.projectForm.path = "B", t.TempDir()
 	a.submitProject()
@@ -109,7 +110,7 @@ func TestPreviewSourceAndPersistence(t *testing.T) {
 	if fromA.ProjectName != "A" || fromB.ProjectName != "B" || fromA.ID == fromB.ID {
 		t.Fatal("project switch rebound the Files preview")
 	}
-	menu(t, tt, a, global, "Open View", "Agents (Preview)")
+	menu(t, tt, a, global, "Open View", "Agents")
 	if len(global.Views) != 3 || global.Active != agents {
 		t.Fatal("Agents preview acquired a project-specific identity")
 	}
@@ -158,7 +159,7 @@ func TestOpenViewWithoutProject(t *testing.T) {
 			t.Fatalf("%s was enabled without a project", label)
 		}
 	}
-	if err := tt.ChooseMenuItem("Agents (Preview)"); err != nil {
+	if err := tt.ChooseMenuItem("Agents"); err != nil {
 		t.Fatal(err)
 	}
 	global := a.state.Global
@@ -167,8 +168,8 @@ func TestOpenViewWithoutProject(t *testing.T) {
 	}
 	a.state.Chinese = true
 	tt.Frame()
-	menu(t, tt, a, global, "打开视图", "Agents（预览）")
-	if len(global.Views) != 1 || !tt.HasText("布局预览") {
+	menu(t, tt, a, global, "打开视图", "Agents")
+	if len(global.Views) != 1 || !tt.HasText("没有正在运行的 agent") {
 		t.Fatal("translated preview entry did not reuse its view")
 	}
 }

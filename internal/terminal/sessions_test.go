@@ -28,7 +28,7 @@ func TestSessionsRunWithoutViewsAndKeepIndependentDirectories(t *testing.T) {
 	}
 	t.Setenv("SHELL", shell)
 	t.Setenv("ENV", "")
-	store := NewStore()
+	store := NewStore(t.TempDir())
 	t.Cleanup(func() {
 		if err := store.CloseAll(); err != nil {
 			t.Error(err)
@@ -85,7 +85,7 @@ func TestSessionsRunWithoutViewsAndKeepIndependentDirectories(t *testing.T) {
 }
 
 func TestInvalidDirectoryDoesNotCreateSession(t *testing.T) {
-	store := NewStore()
+	store := NewStore(t.TempDir())
 	for _, cwd := range []string{"", "relative", filepath.Join(t.TempDir(), "missing")} {
 		if _, err := store.Create("A", cwd, nil); err == nil {
 			t.Fatalf("accepted directory %q", cwd)
@@ -103,7 +103,7 @@ func TestReapExitedShellsRegardlessOfCode(t *testing.T) {
 	}
 	t.Setenv("SHELL", shell)
 	t.Setenv("ENV", "")
-	store := NewStore()
+	store := NewStore(t.TempDir())
 	t.Cleanup(func() {
 		if err := store.CloseAll(); err != nil {
 			t.Error(err)
@@ -145,5 +145,30 @@ func TestReapExitedShellsRegardlessOfCode(t *testing.T) {
 	}
 	if closed, err := store.ReapExited(); len(closed) != 0 || err != nil {
 		t.Fatalf("repeated reaping changed sessions: %v, %v", closed, err)
+	}
+}
+
+func TestShellReportsItsProcess(t *testing.T) {
+	shell := filepath.Join(t.TempDir(), "shell")
+	if err := os.WriteFile(shell, []byte("#!/bin/sh\nexec /bin/sh -i\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", shell)
+	t.Setenv("ENV", "")
+	store := NewStore(t.TempDir())
+	t.Cleanup(func() {
+		if err := store.CloseAll(); err != nil {
+			t.Error(err)
+		}
+	})
+	session, err := store.Create("Jun", t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Terminal.Send([]byte("printf '\\nPID=%s ARGV0=%s\\n' $$ \"$0\"\n"))
+	waitFor(t, func() bool { return strings.Contains(session.Terminal.Text(), "\nPID=") })
+	pid, ok := session.ShellPID()
+	if !ok || !strings.Contains(session.Terminal.Text(), fmt.Sprintf("\nPID=%d ARGV0=", pid)) {
+		t.Fatalf("reported %d (%v), shell printed: %s", pid, ok, session.Terminal.Text())
 	}
 }
