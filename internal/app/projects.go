@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -19,8 +20,12 @@ func (a *app) projectRailWidth() float32 {
 }
 
 func (a *app) projectRail(c *ui.Context) {
-	ui.Column(c).Key("project-rail").Width(a.projectRailWidth()).Shrink(0).FillHeight().Padding(8).Gap(8).
-		Background(a.theme.Surface).Children(func() {
+	rail := ui.Column(c).Key("project-rail").Width(a.projectRailWidth()).Shrink(0).FillHeight().Padding(8).Gap(8)
+	background := a.theme.Surface
+	if rail.FileDragOver() {
+		background = a.theme.Selection
+	}
+	rail.Background(background).Children(func() {
 		ui.Button(c, logo).Height(36).FillWidth().Label(a.text("Toggle project names", "展开或收起项目名称")).
 			Tooltip(a.text("Toggle project names", "展开或收起项目名称")).
 			OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
@@ -44,6 +49,46 @@ func (a *app) projectRail(c *ui.Context) {
 		a.perspectiveButton(c)
 		a.settingsButton(c)
 	})
+	if paths := rail.DroppedFiles(); paths != nil {
+		a.openDroppedProject(paths)
+		c.Invalidate()
+	}
+}
+
+// openDroppedProject opens a directory dropped on the rail, as from Finder.
+// Files are left for the views that will show them.
+func (a *app) openDroppedProject(paths []string) {
+	if len(paths) != 1 {
+		a.report(errors.New(a.text("Drop one directory at a time.", "一次只能拖入一个目录。")))
+		return
+	}
+	info, err := os.Stat(paths[0])
+	if err != nil {
+		a.report(err)
+		return
+	}
+	if !info.IsDir() {
+		a.report(fmt.Errorf(a.text("Only a directory opens as a project: %s", "只有目录可以作为项目打开：%s"), paths[0]))
+		return
+	}
+	a.openProjectDirectory(paths[0])
+}
+
+// openProjectDirectory selects the project open at the directory, or
+// opens one there, asking for a name only when the directory's name
+// cannot be used as is.
+func (a *app) openProjectDirectory(path string) {
+	path = filepath.Clean(path)
+	for _, p := range a.state.Projects {
+		if p.CWD == path {
+			a.selectProject(p.Name)
+			return
+		}
+	}
+	a.projectForm.path = path
+	a.projectForm.name = filepath.Base(path)
+	a.submitProject()
+	a.projectForm.open = a.projectForm.error != ""
 }
 
 func (a *app) chooseProject() {
@@ -62,11 +107,7 @@ func (a *app) chooseProject() {
 			if len(paths) == 0 {
 				return
 			}
-			a.projectForm.path = paths[0]
-			a.projectForm.name = filepath.Base(filepath.Clean(paths[0]))
-			// Ask for a name only when the directory name cannot be used as is.
-			a.submitProject()
-			a.projectForm.open = a.projectForm.error != ""
+			a.openProjectDirectory(paths[0])
 		})
 	}()
 }

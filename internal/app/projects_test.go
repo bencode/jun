@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/egoist/mygo/ui"
 )
 
 func TestSubmitProject(t *testing.T) {
@@ -78,5 +80,27 @@ func TestProjectMenuRenamesAndRemoves(t *testing.T) {
 	if len(a.state.Projects) != 0 || a.state.ActiveProject != "" || len(a.terminals.All()) != 0 || len(a.bindings) != 0 ||
 		len(a.state.Global.Views) != 1 || a.state.Validate() != nil {
 		t.Fatalf("removal left the project's terminals or views: %v", a.state.Validate())
+	}
+}
+
+func TestDropDirectoryOnRailOpensProject(t *testing.T) {
+	a := testNewApp(t)
+	tt := ui.NewTester(a.view, 1440, 900)
+	first, second := t.TempDir(), t.TempDir()
+	for _, dir := range []string{first, second, first} {
+		if !tt.DropFiles(20, 400, dir) {
+			t.Fatal("the rail did not take the directory")
+		}
+	}
+	if len(a.state.Projects) != 2 || a.state.ActiveProject != filepath.Base(first) || len(a.terminals.ForProject(filepath.Base(second))) != 1 {
+		t.Fatal("dropping a directory did not open it, or opened an open one again")
+	}
+	file := filepath.Join(first, "notes.md")
+	if err := os.WriteFile(file, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	tt.DropFiles(20, 400, file)
+	if len(a.state.Projects) != 2 || !a.errorOpen {
+		t.Fatal("a dropped file opened as a project")
 	}
 }

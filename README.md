@@ -17,7 +17,7 @@ go vet ./...
 go tool mygo build -platform darwin/arm64 -skip-dmg
 ```
 
-Open a project through the rail’s **+** button or **File → Open Project…**. Confirm the directory’s name, switch perspectives using the layers button near the bottom of the project rail, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
+Open a project through the rail’s **+** button, **File → Open Project…**, or by dragging a directory from Finder onto the rail. The directory’s name becomes the project’s; Jun asks for another only when it is taken, and selects the project already open at a directory instead of opening it again. Switch perspectives using the layers button near the bottom of the project rail, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
 
 The gear button below Perspective opens **Settings ▸ Language**, offering the same English (default) and Simplified Chinese choices as the native **Language** menu. The language is saved with the layout and used on the next launch. Perspective names retain their spelling when the UI language changes. Repeated launches of the same build focus its existing window; New Window is deferred to a separate iteration.
 
@@ -27,7 +27,7 @@ The **Perspective** menu lists the current project’s perspectives in creation 
 
 The rail shows icons when collapsed and the current perspective name when expanded; its tooltip includes the project and full perspective name. Perspective is disabled without an open project. Switching projects restores that project’s selected perspective. Global remains independent. Duplicating and reordering perspectives are deferred.
 
-Right-click a project in the rail for **Rename Project…** and **Remove Project…**. Renaming keeps its perspectives, tabs and terminal sessions, with the same name rules as opening a project. Removing always asks first; it closes all of the project's terminals, including closed tabs' sessions and any agents running in them, and its views moved into Global or other projects. The directory stays on disk.
+Right-click a project in the rail for **Rename Project…** and **Remove Project…**. Renaming keeps its perspectives, tabs and terminal sessions, with the same name rules as opening a project. Removing always asks first; it closes all of the project’s terminals, including closed tabs’ sessions and any agents running in them, and its views moved into Global or other projects. The directory stays on disk.
 
 ## Opening views
 
