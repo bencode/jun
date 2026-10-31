@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/terminal"
 )
 
 func (a *app) newTerminal(target layout.RegionID) {
@@ -134,4 +135,50 @@ func (a *app) setBottomVisible(bottom layout.RegionID, visible bool) {
 	if r := a.targetRegion(); r != nil {
 		a.focusRegion(r.ID)
 	}
+}
+
+// dropViews forgets what Jun keeps for views removed from the layout,
+// returning the sessions they showed.
+func (a *app) dropViews(views []*layout.View) []terminal.ID {
+	var sessions []terminal.ID
+	for _, v := range views {
+		if id, ok := a.bindings[v.ID]; ok {
+			sessions = append(sessions, id)
+		}
+		delete(a.bindings, v.ID)
+		delete(a.scroll, v.ID)
+		delete(a.terminalErrors, v.ID)
+		delete(a.agentWide, v.ID)
+	}
+	return sessions
+}
+
+// shownTerminals counts the running sessions the views show.
+func (a *app) shownTerminals(views []*layout.View) int {
+	return len(slices.DeleteFunc(slices.Clone(views), func(v *layout.View) bool {
+		session := a.sessionFor(v.ID)
+		return session == nil || session.Exited()
+	}))
+}
+
+func (a *app) confirmDeletePerspective(p *layout.Perspective) {
+	count := a.shownTerminals(p.Views())
+	if count == 0 {
+		a.deletePerspective(p.ID)
+		return
+	}
+	a.confirm(fmt.Sprintf(a.text("Delete perspective “%s”?", "删除视角「%s」？"), p.Name),
+		fmt.Sprintf(a.text("Its terminals (%d) will be closed, together with any agents running in them.", "将关闭其中的 %d 个终端，其中运行的 agent 也会一起关掉。"), count),
+		a.text("Delete", "删除"), func() { a.deletePerspective(p.ID) })
+}
+
+func (a *app) deletePerspective(id layout.PerspectiveID) {
+	views, err := a.state.RemovePerspective(id)
+	if err != nil {
+		a.report(err)
+		return
+	}
+	a.report(a.terminals.Close(a.dropViews(views)...))
+	a.layoutChanged()
+	a.focusCurrentPerspective()
 }

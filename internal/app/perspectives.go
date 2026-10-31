@@ -40,6 +40,9 @@ func (a *app) perspectiveMenu(m *ui.Menu) {
 		a.openPerspectiveForm(project.ActivePerspective)
 	}
 	p := a.state.CurrentPerspective()
+	if m.Item(a.text("Delete Perspective…", "删除视角…")).Disabled(len(project.Perspectives) == 1).Chosen() {
+		a.confirmDeletePerspective(p)
+	}
 	label := a.text("Show Bottom Region", "展开底部区域")
 	if p.BottomVisible {
 		label = a.text("Hide Bottom Region", "收起底部区域")
