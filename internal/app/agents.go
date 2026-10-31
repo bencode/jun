@@ -137,6 +137,17 @@ func (a *app) agentSessions() []*terminal.Session {
 	return sessions
 }
 
+// waitingByProject counts the agents waiting for the user, by project.
+func (a *app) waitingByProject() map[string]int {
+	counts := map[string]int{}
+	for id, info := range a.agents {
+		if session := a.terminals.Get(id); session != nil && info.Status == agent.Waiting {
+			counts[session.ProjectName]++
+		}
+	}
+	return counts
+}
+
 // revealSession shows the session's tab, reopening it in from when its tab
 // was closed.
 func (a *app) revealSession(id terminal.ID, from layout.RegionID) {

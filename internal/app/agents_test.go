@@ -138,3 +138,19 @@ func TestPreviewShowsTheBottomOfTheScreenItsViewFits(t *testing.T) {
 		t.Fatalf("preview %dx%d shows %q", cols, rows, p.term.Text())
 	}
 }
+
+func TestRailShowsWaitingAgents(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	for _, expanded := range []bool{false, true} {
+		a.state.RailExpanded = expanded
+		tt.Frame()
+		if _, ok := tt.Find("1 waiting"); !ok {
+			t.Fatalf("rail (expanded: %v) did not mark the waiting agent", expanded)
+		}
+	}
+	a.agents[sessions[2].ID] = agentInfo{agent.Pi, agent.Working}
+	tt.Frame()
+	if _, ok := tt.Find("1 waiting"); ok {
+		t.Fatal("rail still marks an agent that stopped waiting")
+	}
+}

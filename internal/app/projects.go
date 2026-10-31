@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -26,21 +27,18 @@ func (a *app) projectRail(c *ui.Context) {
 		background = a.theme.Selection
 	}
 	rail.Background(background).Children(func() {
-		ui.Button(c, logo).Height(36).FillWidth().Label(a.text("Toggle project names", "展开或收起项目名称")).
-			Tooltip(a.text("Toggle project names", "展开或收起项目名称")).
-			OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
+		toggle := a.text("Toggle project names", "展开或收起项目名称")
+		ui.ButtonBase(c.Key("logo")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
+			Label(toggle).Tooltip(toggle).Children(func() {
+			ui.Icon(c, logoIcon).Height(20).Shrink(0)
+		}).OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
 		ui.Scroll(c).Grow(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Gap(6).Children(func() {
+				// Without a home, paths show in full.
+				home, _ := os.UserHomeDir()
+				waiting := a.waitingByProject()
 				for _, p := range a.state.Projects {
-					label := projectIcon(p.Name)
-					if a.state.RailExpanded {
-						label += "   " + p.Name
-					}
-					b := ui.Button(c.Key(p.Name), label).Height(36).FillWidth().Label(p.Name).Tooltip(p.Name + " " + p.CWD)
-					if p.Name == a.state.ActiveProject {
-						b.Background(a.theme.Selection).TextColor(a.theme.Text)
-					}
-					b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
+					a.projectButton(c, p, waiting[p.Name], home)
 				}
 				ui.Button(c, "+").Height(36).FillWidth().Label(a.text("Add Project", "添加项目")).
 					Tooltip(a.text("Add Project", "添加项目")).OnClick(a.chooseProject)
@@ -53,6 +51,61 @@ func (a *app) projectRail(c *ui.Context) {
 		a.openDroppedProject(paths)
 		c.Invalidate()
 	}
+}
+
+// projectButton shows a project as a colored tile of its abbreviation,
+// with its name and path beside it when the rail is expanded, and marks
+// the agents waiting in it.
+func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home string) {
+	expanded := a.state.RailExpanded
+	height := float32(40)
+	if expanded {
+		height = 44
+	}
+	waitingLabel := fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), waiting)
+	b := ui.ButtonBase(c.Key(p.Name)).Height(height).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
+		Label(p.Name).Tooltip(p.Name + " " + p.CWD).Children(func() {
+		ui.Box(c).Width(32).Height(32).Shrink(0).Radius(8).Background(projectColor(p.Name)).Center().Children(func() {
+			ui.Text(c, projectAbbrev(p.Name)).Bold().TextColor(ui.RGB(255, 255, 255))
+			if waiting > 0 && !expanded {
+				ui.Box(c).Absolute().Top(-3).Right(-3).Width(10).Height(10).Radius(5).
+					Background(a.theme.Warning).Border(2, a.theme.Surface).Label(waitingLabel)
+			}
+		})
+		if !expanded {
+			return
+		}
+		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+			ui.Text(c, p.Name).SingleLine().Ellipsis("…")
+			ui.Text(c, shortPath(p.CWD, home)).FontSize(11).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
+		})
+		if waiting > 0 {
+			ui.Text(c, fmt.Sprintf("●%d", waiting)).FontSize(11).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
+		}
+	})
+	if p.Name == a.state.ActiveProject {
+		b.Background(a.theme.Selection)
+	}
+	b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
+}
+
+// shortPath shows home as "~" and keeps the last two parts of a long path.
+func shortPath(cwd, home string) string {
+	root, rest := "", strings.TrimPrefix(cwd, "/")
+	if home != "" && (cwd == home || strings.HasPrefix(cwd, home+"/")) {
+		root, rest = "~", strings.TrimPrefix(strings.TrimPrefix(cwd, home), "/")
+	}
+	var parts []string
+	if rest != "" {
+		parts = strings.Split(rest, "/")
+	}
+	if len(parts) > 3 {
+		parts = append([]string{"…"}, parts[len(parts)-2:]...)
+	}
+	if root == "~" && len(parts) == 0 {
+		return root
+	}
+	return root + "/" + strings.Join(parts, "/")
 }
 
 // openDroppedProject opens a directory dropped on the rail, as from Finder.
