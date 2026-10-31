@@ -98,3 +98,23 @@ func (s *State) reveal(r *Region) {
 		}
 	}
 }
+
+// RevealView selects the view in its region and shows the region: the
+// region's project and perspective become current, and a hidden bottom
+// region or Global appears.
+func (s *State) RevealView(view ViewID) (RegionID, error) {
+	r, _ := s.locate(view)
+	if r == nil {
+		return 0, fmt.Errorf("view not found")
+	}
+	for _, p := range s.Projects {
+		for _, perspective := range p.Perspectives {
+			if r == perspective.Bottom || slices.Contains(perspective.Columns, r) {
+				s.ActiveProject, p.ActivePerspective = p.Name, perspective.ID
+			}
+		}
+	}
+	r.Active = view
+	s.reveal(r)
+	return r.ID, nil
+}

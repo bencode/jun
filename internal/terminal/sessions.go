@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 )
@@ -17,14 +20,51 @@ type Session struct {
 	ProjectName string
 	CWD         string
 	Terminal    *ghostty.Terminal
+	report      string
+	shellPID    int
 }
 
 type Store struct {
-	nextID   ID
-	sessions []*Session
+	nextID     ID
+	sessions   []*Session
+	runtimeDir string
 }
 
-func NewStore() *Store { return &Store{} }
+// NewStore keeps sessions whose shells report their process IDs in
+// runtimeDir.
+func NewStore(runtimeDir string) *Store { return &Store{runtimeDir: runtimeDir} }
+
+// shellCommand starts the user's login shell, as the terminal does by
+// default, after the shell's process writes its ID to report: exec keeps
+// the process, so the ID, the terminal and the exit code are the shell's.
+// A shell that cannot run is left to the terminal's default, which fails
+// to start it, so that the failure shows rather than closing as an exit.
+func shellCommand(report string) []string {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/zsh"
+	}
+	if _, err := exec.LookPath(shell); err != nil {
+		return nil
+	}
+	return []string{"/bin/zsh", "-fc", `print -r -- $$ > $1; exec -a "-${2:t}" $2`, "jun-shell", report, shell}
+}
+
+// ShellPID returns the process ID of the session's shell once it reported it.
+func (s *Session) ShellPID() (int, bool) {
+	if s.shellPID == 0 {
+		b, err := os.ReadFile(s.report)
+		if err != nil {
+			return 0, false
+		}
+		pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+		if err != nil {
+			return 0, false
+		}
+		s.shellPID = pid
+	}
+	return s.shellPID, true
+}
 
 func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, error) {
 	if cwd == "" || !filepath.IsAbs(cwd) {
@@ -42,15 +82,16 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 			invalidate()
 		}
 	}
+	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
-		Dir: cwd, Theme: ghostty.DarkTheme(), Scrollback: 10 << 20,
+		Command: shellCommand(report), Dir: cwd, Theme: ghostty.DarkTheme(), Scrollback: 10 << 20,
 		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
 	})
 	if err != nil {
 		return nil, err
 	}
 	s.nextID++
-	session := &Session{ID: s.nextID, ProjectName: projectName, CWD: cwd, Terminal: term}
+	session := &Session{ID: s.nextID, ProjectName: projectName, CWD: cwd, Terminal: term, report: report}
 	s.sessions = append(s.sessions, session)
 	return session, nil
 }
@@ -63,6 +104,8 @@ func (s *Store) Get(id ID) *Session {
 	}
 	return nil
 }
+
+func (s *Store) All() []*Session { return slices.Clone(s.sessions) }
 
 func (s *Store) ForProject(projectName string) []*Session {
 	var result []*Session

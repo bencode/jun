@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/layout"
@@ -35,15 +37,21 @@ type app struct {
 	scroll          map[layout.ViewID]*ui.ScrollState
 	errorMessage    string
 	errorOpen       bool
+	agents          map[terminal.ID]agentInfo
+	ttys            map[terminal.ID]string
+	previews        map[terminal.ID]*preview
+	agentPolling    bool
+	agentWide       map[layout.ViewID]bool
 }
 
-func newApp() *app {
+func newApp(runtimeDir string) *app {
 	return &app{state: layout.New(), theme: ui.DarkTheme(), scroll: map[layout.ViewID]*ui.ScrollState{},
-		terminals: terminal.NewStore(), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{}}
+		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
+		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
+		agentWide: map[layout.ViewID]bool{}}
 }
 
 func Run() error {
-	a := newApp()
 	mygo.App.SetName("Jun")
 	if !mygo.App.RequestSingleInstanceLock() {
 		return nil
@@ -51,6 +59,16 @@ func Run() error {
 	if err := ghostty.Load(); err != nil {
 		return fmt.Errorf("load terminal library: %w", err)
 	}
+	runtimeDir, err := os.MkdirTemp("", "jun-terminals-")
+	if err != nil {
+		return fmt.Errorf("create runtime directory: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(runtimeDir); err != nil {
+			log.Printf("remove runtime directory: %v", err)
+		}
+	}()
+	a := newApp(runtimeDir)
 	defer a.closeTerminals()
 	path, err := config.DefaultPath()
 	if err != nil {
@@ -76,11 +94,17 @@ func Run() error {
 			Title: "Jun", Width: 1440, Height: 900, MinWidth: 1000, MinHeight: 640,
 			Content: ui.View(a.view),
 		})
+		stopAgents := make(chan struct{})
 		a.window.OnClose(a.beforeClose)
-		a.window.OnClosed(a.closeTerminals)
+		a.window.OnClosed(func() {
+			close(stopAgents)
+			a.closePreviews()
+			a.closeTerminals()
+		})
 		a.window.OnBlur(a.saveInBackground)
 		a.window.OnHide(a.saveInBackground)
 		a.restoreTerminals()
+		a.startAgentPoller(stopAgents)
 		a.focusCurrentPerspective()
 		a.window.Invalidate()
 		a.checkCurrentDirectory()

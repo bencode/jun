@@ -306,3 +306,35 @@ func TestRemovingEmptyColumnPreservesDestinationSelection(t *testing.T) {
 		}
 	}
 }
+
+func TestRevealViewSelectsItsProjectPerspectiveAndRegion(t *testing.T) {
+	s := New()
+	jun := project(t, s, "Jun")
+	review := jun.Perspectives[1]
+	hidden, err := s.OpenView(review.Bottom.ID, ViewTerminal, "Jun")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.OpenView(review.Bottom.ID, ViewTerminal, "Jun"); err != nil {
+		t.Fatal(err)
+	}
+	review.BottomVisible = false
+	project(t, s, "Brain")
+	region, err := s.RevealView(hidden)
+	if err != nil || region != review.Bottom.ID || s.ActiveProject != "Jun" || s.CurrentPerspective() != review ||
+		!review.BottomVisible || review.Bottom.Active != hidden {
+		t.Fatalf("bottom view not revealed: %v", err)
+	}
+	global, err := s.OpenView(s.Global.ID, ViewAgents, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.GlobalVisible = false
+	if _, err := s.RevealView(global); err != nil || !s.GlobalVisible || s.ActiveProject != "Jun" {
+		t.Fatalf("Global view not revealed without switching project: %v", err)
+	}
+	before := s.ActiveProject
+	if _, err := s.RevealView(9999); err == nil || s.ActiveProject != before {
+		t.Fatal("missing view changed state")
+	}
+}

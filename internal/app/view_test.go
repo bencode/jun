@@ -18,7 +18,7 @@ func testNewApp(t *testing.T) *app {
 	}
 	t.Setenv("SHELL", shell)
 	t.Setenv("ENV", "")
-	a := newApp()
+	a := newApp(t.TempDir())
 	t.Cleanup(func() {
 		if err := a.terminals.CloseAll(); err != nil {
 			t.Error(err)
