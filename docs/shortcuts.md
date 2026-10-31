@@ -42,9 +42,19 @@ Perspectives are ordered as in the Perspective menu. Switching focuses the first
 |---|---|
 | Next / previous project | ⌃⌘] / ⌃⌘[ |
 | Project 1–9 | ⌃⌘1–⌃⌘9 |
-| Open Project… | ⌘O |
+| Open Project… (the command palette at `~/`) | ⌘O |
 
 Projects are ordered as in the project rail. Switching restores the project's selected perspective and focuses its first column.
+
+## Command palette
+
+| Action | Shortcut |
+|---|---|
+| Command palette | ⌘K |
+| Move among items | ↑ / ↓ |
+| Go into the highlighted directory | Tab |
+| Run the highlighted item | Enter |
+| Close | Esc |
 
 ## Rules
 
@@ -60,8 +70,9 @@ The terminal keeps these macOS keys:
 | Action | Shortcut |
 |---|---|
 | Copy / paste / select all | ⌘C / ⌘V / ⌘A |
-| Clear screen | ⌘K |
 | Larger / smaller / reset font | ⌘= / ⌘- / ⌘0 |
 | Scroll page / to top or bottom | ⌘PageUp / ⌘PageDown / ⌘Home / ⌘End |
+
+⌘K opens the command palette rather than clearing the screen; ⌃L clears it in most shells.
 
 ⌘Q quits Jun.

@@ -23,6 +23,14 @@ type app struct {
 		open              bool
 		name, path, error string
 	}
+	palette struct {
+		open      bool
+		query     string
+		highlight int
+		// caretEnd puts the caret after a query the palette completed, once
+		// its input shows it.
+		caretEnd bool
+	}
 	perspectiveForm struct {
 		open        bool
 		project     string
@@ -83,7 +91,7 @@ func Run() error {
 	} else {
 		a.restoreConfig(path)
 	}
-	mygo.App.OnSecondInstance(func(_ []string, _ string) {
+	mygo.App.OnSecondInstance(func(args []string, wd string) {
 		if a.window == nil {
 			return
 		}
@@ -93,6 +101,7 @@ func Run() error {
 		a.window.Show()
 		a.window.Focus()
 		mygo.App.Focus()
+		a.window.Update(func() { a.openArgs(args, wd) })
 	})
 	mygo.App.WhenReady(func() {
 		mygo.App.SetMenu(a.applicationMenu())
@@ -114,6 +123,11 @@ func Run() error {
 		a.focusCurrentPerspective()
 		a.window.Invalidate()
 		a.checkCurrentDirectory()
+		if wd, err := os.Getwd(); err != nil {
+			a.report(fmt.Errorf("working directory: %w", err))
+		} else {
+			a.openArgs(os.Args[1:], wd)
+		}
 	})
 	return mygo.App.Run()
 }

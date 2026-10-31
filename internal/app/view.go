@@ -25,6 +25,7 @@ func (a *app) view(c *ui.Context) {
 		}
 	})
 	a.shortcuts(c)
+	a.paletteDialog(c)
 	a.projectDialog(c)
 	a.perspectiveDialog(c)
 	a.projectRenameDialog(c)
@@ -52,7 +53,7 @@ func (a *app) center(c *ui.Context, width float32) {
 			ui.Icon(c, logoIcon).Height(48).TextColor(a.theme.Accent)
 			ui.Text(c, a.text("Your agents. Your perspective.", "你的 Agents，你的工作视角。")).FontSize(23).Bold()
 			ui.Text(c, a.text("Open a directory to start a project.", "打开目录，开始一个项目。")).TextColor(a.theme.TextMuted)
-			ui.PrimaryButton(c, a.text("Open Project…", "打开项目…")).OnClick(a.chooseProject)
+			ui.PrimaryButton(c, a.text("Open Project…", "打开项目…")).OnClick(func() { a.openPalette("~/") })
 		})
 	})
 }
