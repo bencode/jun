@@ -338,3 +338,82 @@ func TestRevealViewSelectsItsProjectPerspectiveAndRegion(t *testing.T) {
 		t.Fatal("missing view changed state")
 	}
 }
+
+func TestRenameAndRemoveProjectFollowItsViews(t *testing.T) {
+	s := New()
+	jun := project(t, s, "Jun")
+	brain := project(t, s, "Brain")
+	work := jun.Perspectives[0]
+	toGlobal, toBrain := work.Columns[0].Views[0].ID, work.Columns[1].Views[0].ID
+	if err := s.MoveView(toGlobal, s.Global.ID, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MoveView(toBrain, brain.Perspectives[0].Columns[0].ID, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.OpenView(jun.Perspectives[1].Bottom.ID, ViewTree, "Jun"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SelectProject("Jun"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RenameProject("Jun", " brain "); err == nil {
+		t.Fatal("renamed onto another project's name")
+	}
+	if err := s.RenameProject("Jun", "Lesscap"); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range s.regions() {
+		for _, v := range r.Views {
+			if v.ProjectName == "Jun" {
+				t.Fatalf("view %d still refers to the old name", v.ID)
+			}
+		}
+	}
+	if s.ActiveProject != "Lesscap" || s.Validate() != nil {
+		t.Fatalf("rename left the layout inconsistent: %v", s.Validate())
+	}
+	project(t, s, "Docs")
+	if err := s.SelectProject("Lesscap"); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := s.RemoveProject("Lesscap")
+	if err != nil || len(removed) != 3 || s.ActiveProject != "Brain" || len(s.Global.Views) != 0 || s.Validate() != nil {
+		t.Fatalf("removed %d views, active %q: %v, %v", len(removed), s.ActiveProject, err, s.Validate())
+	}
+	for _, name := range []string{"Brain", "Docs"} {
+		if _, err := s.RemoveProject(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if s.ActiveProject != "" || s.Validate() != nil {
+		t.Fatalf("removing every project left active %q: %v", s.ActiveProject, s.Validate())
+	}
+}
+
+func TestRemovePerspective(t *testing.T) {
+	s := New()
+	jun := project(t, s, "Jun")
+	review := jun.Perspectives[1]
+	if _, err := s.OpenView(review.Bottom.ID, ViewTree, "Jun"); err != nil {
+		t.Fatal(err)
+	}
+	notes, err := s.AddPerspective("Notes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SelectPerspective(review.ID); err != nil {
+		t.Fatal(err)
+	}
+	views, err := s.RemovePerspective(review.ID)
+	if err != nil || len(views) != 1 || jun.ActivePerspective != notes || len(jun.Perspectives) != 2 || s.Validate() != nil {
+		t.Fatalf("removing the current perspective: %d views, active %d: %v, %v", len(views), jun.ActivePerspective, err, s.Validate())
+	}
+	if _, err := s.RemovePerspective(notes); err != nil {
+		t.Fatal(err)
+	}
+	last := jun.Perspectives[0]
+	if _, err := s.RemovePerspective(last.ID); err == nil || len(jun.Perspectives) != 1 || jun.ActivePerspective != last.ID {
+		t.Fatal("removed the project's last perspective")
+	}
+}

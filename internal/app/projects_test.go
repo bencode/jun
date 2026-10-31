@@ -46,3 +46,37 @@ func TestFailedProjectSubmissionDoesNotAddProject(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectMenuRenamesAndRemoves(t *testing.T) {
+	a, tt := testApp(t)
+	work := a.state.CurrentPerspective()
+	a.closeView(work.Columns[1].ID, work.Columns[1].Views[0].ID)
+	tt.Frame()
+	projectMenu := func(name, item string) {
+		t.Helper()
+		if err := tt.RightClick(name); err != nil {
+			t.Fatal(err)
+		}
+		if err := tt.ChooseMenuItem(item); err != nil {
+			t.Fatal(err)
+		}
+		tt.Frame()
+	}
+	projectMenu("Jun", "Rename Project…")
+	a.projectRename.name = " Lesscap "
+	click(t, tt, "Rename")
+	if a.state.ActiveProject != "Lesscap" || len(a.terminals.ForProject("Lesscap")) != 3 || len(a.hiddenTerminals("Lesscap")) != 1 {
+		t.Fatal("rename did not follow the project's terminals")
+	}
+	projectMenu("Lesscap", "Remove Project…")
+	click(t, tt, "Cancel")
+	if len(a.state.Projects) != 1 || len(a.terminals.All()) != 3 {
+		t.Fatal("cancel removed the project")
+	}
+	projectMenu("Lesscap", "Remove Project…")
+	click(t, tt, "Remove")
+	if len(a.state.Projects) != 0 || a.state.ActiveProject != "" || len(a.terminals.All()) != 0 || len(a.bindings) != 0 ||
+		len(a.state.Global.Views) != 1 || a.state.Validate() != nil {
+		t.Fatalf("removal left the project's terminals or views: %v", a.state.Validate())
+	}
+}

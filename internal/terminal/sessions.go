@@ -145,6 +145,31 @@ func (s *Store) ReapExited() ([]ID, error) {
 	return closed, errors.Join(errs...)
 }
 
+// Rename moves the sessions of a project to its new name.
+func (s *Store) Rename(old, name string) {
+	for _, session := range s.sessions {
+		if session.ProjectName == old {
+			session.ProjectName = name
+		}
+	}
+}
+
+// Close ends the sessions, and whatever runs in their shells, and forgets
+// them.
+func (s *Store) Close(ids ...ID) error {
+	var errs []error
+	s.sessions = slices.DeleteFunc(s.sessions, func(session *Session) bool {
+		if !slices.Contains(ids, session.ID) {
+			return false
+		}
+		if err := session.Terminal.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("terminal %d: %w", session.ID, err))
+		}
+		return true
+	})
+	return errors.Join(errs...)
+}
+
 func (s *Store) CloseAll() error {
 	var errs []error
 	for _, session := range s.sessions {

@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -59,4 +60,32 @@ func perspectiveNameAvailable(project *Project, except PerspectiveID, name strin
 		}
 	}
 	return nil
+}
+
+// Views lists the views in the perspective's columns and bottom region.
+func (p *Perspective) Views() []*View {
+	var views []*View
+	for _, r := range append(slices.Clone(p.Columns), p.Bottom) {
+		views = append(views, r.Views...)
+	}
+	return views
+}
+
+// RemovePerspective removes a perspective of the current project, which
+// keeps at least one, returning its views. Its neighbor becomes current.
+func (s *State) RemovePerspective(id PerspectiveID) ([]*View, error) {
+	project := s.CurrentProject()
+	if project == nil || project.Perspective(id) == nil {
+		return nil, fmt.Errorf("perspective not in current project: %d", id)
+	}
+	if len(project.Perspectives) == 1 {
+		return nil, fmt.Errorf("a project keeps at least one perspective")
+	}
+	i := slices.IndexFunc(project.Perspectives, func(p *Perspective) bool { return p.ID == id })
+	views := project.Perspectives[i].Views()
+	project.Perspectives = slices.Delete(project.Perspectives, i, i+1)
+	if project.ActivePerspective == id {
+		project.ActivePerspective = project.Perspectives[min(i, len(project.Perspectives)-1)].ID
+	}
+	return views, nil
 }

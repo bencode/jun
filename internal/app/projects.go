@@ -35,7 +35,7 @@ func (a *app) projectRail(c *ui.Context) {
 					if p.Name == a.state.ActiveProject {
 						b.Background(a.theme.Selection).TextColor(a.theme.Text)
 					}
-					b.OnClick(func() { a.selectProject(p.Name) })
+					b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
 				}
 				ui.Button(c, "+").Height(36).FillWidth().Label(a.text("Add Project", "添加项目")).
 					Tooltip(a.text("Add Project", "添加项目")).OnClick(a.chooseProject)

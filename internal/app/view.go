@@ -27,6 +27,8 @@ func (a *app) view(c *ui.Context) {
 	a.shortcuts(c)
 	a.projectDialog(c)
 	a.perspectiveDialog(c)
+	a.projectRenameDialog(c)
+	a.confirmDialog(c)
 	ui.Modal(c, &a.errorOpen, func() {
 		ui.Text(c, a.text("Unable to complete action", "无法完成操作")).Bold()
 		ui.Text(c, a.errorMessage)

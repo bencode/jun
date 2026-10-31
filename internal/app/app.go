@@ -28,6 +28,11 @@ type app struct {
 		id          layout.PerspectiveID
 		name, error string
 	}
+	projectRename struct {
+		open                 bool
+		project, name, error string
+	}
+	confirmation    confirmation
 	terminals       *terminal.Store
 	bindings        map[layout.ViewID]terminal.ID
 	terminalErrors  map[layout.ViewID]error

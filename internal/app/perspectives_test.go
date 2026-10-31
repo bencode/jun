@@ -152,3 +152,32 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	}
 	tt.CloseMenu()
 }
+
+func TestDeletePerspectiveClosesItsTerminals(t *testing.T) {
+	a, tt := testApp(t)
+	project := a.state.CurrentProject()
+	work, review := project.Perspectives[0], project.Perspectives[1]
+	if _, err := a.state.AddPerspective("Notes"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	perspectiveMenu(t, tt, "Delete Perspective…")
+	if a.confirmation.open || len(project.Perspectives) != 2 || len(a.terminals.All()) != 3 {
+		t.Fatal("deleting a perspective without terminals asked or closed terminals")
+	}
+	a.selectPerspective(review.ID)
+	tt.Frame()
+	perspectiveMenu(t, tt, "Delete Perspective…")
+	tt.Frame()
+	if !a.confirmation.open || len(project.Perspectives) != 2 {
+		t.Fatal("deleting a perspective with a terminal did not ask first")
+	}
+	click(t, tt, "Delete")
+	if len(project.Perspectives) != 1 || project.ActivePerspective != work.ID || len(a.terminals.All()) != 2 || len(a.bindings) != 2 {
+		t.Fatal("deleted perspective kept its terminal")
+	}
+	click(t, tt, "Perspective")
+	if err := tt.ChooseMenuItem("Delete Perspective…"); err == nil {
+		t.Fatal("the last perspective could be deleted")
+	}
+}
