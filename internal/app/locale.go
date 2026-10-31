@@ -11,7 +11,7 @@ import (
 )
 
 func (a *app) text(en, zh string) string {
-	if a.chinese {
+	if a.state.Chinese {
 		return zh
 	}
 	return en

@@ -17,15 +17,18 @@ func (a *app) settingsButton(c *ui.Context) {
 }
 
 func (a *app) settingsMenu(m *ui.Menu) {
-	if m.Item("English").Checked(!a.chinese).Chosen() {
-		a.setLanguage(false)
-	}
-	if m.Item("简体中文").Checked(a.chinese).Chosen() {
-		a.setLanguage(true)
-	}
+	m.Submenu(a.text("Language", "语言"), func(m *ui.Menu) {
+		if m.Item("English").Radio(!a.state.Chinese).Chosen() {
+			a.setLanguage(false)
+		}
+		if m.Item("简体中文").Radio(a.state.Chinese).Chosen() {
+			a.setLanguage(true)
+		}
+	})
 }
 
 func (a *app) setLanguage(chinese bool) {
-	a.chinese = chinese
+	a.state.Chinese = chinese
+	a.layoutChanged()
 	mygo.App.SetMenu(a.applicationMenu())
 }

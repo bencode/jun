@@ -198,7 +198,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	if !a.state.GlobalVisible || a.state.Global != global || !tt.HasText("Agents") {
 		t.Fatal("Global did not restore")
 	}
-	a.chinese = true
+	a.state.Chinese = true
 	tt.Frame()
 	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("布局预览") {
 		t.Fatal("Chinese labels missing")
