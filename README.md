@@ -17,7 +17,13 @@ go vet ./...
 go tool mygo build -platform darwin/arm64 -skip-dmg
 ```
 
-Open a project through the rail’s **+** button, **File → Open Project…**, or by dragging a directory from Finder onto the rail. The directory’s name becomes the project’s; Jun asks for another only when it is taken, and selects the project already open at a directory instead of opening it again. Switch perspectives using the layers button near the bottom of the project rail, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
+Press ⌘K for the command palette. Type a directory, such as `~/work/`, to open it as a project: Tab goes into the highlighted directory, and Enter opens it. Anything else filters commands, such as New Terminal or switching projects and perspectives. The rail’s **+** button and **File → Open Project…** (⌘O) open the palette at `~/`; its **Browse…** item opens the system folder picker. You can also drag a directory from Finder onto the rail, or run `jun <directory>` in a terminal, such as `jun .`, after adding an alias to your shell:
+
+```sh
+alias jun=/Applications/Jun.app/Contents/MacOS/Jun
+```
+
+The directory’s name becomes the project’s; Jun asks for another only when it is taken, and selects the project already open at a directory instead of opening it again. Switch perspectives using the layers button near the bottom of the project rail, and use **⋯ → Open View** in any region to open a terminal or a preview view. An empty region offers the same **Open View** menu; column actions remain in that column’s **⋯**, and bottom visibility lives in the Perspective menu. Drag tabs to reorder or move between regions. Moving a tab to a hidden bottom/Global region through its context menu reveals it. The upper-right center control hides or restores Global.
 
 The gear button below Perspective opens **Settings ▸ Language**, offering the same English (default) and Simplified Chinese choices as the native **Language** menu. The language is saved with the layout and used on the next launch. Perspective names retain their spelling when the UI language changes. Repeated launches of the same build focus its existing window; New Window is deferred to a separate iteration.
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/bencode/jun/internal/theme"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/ui"
 )
 
 type ID uint64
@@ -86,7 +87,9 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
 		Command: shellCommand(report), Dir: cwd, Theme: theme.Terminal(), Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
-		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
+		// ⌘K is Jun's command palette; Control+L clears the screen.
+		Keybinds: []ghostty.Keybind{{Mods: ui.Super, Key: ui.KeyK, Action: ghostty.ActionNone}},
+		OnTitle:  func(string) { notify() }, OnExit: func(int) { notify() },
 	})
 	if err != nil {
 		return nil, err

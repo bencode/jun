@@ -45,7 +45,7 @@ func (a *app) projectRail(c *ui.Context) {
 				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
 					Label(add).Tooltip(add)).Children(func() {
 					ui.Icon(c, addIcon).Size(18, 18).Shrink(0)
-				}).OnClick(a.chooseProject)
+				}).OnClick(func() { a.openPalette("~/") })
 			})
 		})
 		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
@@ -132,16 +132,22 @@ func (a *app) openDroppedProject(paths []string) {
 		a.report(errors.New(a.text("Drop one directory at a time.", "一次只能拖入一个目录。")))
 		return
 	}
-	info, err := os.Stat(paths[0])
+	a.openProjectPath(paths[0])
+}
+
+// openProjectPath opens path as a project, or tells why a path that is not
+// a directory cannot be one.
+func (a *app) openProjectPath(path string) {
+	info, err := os.Stat(path)
 	if err != nil {
 		a.report(err)
 		return
 	}
 	if !info.IsDir() {
-		a.report(fmt.Errorf(a.text("Only a directory opens as a project: %s", "只有目录可以作为项目打开：%s"), paths[0]))
+		a.report(fmt.Errorf(a.text("Only a directory opens as a project: %s", "只有目录可以作为项目打开：%s"), path))
 		return
 	}
-	a.openProjectDirectory(paths[0])
+	a.openProjectDirectory(path)
 }
 
 // openProjectDirectory selects the project open at the directory, or
@@ -159,6 +165,20 @@ func (a *app) openProjectDirectory(path string) {
 	a.projectForm.name = filepath.Base(path)
 	a.submitProject()
 	a.projectForm.open = a.projectForm.error != ""
+}
+
+// openArgs opens the directories jun was started with, relative to wd,
+// as "jun ." in a terminal; flags, as macOS may pass, are not directories.
+func (a *app) openArgs(args []string, wd string) {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		if !filepath.IsAbs(arg) {
+			arg = filepath.Join(wd, arg)
+		}
+		a.openProjectPath(arg)
+	}
 }
 
 func (a *app) chooseProject() {

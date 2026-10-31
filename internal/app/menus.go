@@ -22,7 +22,8 @@ func (a *app) applicationMenu() *mygo.Menu {
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Label: "Jun", Submenu: []*mygo.MenuItem{{Role: mygo.RoleAbout}, mygo.Separator(), {Role: mygo.RoleQuit}}},
 		{Label: a.text("File", "文件"), Submenu: []*mygo.MenuItem{
-			{Label: a.text("Open Project…", "打开项目…"), Accelerator: "CmdOrCtrl+O", Click: action(a.chooseProject)},
+			{Label: a.text("Command Palette…", "命令面板…"), Accelerator: "CmdOrCtrl+K", Click: action(func() { a.openPalette("") })},
+			{Label: a.text("Open Project…", "打开项目…"), Accelerator: "CmdOrCtrl+O", Click: action(func() { a.openPalette("~/") })},
 		}},
 		{Role: mygo.RoleEditMenu},
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{

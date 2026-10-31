@@ -13,7 +13,7 @@ func (a *app) reapExitedTerminals(focused layout.ViewID) bool {
 		return false
 	}
 	var destination layout.RegionID
-	modal := a.projectForm.open || a.perspectiveForm.open || a.projectRename.open || a.confirmation.open || a.errorOpen ||
+	modal := a.palette.open || a.projectForm.open || a.perspectiveForm.open || a.projectRename.open || a.confirmation.open || a.errorOpen ||
 		a.persistence != nil && a.persistence.errorOpen
 	if !modal && focused != 0 && slices.Contains(closed, a.bindings[focused]) {
 		if r := a.targetRegion(); r != nil && r.Active == focused {
