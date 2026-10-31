@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bencode/jun/internal/theme"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 )
 
@@ -84,7 +85,7 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	}
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
-		Command: shellCommand(report), Dir: cwd, Theme: ghostty.DarkTheme(), Scrollback: 10 << 20,
+		Command: shellCommand(report), Dir: cwd, Theme: theme.Terminal(), Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
 	})
 	if err != nil {

@@ -10,8 +10,8 @@ func (a *app) perspectiveButton(c *ui.Context) {
 		name = p.Name
 		tip = a.state.ActiveProject + " / " + p.Name
 	}
-	ui.ButtonBase(c.Key("perspective-switcher")).Height(36).FillWidth().Shrink(0).Padding(0, 10).Gap(8).
-		Label(a.text("Perspective", "视角")).Tooltip(tip).Disabled(p == nil).Children(func() {
+	a.railAction(ui.ButtonBase(c.Key("perspective-switcher")).Height(36).FillWidth().Shrink(0).Padding(0, 10).Gap(8).
+		Label(a.text("Perspective", "视角")).Tooltip(tip).Disabled(p == nil)).Children(func() {
 		ui.Icon(c, perspectiveIcon).Size(18, 18).Shrink(0)
 		if a.state.RailExpanded {
 			ui.Text(c, name).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
