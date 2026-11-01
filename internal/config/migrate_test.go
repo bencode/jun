@@ -50,10 +50,11 @@ func legacyDocument(t *testing.T, old *legacyState) []byte {
 func TestLoadV1PreservesStateAndSavesV3(t *testing.T) {
 	old := legacyFixture()
 	// Global's terminal moves to the first column of Jun's current
-	// perspective, Review, whose placeholder file view goes.
+	// perspective, Review, whose placeholder file and Diff views go.
 	want := legacyFixture()
-	review := want.Projects[0].Perspectives["review"].Columns[0]
-	review.Views, review.Active = want.Global.Views, want.Global.Views[0].ID
+	review := want.Projects[0].Perspectives["review"].Columns
+	review[0].Views, review[0].Active = want.Global.Views, want.Global.Views[0].ID
+	review[1].Views, review[1].Active = []*layout.View{}, 0
 	path := filepath.Join(t.TempDir(), "config.json")
 	original := legacyDocument(t, old)
 	if err := os.WriteFile(path, original, 0600); err != nil {

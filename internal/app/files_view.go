@@ -118,7 +118,7 @@ func (a *app) filesTree(c *ui.Context, r *repoState, st *filesViewState, project
 // opens or closes a directory.
 func (a *app) fileOutline(c *ui.Context, r *repoState, st *ui.OutlineState[fileNode], roots []fileNode, children func(fileNode) []fileNode, project string) ui.Element {
 	outline := ui.Outline(c, st, roots, children, func(n fileNode) {
-		a.fileRow(c, r, n, children(n) != nil)
+		a.fileRow(c, r, n, children(n) != nil, project)
 	}).Grow(1).FillWidth()
 	chosen := func() (fileNode, bool) {
 		i := *st.List.Selected
@@ -193,9 +193,9 @@ func activeView(r *layout.Region) *layout.View {
 
 // fileRow is a row of Files: a source, named by its branch and where it is
 // read from, or a file or directory.
-func (a *app) fileRow(c *ui.Context, r *repoState, n fileNode, dir bool) {
+func (a *app) fileRow(c *ui.Context, r *repoState, n fileNode, dir bool, project string) {
 	s, _ := r.source(n.source)
-	ui.Row(c).FillWidth().Gap(6).AlignItems(ui.Center).ContextMenu(func(m *ui.Menu) { a.fileMenu(m, r, s, n) }).Children(func() {
+	ui.Row(c).FillWidth().Gap(6).AlignItems(ui.Center).ContextMenu(func(m *ui.Menu) { a.fileMenu(m, r, s, n, project) }).Children(func() {
 		if n.path != "" {
 			ui.Text(c, path.Base(n.path)).MinWidth(0).SingleLine().Ellipsis("…")
 			return
@@ -228,7 +228,10 @@ func sourceName(s repo.Source) string {
 
 // fileMenu copies a row's path, and for a worktree's files shows them in
 // Finder or opens them in their default app.
-func (a *app) fileMenu(m *ui.Menu, r *repoState, s repo.Source, n fileNode) {
+func (a *app) fileMenu(m *ui.Menu, r *repoState, s repo.Source, n fileNode, project string) {
+	if n.path == "" && m.Item(a.text("Review Changes", "查看改动")).Chosen() {
+		a.openDiff(project, n.source)
+	}
 	if n.path != "" && m.Item(a.text("Copy Relative Path", "复制相对路径")).Chosen() {
 		mygo.Clipboard.WriteText(n.path)
 	}

@@ -167,7 +167,7 @@ func TestColumnBoundsAndRemovalPreserveViews(t *testing.T) {
 	if _, err := s.AddColumn(p.Columns[len(p.Columns)-1].ID); err == nil {
 		t.Fatal("accepted fourth column")
 	}
-	view, err := s.OpenView(id, ViewDiff, "Jun")
+	view, err := s.OpenView(id, ViewTerminal, "Jun")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestRemovingEmptyColumnPreservesDestinationSelection(t *testing.T) {
 		if first {
 			source, target = target, source
 		}
-		view, err := s.OpenView(target.ID, ViewDiff, "A")
+		view, err := s.OpenView(target.ID, ViewTerminal, "A")
 		if err != nil {
 			t.Fatal(err)
 		}

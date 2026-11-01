@@ -36,6 +36,9 @@ func (a *app) title(v *layout.View) string {
 	if v.File != nil {
 		return path.Base(v.File.Path)
 	}
+	if v.Diff != nil {
+		return "Diff · " + diffSourceName(v.Diff.Source)
+	}
 	if v.Transcript != nil {
 		if project := a.project(v.ProjectName); project != nil {
 			return transcriptTitle(a, a.sessionOf(project, *v.Transcript))

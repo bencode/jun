@@ -18,7 +18,7 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	if s.Fixed(target) {
 		return 0, errFixed
 	}
-	if kind == ViewFile || kind == ViewTranscript || !slices.Contains(tabKinds, kind) {
+	if kind == ViewFile || kind == ViewTranscript || kind == ViewDiff || !slices.Contains(tabKinds, kind) {
 		return 0, fmt.Errorf("view kind %s cannot be opened in a tab", kind)
 	}
 	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
@@ -97,6 +97,44 @@ func (s *State) OpenTranscript(target RegionID, project string, ref SessionRef, 
 func validSession(ref SessionRef) error {
 	if !history.Known(ref.Agent) || !history.ValidID(ref.ID) || !filepath.IsAbs(ref.Path) {
 		return fmt.Errorf("invalid session %q of %q", ref.ID, ref.Agent)
+	}
+	return nil
+}
+
+// OpenDiff shows the comparison in the target region: in the Diff view
+// there of the same source, else in a new one.
+func (s *State) OpenDiff(target RegionID, project string, ref DiffRef) (ViewID, error) {
+	r := s.Region(target)
+	if r == nil {
+		return 0, fmt.Errorf("region not found")
+	}
+	if s.Fixed(target) {
+		return 0, errFixed
+	}
+	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == project }) {
+		return 0, fmt.Errorf("source project not found: %s", project)
+	}
+	if err := validDiff(ref); err != nil {
+		return 0, err
+	}
+	shows := func(v *View) bool {
+		return v.Kind == ViewDiff && v.ProjectName == project && v.Diff != nil && v.Diff.Source == ref.Source
+	}
+	if i := slices.IndexFunc(r.Views, shows); i >= 0 {
+		r.Active = r.Views[i].ID
+	} else {
+		s.appendView(r, ViewDiff, project)
+		r.Views[len(r.Views)-1].Diff = &ref
+	}
+	s.reveal(r)
+	return r.Active, nil
+}
+
+func validDiff(ref DiffRef) error {
+	hex := func(s string) bool { return strings.Trim(strings.ToLower(s), "0123456789abcdef") == "" }
+	if ref.Source == "" || ref.Base != "" && (strings.HasPrefix(ref.Base, "-") || strings.ContainsAny(ref.Base, " \t\n\x00")) ||
+		ref.Commit != "" && (len(ref.Commit) < 4 || len(ref.Commit) > 64 || !hex(ref.Commit)) || ref.Uncommitted && ref.Commit != "" {
+		return fmt.Errorf("invalid diff of %q", ref.Source)
 	}
 	return nil
 }

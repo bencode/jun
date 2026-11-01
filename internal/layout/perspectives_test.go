@@ -21,7 +21,7 @@ func TestDynamicPerspectivesKeepIdentityAndLayout(t *testing.T) {
 		len(review.Columns) != 1 || len(review.Columns[0].Views) != 0 || review.BottomVisible || len(review.Bottom.Views) != 0 {
 		t.Fatal("new perspective should be ordered, selected and empty")
 	}
-	view, err := s.OpenView(review.Columns[0].ID, ViewDiff, "Jun")
+	view, err := s.OpenView(review.Columns[0].ID, ViewTerminal, "Jun")
 	if err != nil {
 		t.Fatal(err)
 	}

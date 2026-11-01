@@ -87,6 +87,21 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"file on a terminal": func(s *State) {
 			s.CurrentPerspective().Columns[0].Views[0].File = &FileRef{Source: "main", Path: "README.md"}
 		},
+		"diff on a terminal": func(s *State) {
+			s.CurrentPerspective().Columns[0].Views[0].Diff = &DiffRef{Source: "main"}
+		},
+		"diff base read as an option": func(s *State) {
+			v := s.CurrentPerspective().Columns[0].Views[0]
+			v.Kind, v.Diff = ViewDiff, &DiffRef{Source: "main", Base: "--output=x"}
+		},
+		"diff commit not a hash": func(s *State) {
+			v := s.CurrentPerspective().Columns[0].Views[0]
+			v.Kind, v.Diff = ViewDiff, &DiffRef{Source: "main", Commit: "HEAD~1"}
+		},
+		"diff of a commit and uncommitted": func(s *State) {
+			v := s.CurrentPerspective().Columns[0].Views[0]
+			v.Kind, v.Diff = ViewDiff, &DiffRef{Source: "main", Commit: "abc123", Uncommitted: true}
+		},
 		"no ID space": func(s *State) {
 			side := s.CurrentPerspective().Side
 			side.Views, side.Active = nil, 0
@@ -104,6 +119,21 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 				t.Fatal("failed restoration mutated allocator")
 			}
 		})
+	}
+}
+
+func TestRestoreDropsDiffPlaceholders(t *testing.T) {
+	s := decodedLayout(t)
+	column := s.CurrentPerspective().Columns[0]
+	placeholder := &View{ID: 900, Kind: ViewDiff, ProjectName: "Jun"}
+	kept := &View{ID: 901, Kind: ViewDiff, ProjectName: "Jun", Diff: &DiffRef{Source: "main"}}
+	column.Views = append(column.Views, placeholder, kept)
+	column.Active = placeholder.ID
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if len(column.Views) != 2 || column.Views[1] != kept || column.Active != kept.ID {
+		t.Fatalf("restored views %+v, active %d", column.Views, column.Active)
 	}
 }
 

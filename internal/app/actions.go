@@ -168,6 +168,7 @@ func (a *app) dropViews(views []*layout.View) []terminal.ID {
 		delete(a.fileViews, v.ID)
 		delete(a.sessionViews, v.ID)
 		delete(a.transcripts, v.ID)
+		delete(a.diffs, v.ID)
 		maps.DeleteFunc(a.previewTabs, func(_ layout.RegionID, id layout.ViewID) bool { return id == v.ID })
 	}
 	return sessions

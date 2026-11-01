@@ -54,6 +54,7 @@ Projects are ordered as in the project rail. Switching restores the project's se
 | Action | Shortcut |
 |---|---|
 | Command palette | ⌘K |
+| Review a branch's changes, in the palette | ⌘⇧D |
 | Move among items | ↑ / ↓ |
 | Go into the highlighted directory | Tab |
 | Run the highlighted item | Enter |
@@ -76,6 +77,6 @@ The terminal keeps these macOS keys:
 | Larger / smaller / reset font | ⌘= / ⌘- / ⌘0 |
 | Scroll page / to top or bottom | ⌘PageUp / ⌘PageDown / ⌘Home / ⌘End |
 
-⌘K opens the command palette rather than clearing the screen; ⌃L clears it in most shells.
+⌘K opens the command palette rather than clearing the screen; ⌃L clears it in most shells. ⌘⇧D reviews changes rather than splitting the terminal.
 
 ⌘Q quits Jun.

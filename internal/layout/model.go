@@ -33,6 +33,17 @@ type View struct {
 	AgentsLayout AgentsLayout `json:"agentsLayout,omitempty"`
 	File         *FileRef     `json:"file,omitempty"`       // a file view's file
 	Transcript   *SessionRef  `json:"transcript,omitempty"` // a transcript view's session
+	Diff         *DiffRef     `json:"diff,omitempty"`       // what a Diff view compares
+}
+
+// DiffRef is what a Diff view compares: a source of the view's project's
+// repository, named as FileRef.Source names it, and how.
+type DiffRef struct {
+	Source      string `json:"source"`
+	Base        string `json:"base,omitempty"` // a branch; guessed when ""
+	Uncommitted bool   `json:"uncommitted,omitempty"`
+	Commit      string `json:"commit,omitempty"` // one commit's changes, when set
+	Unified     bool   `json:"unified,omitempty"`
 }
 
 // SessionRef is an agent session a transcript view shows.

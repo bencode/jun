@@ -25,7 +25,24 @@ func (s *State) Restore() error {
 	}
 	s.nextID = maximum
 	s.fillPresets()
+	s.dropPlaceholders()
 	return nil
+}
+
+// dropPlaceholders removes the Diff views of earlier versions, which had
+// nothing to compare.
+func (s *State) dropPlaceholders() {
+	for _, p := range s.Projects {
+		for _, perspective := range p.Perspectives {
+			for _, r := range append(slices.Clone(perspective.Columns), perspective.Bottom) {
+				for i := len(r.Views) - 1; i >= 0; i-- {
+					if r.Views[i].Kind == ViewDiff && r.Views[i].Diff == nil {
+						removeView(r, i)
+					}
+				}
+			}
+		}
+	}
 }
 
 type restoreCheck struct {
@@ -184,6 +201,16 @@ func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed
 		}
 		if v.Transcript != nil {
 			if err := validSession(*v.Transcript); err != nil {
+				return fmt.Errorf("view %d: %w", v.ID, err)
+			}
+		}
+		// A Diff view with no source is an earlier version's placeholder,
+		// which restoring drops.
+		if v.Diff != nil && v.Kind != ViewDiff {
+			return fmt.Errorf("view %d: only a Diff view compares", v.ID)
+		}
+		if v.Diff != nil {
+			if err := validDiff(*v.Diff); err != nil {
 				return fmt.Errorf("view %d: %w", v.ID, err)
 			}
 		}
