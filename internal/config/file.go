@@ -50,7 +50,7 @@ func Save(path string, state *layout.State) (err error) {
 	if err := state.Validate(); err != nil {
 		return fmt.Errorf("save config %q: %w", path, err)
 	}
-	data, err := json.MarshalIndent(document{Version: 2, Layout: state}, "", "  ")
+	data, err := json.MarshalIndent(document{Version: 3, Layout: state}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode config %q: %w", path, err)
 	}

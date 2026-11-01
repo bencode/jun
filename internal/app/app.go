@@ -49,6 +49,7 @@ type app struct {
 	bindings        map[layout.ViewID]terminal.ID
 	terminalErrors  map[layout.ViewID]error
 	activeRegion    layout.RegionID
+	lastTabs        layout.RegionID // the column or bottom region last focused
 	pendingFocus    layout.RegionID
 	focusedTerminal layout.ViewID
 	scroll          map[layout.ViewID]*ui.ScrollState

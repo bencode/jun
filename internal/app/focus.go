@@ -18,6 +18,9 @@ const (
 func (a *app) focusRegion(id layout.RegionID) {
 	a.activeRegion = id
 	a.pendingFocus = id
+	if !a.state.Fixed(id) {
+		a.lastTabs = id
+	}
 }
 
 func (a *app) targetRegion() *layout.Region {
@@ -33,12 +36,36 @@ func (a *app) targetRegion() *layout.Region {
 		if p.BottomVisible && p.Bottom.ID == a.activeRegion {
 			return p.Bottom
 		}
+		if p.SideVisible && p.Side.ID == a.activeRegion {
+			return p.Side
+		}
 		return p.Columns[0]
 	}
 	if a.state.GlobalVisible {
 		return a.state.Global
 	}
 	return nil
+}
+
+// tabsTarget is where new tabs go: the active region, or when that is
+// Global or the side region, the column or bottom region last focused,
+// else the first column.
+func (a *app) tabsTarget() *layout.Region {
+	r := a.targetRegion()
+	if r == nil || !a.state.Fixed(r.ID) {
+		return r
+	}
+	p := a.state.CurrentPerspective()
+	if p == nil {
+		return nil
+	}
+	if p.BottomVisible && p.Bottom.ID == a.lastTabs {
+		return p.Bottom
+	}
+	if i := slices.IndexFunc(p.Columns, func(r *layout.Region) bool { return r.ID == a.lastTabs }); i >= 0 {
+		return p.Columns[i]
+	}
+	return p.Columns[0]
 }
 
 func (a *app) focusCurrentPerspective() {
@@ -65,11 +92,15 @@ func (a *app) selectTab(r *layout.Region, view layout.ViewID) {
 	a.focusRegion(r.ID)
 }
 
-// visibleRegions orders regions as ⌘[ and ⌘] cycle them: columns, bottom, Global.
+// visibleRegions orders regions as ⌘[ and ⌘] cycle them: side, columns,
+// bottom, Global.
 func (a *app) visibleRegions() []*layout.Region {
 	var regions []*layout.Region
 	if p := a.state.CurrentPerspective(); p != nil {
-		regions = slices.Clone(p.Columns)
+		if p.SideVisible {
+			regions = append(regions, p.Side)
+		}
+		regions = append(regions, p.Columns...)
 		if p.BottomVisible {
 			regions = append(regions, p.Bottom)
 		}
@@ -95,16 +126,26 @@ func (a *app) focusDirection(d direction) {
 	}
 }
 
-// neighbor follows the window geometry: Global sits right of the columns,
-// bottom spans below them. Directions stop at the edges.
+// neighbor follows the window geometry: the side region sits left of the
+// columns and bottom, Global right of them, bottom spans below the columns.
+// Directions stop at the edges.
 func (a *app) neighbor(d direction) *layout.Region {
 	p, r := a.state.CurrentPerspective(), a.targetRegion()
 	if p == nil || r == nil {
 		return nil
 	}
-	var global *layout.Region
+	var global, side *layout.Region
 	if a.state.GlobalVisible {
 		global = a.state.Global
+	}
+	if p.SideVisible {
+		side = p.Side
+	}
+	if r == p.Side {
+		if d == focusRight {
+			return p.Columns[0]
+		}
+		return nil
 	}
 	if r == a.state.Global {
 		if d == focusLeft {
@@ -113,6 +154,9 @@ func (a *app) neighbor(d direction) *layout.Region {
 		return nil
 	}
 	if r == p.Bottom {
+		if d == focusLeft {
+			return side
+		}
 		if d == focusRight {
 			return global
 		}
@@ -124,6 +168,9 @@ func (a *app) neighbor(d direction) *layout.Region {
 	index := slices.Index(p.Columns, r)
 	if d == focusLeft && index > 0 {
 		return p.Columns[index-1]
+	}
+	if d == focusLeft {
+		return side
 	}
 	if d == focusRight && index < len(p.Columns)-1 {
 		return p.Columns[index+1]

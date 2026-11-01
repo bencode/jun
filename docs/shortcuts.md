@@ -6,7 +6,7 @@ The modifiers form a ladder: ⌘ for tabs, ⌘⌥ for perspectives, ⌃⌘ for p
 
 ## Tabs
 
-Tab shortcuts act on the active region: the column, bottom region or Global that holds keyboard focus.
+Tab shortcuts act on the active region: the side bar, column, bottom region or Global that holds keyboard focus. The side bar’s and Global’s tabs are fixed: there ⌘W does nothing, and ⌘T opens the terminal in the column or bottom region focused last.
 
 | Action | Shortcut |
 |---|---|
@@ -23,8 +23,9 @@ Tab shortcuts act on the active region: the column, bottom region or Global that
 | Focus the region to the left / right | ⌘⌥← / ⌘⌥→ |
 | Focus the region above / below | ⌘⌥↑ / ⌘⌥↓ |
 | Previous / next region | ⌘[ / ⌘] |
+| Show / hide the side bar | ⌘B |
 
-Arrow keys move by position. Global sits to the right of the last column. The bottom region sits below the columns; ⌘⌥↑ from the bottom region focuses the first column. Arrows stop at the edge. ⌘[ and ⌘] cycle through the visible regions in the order columns, bottom, Global, and wrap around.
+Arrow keys move by position. The side bar sits to the left of the first column and the bottom region, Global to the right of the last column. The bottom region sits below the columns; ⌘⌥↑ from the bottom region focuses the first column, and so does ⌘⌥→ from the side bar. Arrows stop at the edge. ⌘[ and ⌘] cycle through the visible regions in the order side bar, columns, bottom, Global, and wrap around. Hiding the focused side bar focuses the first column.
 
 ## Perspectives
 

@@ -16,6 +16,9 @@ func (a *app) view(c *ui.Context) {
 			centerMinimum := minimumRegionWidth
 			if p := a.state.CurrentPerspective(); p != nil {
 				centerMinimum = columnsMinimum(len(p.Columns))
+				if p.SideVisible {
+					centerMinimum += minimumRegionWidth + 1
+				}
 			}
 			center := func() { a.center(c, (width-1)*a.state.CenterPercent/100) }
 			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, minimumRegionWidth, center, func() {

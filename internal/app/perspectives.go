@@ -43,11 +43,18 @@ func (a *app) perspectiveMenu(m *ui.Menu) {
 	if m.Item(a.text("Delete Perspective…", "删除视角…")).Disabled(len(project.Perspectives) == 1).Chosen() {
 		a.confirmDeletePerspective(p)
 	}
+	side := a.text("Show Side Bar", "展开侧边栏")
+	if p.SideVisible {
+		side = a.text("Hide Side Bar", "收起侧边栏")
+	}
 	label := a.text("Show Bottom Region", "展开底部区域")
 	if p.BottomVisible {
 		label = a.text("Hide Bottom Region", "收起底部区域")
 	}
 	m.Separator()
+	if m.Item(side).Shortcut(ui.Super, ui.KeyB).Chosen() {
+		a.toggleSide()
+	}
 	if m.Item(label).Chosen() {
 		a.setBottomVisible(p.Bottom.ID, !p.BottomVisible)
 	}

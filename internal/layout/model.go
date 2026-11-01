@@ -8,10 +8,12 @@ type ViewKind string
 
 const (
 	ViewTerminal ViewKind = "terminal"
-	ViewTree     ViewKind = "tree"
+	ViewTree     ViewKind = "tree" // Files, in the side region
 	ViewDiff     ViewKind = "diff"
 	ViewFile     ViewKind = "file"
-	ViewAgents   ViewKind = "agents"
+	ViewAgents   ViewKind = "agents"   // in Global
+	ViewSessions ViewKind = "sessions" // in the side region
+	ViewSkills   ViewKind = "skills"   // in the side region
 )
 
 // AgentsLayout is how an Agents view shows the agents.
@@ -42,6 +44,10 @@ type Perspective struct {
 	BottomVisible bool          `json:"bottomVisible"`
 	ColumnSplits  []float32     `json:"columnSplits"`
 	TopPercent    float32       `json:"topPercent"`
+	// Side is the perspective's fixed region, left of its columns.
+	Side        *Region `json:"side"`
+	SideVisible bool    `json:"sideVisible"`
+	SideWidth   float32 `json:"sideWidth"` // in DIPs, so that the side keeps it as the room around changes
 }
 type Project struct {
 	Name              string         `json:"name"`
@@ -64,6 +70,7 @@ type State struct {
 func New() *State {
 	s := &State{CenterPercent: 76}
 	s.Global = s.newRegion()
+	s.fill(s.Global, globalPreset, "")
 	return s
 }
 
@@ -85,7 +92,7 @@ func (s *State) regions() []*Region {
 	for _, p := range s.Projects {
 		for _, perspective := range p.Perspectives {
 			result = append(result, perspective.Columns...)
-			result = append(result, perspective.Bottom)
+			result = append(result, perspective.Bottom, perspective.Side)
 		}
 	}
 	return result

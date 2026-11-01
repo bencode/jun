@@ -83,6 +83,20 @@ func (a *app) toggleGlobal() {
 	a.layoutChanged()
 }
 
+// toggleSide shows or hides the current perspective's side region; hiding
+// it while focused focuses the first column.
+func (a *app) toggleSide() {
+	p := a.state.CurrentPerspective()
+	if p == nil {
+		return
+	}
+	p.SideVisible = !p.SideVisible
+	if !p.SideVisible && a.activeRegion == p.Side.ID {
+		a.focusCurrentPerspective()
+	}
+	a.layoutChanged()
+}
+
 func (a *app) selectPerspective(id layout.PerspectiveID) {
 	if p := a.state.CurrentProject(); p != nil && p.ActivePerspective == id {
 		if r := a.targetRegion(); r != nil {

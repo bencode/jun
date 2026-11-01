@@ -113,20 +113,24 @@ func TestAgentClickRevealsTabAcrossProjects(t *testing.T) {
 	}
 }
 
-func TestAgentClickReopensClosedTabInItsRegion(t *testing.T) {
+func TestAgentClickReopensClosedTabInItsProject(t *testing.T) {
 	a, tt, _ := agentsApp(t)
-	hidden, err := a.terminals.Create("Jun", a.state.CurrentProject().CWD, nil)
+	jun := a.state.CurrentProject()
+	hidden, err := a.terminals.Create("Jun", jun.CWD, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	a.agents[hidden.ID] = agentInfo{agent.Claude, agent.Waiting}
+	if err := a.state.AddProject("Brain", t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 	tt.Frame()
-	global := a.state.Global
 	click(t, tt, a.agentLabel(hidden))
-	view := global.Views[len(global.Views)-1]
-	if len(global.Views) != 2 || global.Active != view.ID || a.bindings[view.ID] != hidden.ID ||
-		view.ProjectName != "Jun" || !tt.Focused(contentLabel(a, view)) {
-		t.Fatal("click did not reopen the agent's session in the Agents region")
+	column := a.state.CurrentPerspective().Columns[0]
+	view := column.Views[len(column.Views)-1]
+	if a.state.CurrentProject() != jun || column.Active != view.ID || a.bindings[view.ID] != hidden.ID ||
+		view.ProjectName != "Jun" || len(a.state.Global.Views) != 1 || !tt.Focused(contentLabel(a, view)) {
+		t.Fatal("click did not reopen the agent's session in its project's column")
 	}
 }
 

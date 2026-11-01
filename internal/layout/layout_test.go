@@ -29,8 +29,8 @@ func project(t *testing.T, s *State, name string) *Project {
 
 func TestProjectPerspectiveAndGlobalIsolation(t *testing.T) {
 	s := New()
-	if s.CurrentProject() != nil || len(s.Global.Views) != 0 {
-		t.Fatal("unexpected initial state")
+	if s.CurrentProject() != nil || len(s.Global.Views) != 1 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID {
+		t.Fatal("Global should start with only Agents")
 	}
 	a := project(t, s, "Jun")
 	work := s.CurrentPerspective()
@@ -75,14 +75,7 @@ func TestMoveRetainsIdentityAndOriginAcrossProjects(t *testing.T) {
 	p := s.CurrentPerspective()
 	source := p.Columns[0]
 	view := source.Views[0]
-	s.GlobalVisible = false
-	if err := s.MoveView(view.ID, s.Global.ID, 0); err != nil {
-		t.Fatal(err)
-	}
 	project(t, s, "Brain")
-	if !s.GlobalVisible || s.Global.Active != view.ID || view.ProjectName != "Jun" {
-		t.Fatal("Global move lost state")
-	}
 	destination := s.CurrentPerspective().Columns[0]
 	if err := s.MoveView(view.ID, destination.ID, destination.Views[0].ID); err != nil {
 		t.Fatal(err)
@@ -207,7 +200,20 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 	other := p.Columns[1]
 	views := append([]*View(nil), r.Views...)
 	active := r.Active
+	side, global := p.Side, s.Global
+	sideViews, globalViews := slices.Clone(side.Views), slices.Clone(global.Views)
+	agents := global.Views[0].ID
 	operations := []func() error{
+		func() error { _, err := s.OpenView(global.ID, ViewTerminal, "Jun"); return err },
+		func() error { _, err := s.OpenView(side.ID, ViewTerminal, "Jun"); return err },
+		func() error { _, err := s.OpenView(r.ID, ViewAgents, ""); return err },
+		func() error { _, err := s.OpenView(r.ID, ViewTree, "Jun"); return err },
+		func() error { return s.MoveView(active, global.ID, 0) },
+		func() error { return s.MoveView(active, side.ID, 0) },
+		func() error { return s.MoveView(agents, r.ID, 0) },
+		func() error { return s.MoveView(agents, global.ID, agents) },
+		func() error { return s.CloseView(agents) },
+		func() error { return s.CloseView(side.Active) },
 		func() error { return s.MoveView(active, other.ID, 9999) },
 		func() error { return s.MoveView(active, 9999, 0) },
 		func() error { return s.MoveView(9999, other.ID, 0) },
@@ -223,7 +229,8 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 		if operation() == nil {
 			t.Fatalf("operation %d accepted invalid input", i)
 		}
-		if !reflect.DeepEqual(r.Views, views) || r.Active != active || s.ActiveProject != "Jun" || s.CurrentProject().ActivePerspective != s.CurrentProject().Perspectives[0].ID {
+		if !reflect.DeepEqual(r.Views, views) || r.Active != active || s.ActiveProject != "Jun" || s.CurrentProject().ActivePerspective != s.CurrentProject().Perspectives[0].ID ||
+			!reflect.DeepEqual(side.Views, sideViews) || !reflect.DeepEqual(global.Views, globalViews) {
 			t.Fatalf("operation %d partially mutated state", i)
 		}
 	}
@@ -231,8 +238,8 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 
 func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 	s := New()
-	if s.GlobalVisible || len(s.Global.Views) != 0 {
-		t.Fatal("Global should start empty and hidden")
+	if s.GlobalVisible || len(s.Global.Views) != 1 {
+		t.Fatal("Global should start hidden, with Agents")
 	}
 	if err := s.AddProject("Jun", "/Jun"); err != nil {
 		t.Fatal(err)
@@ -243,6 +250,27 @@ func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 	}
 	if len(work.Columns) != 1 || len(work.Columns[0].Views) != 1 || work.Columns[0].Views[0].Kind != ViewTerminal || work.BottomVisible || len(work.Bottom.Views) != 0 {
 		t.Fatal("Work should contain just one Terminal view")
+	}
+	kinds := func(r *Region) []ViewKind {
+		var result []ViewKind
+		for _, v := range r.Views {
+			if v.ProjectName != "Jun" {
+				t.Fatalf("side view %d belongs to %q", v.ID, v.ProjectName)
+			}
+			result = append(result, v.Kind)
+		}
+		return result
+	}
+	if !work.SideVisible || !reflect.DeepEqual(kinds(work.Side), sidePreset) || work.Side.Active != work.Side.Views[0].ID {
+		t.Fatal("Work should show a side region with Files, Sessions and Skills")
+	}
+	id, err := s.AddPerspective("Review")
+	if err != nil {
+		t.Fatal(err)
+	}
+	review := s.CurrentProject().Perspective(id)
+	if review.SideVisible || !reflect.DeepEqual(kinds(review.Side), sidePreset) || review.SideWidth != DefaultSideWidth {
+		t.Fatal("a new perspective should have a hidden side region")
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatal(err)
@@ -325,10 +353,7 @@ func TestRevealViewSelectsItsProjectPerspectiveAndRegion(t *testing.T) {
 		!review.BottomVisible || review.Bottom.Active != hidden {
 		t.Fatalf("bottom view not revealed: %v", err)
 	}
-	global, err := s.OpenView(s.Global.ID, ViewAgents, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	global := s.Global.Views[0].ID
 	s.GlobalVisible = false
 	if _, err := s.RevealView(global); err != nil || !s.GlobalVisible || s.ActiveProject != "Jun" {
 		t.Fatalf("Global view not revealed without switching project: %v", err)
@@ -344,14 +369,11 @@ func TestRenameAndRemoveProjectFollowItsViews(t *testing.T) {
 	jun := project(t, s, "Jun")
 	brain := project(t, s, "Brain")
 	work := jun.Perspectives[0]
-	toGlobal, toBrain := work.Columns[0].Views[0].ID, work.Columns[1].Views[0].ID
-	if err := s.MoveView(toGlobal, s.Global.ID, 0); err != nil {
-		t.Fatal(err)
-	}
+	toBrain := work.Columns[1].Views[0].ID
 	if err := s.MoveView(toBrain, brain.Perspectives[0].Columns[0].ID, 0); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.OpenView(jun.Perspectives[1].Bottom.ID, ViewTree, "Jun"); err != nil {
+	if _, err := s.OpenView(jun.Perspectives[1].Bottom.ID, ViewTerminal, "Jun"); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.SelectProject("Jun"); err != nil {
@@ -378,7 +400,8 @@ func TestRenameAndRemoveProjectFollowItsViews(t *testing.T) {
 		t.Fatal(err)
 	}
 	removed, err := s.RemoveProject("Lesscap")
-	if err != nil || len(removed) != 3 || s.ActiveProject != "Brain" || len(s.Global.Views) != 0 || s.Validate() != nil {
+	// Work's terminal, Review's and the one moved into Brain, besides each perspective's three side views.
+	if err != nil || len(removed) != 9 || s.ActiveProject != "Brain" || len(s.Global.Views) != 1 || s.Validate() != nil {
 		t.Fatalf("removed %d views, active %q: %v, %v", len(removed), s.ActiveProject, err, s.Validate())
 	}
 	for _, name := range []string{"Brain", "Docs"} {
@@ -395,7 +418,7 @@ func TestRemovePerspective(t *testing.T) {
 	s := New()
 	jun := project(t, s, "Jun")
 	review := jun.Perspectives[1]
-	if _, err := s.OpenView(review.Bottom.ID, ViewTree, "Jun"); err != nil {
+	if _, err := s.OpenView(review.Bottom.ID, ViewTerminal, "Jun"); err != nil {
 		t.Fatal(err)
 	}
 	notes, err := s.AddPerspective("Notes")
@@ -406,7 +429,7 @@ func TestRemovePerspective(t *testing.T) {
 		t.Fatal(err)
 	}
 	views, err := s.RemovePerspective(review.ID)
-	if err != nil || len(views) != 1 || jun.ActivePerspective != notes || len(jun.Perspectives) != 2 || s.Validate() != nil {
+	if err != nil || len(views) != 1+len(sidePreset) || jun.ActivePerspective != notes || len(jun.Perspectives) != 2 || s.Validate() != nil {
 		t.Fatalf("removing the current perspective: %d views, active %d: %v, %v", len(views), jun.ActivePerspective, err, s.Validate())
 	}
 	if _, err := s.RemovePerspective(notes); err != nil {

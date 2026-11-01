@@ -6,11 +6,15 @@ import (
 	"strings"
 )
 
-func (s *State) newPerspective(name string) *Perspective {
+// newPerspective makes a perspective of the project, its side region
+// hidden.
+func (s *State) newPerspective(project, name string) *Perspective {
 	s.nextID++
 	id := PerspectiveID(s.nextID)
-	return &Perspective{ID: id, Name: name,
-		Columns: []*Region{s.newRegion()}, Bottom: s.newRegion(), TopPercent: 75}
+	p := &Perspective{ID: id, Name: name, Columns: []*Region{s.newRegion()}, Bottom: s.newRegion(), TopPercent: 75,
+		Side: s.newRegion(), SideWidth: DefaultSideWidth}
+	s.fill(p.Side, sidePreset, project)
+	return p
 }
 
 func (s *State) AddPerspective(name string) (PerspectiveID, error) {
@@ -22,7 +26,7 @@ func (s *State) AddPerspective(name string) (PerspectiveID, error) {
 	if err := perspectiveNameAvailable(project, 0, name); err != nil {
 		return 0, err
 	}
-	p := s.newPerspective(name)
+	p := s.newPerspective(project.Name, name)
 	project.Perspectives = append(project.Perspectives, p)
 	project.ActivePerspective = p.ID
 	return p.ID, nil
@@ -62,10 +66,10 @@ func perspectiveNameAvailable(project *Project, except PerspectiveID, name strin
 	return nil
 }
 
-// Views lists the views in the perspective's columns and bottom region.
+// Views lists the views in the perspective's columns, bottom and side regions.
 func (p *Perspective) Views() []*View {
 	var views []*View
-	for _, r := range append(slices.Clone(p.Columns), p.Bottom) {
+	for _, r := range append(slices.Clone(p.Columns), p.Bottom, p.Side) {
 		views = append(views, r.Views...)
 	}
 	return views

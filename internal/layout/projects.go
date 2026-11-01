@@ -11,7 +11,8 @@ func (s *State) AddProject(name, cwd string) error {
 	if err := projectNameAvailable(s, nil, name); err != nil {
 		return err
 	}
-	work := s.newPerspective("Work")
+	work := s.newPerspective(name, "Work")
+	work.SideVisible = true
 	s.appendView(work.Columns[0], ViewTerminal, name)
 	p := &Project{Name: name, CWD: cwd, ActivePerspective: work.ID, Perspectives: []*Perspective{work}}
 

@@ -18,10 +18,11 @@ func snapshot(t *testing.T) *layout.State {
 		t.Fatal(err)
 	}
 	view := s.CurrentPerspective().Columns[0].Active
-	if err := s.MoveView(view, s.Global.ID, 0); err != nil {
+	if err := s.AddProject("Brain", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.AddProject("Brain", t.TempDir()); err != nil {
+	// A view keeps its source project in another project's perspective.
+	if err := s.MoveView(view, s.CurrentPerspective().Columns[0].ID, 0); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.AddPerspective("Review"); err != nil {
@@ -34,6 +35,7 @@ func snapshot(t *testing.T) *layout.State {
 	p.TopPercent = 62
 	p.ColumnSplits[0] = 39
 	p.BottomVisible = true
+	p.SideVisible, p.SideWidth, p.Side.Active = true, 300, p.Side.Views[1].ID
 	if _, err := s.OpenView(p.Bottom.ID, layout.ViewDiff, "Jun"); err != nil {
 		t.Fatal(err)
 	}
@@ -57,10 +59,11 @@ func TestSnapshotRoundTripPreservesSourceAndLayout(t *testing.T) {
 	if !reflect.DeepEqual(s.Projects, restored.Projects) || !reflect.DeepEqual(s.Global, restored.Global) || restored.ActiveProject != s.ActiveProject || restored.GlobalVisible || !restored.RailExpanded || restored.CenterPercent != 71 {
 		t.Fatal("snapshot lost project, global, or layout state")
 	}
-	if restored.Global.Views[0].ProjectName != "Jun" || restored.ActiveProject != "Brain" {
+	moved := restored.Projects[1].Perspectives[0].Columns[0]
+	if moved.Views[len(moved.Views)-1].ProjectName != "Jun" || restored.ActiveProject != "Brain" {
 		t.Fatal("source project was rebound")
 	}
-	id, err := restored.OpenView(restored.Global.ID, layout.ViewTerminal, "Jun")
+	id, err := restored.OpenView(restored.CurrentPerspective().Columns[0].ID, layout.ViewTerminal, "Jun")
 	if err != nil || id <= restored.CurrentPerspective().Bottom.Active {
 		t.Fatalf("restored IDs conflict: %d: %v", id, err)
 	}
@@ -117,7 +120,7 @@ func TestSaveFailurePreservesPriorConfiguration(t *testing.T) {
 
 func TestSavingDoesNotReuseClosedViewIDs(t *testing.T) {
 	s := snapshot(t)
-	region := s.Global.ID
+	region := s.CurrentPerspective().Columns[0].ID
 	removed, err := s.OpenView(region, layout.ViewTerminal, "Jun")
 	if err != nil {
 		t.Fatal(err)

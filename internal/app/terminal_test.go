@@ -37,8 +37,6 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 	tt.Type("printf '\\nLIVE:%s\\n' \"$$\"")
 	tt.Key(0, ui.KeyEnter)
 	waitTerminal(t, tt, func() bool { return strings.Contains(session.Terminal.Text(), "\nLIVE:") })
-	a.moveView(view.ID, a.state.Global.ID, 0)
-	tt.Frame()
 	cwdB := t.TempDir()
 	if err := a.state.AddProject("Brain", cwdB); err != nil {
 		t.Fatal(err)
@@ -47,15 +45,16 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 	a.selectProject("Brain")
 	tt.Frame()
 	if a.sessionFor(view.ID) != session || session.ProjectName != "Jun" {
-		t.Fatal("Global terminal changed ownership")
+		t.Fatal("project switch changed the terminal's ownership")
 	}
-	a.newTerminal(a.state.Global.ID)
-	opened := a.state.Global.Views[len(a.state.Global.Views)-1]
+	brain := a.state.CurrentPerspective().Columns[0]
+	a.newTerminal(brain.ID)
+	opened := brain.Views[len(brain.Views)-1]
 	if s := a.sessionFor(opened.ID); s.CWD != cwdB || s.ProjectName != "Brain" {
-		t.Fatal("Global creation used wrong project")
+		t.Fatal("new terminal used the wrong project")
 	}
 	a.selectProject("Jun")
-	a.closeView(a.state.Global.ID, view.ID)
+	a.closeView(r.ID, view.ID)
 	session.Terminal.Send([]byte("printf '\\nSTILL_ALIVE\\n'\n"))
 	waitTerminal(t, tt, func() bool { return strings.Contains(session.Terminal.Text(), "\nSTILL_ALIVE\n") })
 	label := fmt.Sprintf("%s · #%d", a.sessionTitle(session), session.ID)
@@ -81,7 +80,7 @@ func TestTerminalSurvivesCloseReopenAndProjectSwitch(t *testing.T) {
 
 func TestRestoresAllSavedTerminalViewsAsFreshSessions(t *testing.T) {
 	a, _ := testApp(t)
-	a.newTerminal(a.state.Global.ID)
+	a.newTerminal(a.state.CurrentPerspective().Columns[1].ID)
 	if _, err := a.state.AddPerspective("Investigation"); err != nil {
 		t.Fatal(err)
 	}
