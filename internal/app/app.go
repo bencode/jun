@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/bencode/jun/internal/config"
+	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
@@ -66,6 +67,10 @@ type app struct {
 	fileViews       map[layout.ViewID]*fileViewState  // what file views read
 	previewTabs     map[layout.RegionID]layout.ViewID // each region's preview tab, which the next file opened replaces
 	focusFileSearch bool                              // ⌘P asked to focus Files' search field
+	history         history.Scanner                   // agents' sessions, read once each as they change
+	sessionLists    map[string]*sessionList           // projects' agent sessions, by project directory
+	sessionViews    map[layout.ViewID]*sessionsViewState
+	transcripts     map[layout.ViewID]*transcriptState
 }
 
 func newApp(runtimeDir string) *app {
@@ -73,7 +78,8 @@ func newApp(runtimeDir string) *app {
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
 		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
-		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{}}
+		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
+		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{}}
 }
 
 func Run() error {

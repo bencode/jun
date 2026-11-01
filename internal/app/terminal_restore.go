@@ -1,13 +1,18 @@
 package app
 
 import (
+	"cmp"
 	"fmt"
 	"log"
 
 	"github.com/bencode/jun/internal/layout"
 )
 
-func (a *app) startTerminal(v *layout.View) error {
+func (a *app) startTerminal(v *layout.View) error { return a.startTerminalIn(v, "") }
+
+// startTerminalIn starts the terminal view's shell in dir, or in its
+// project's directory when dir is "".
+func (a *app) startTerminalIn(v *layout.View, dir string) error {
 	if v.Kind != layout.ViewTerminal {
 		return fmt.Errorf("view %d is not a terminal", v.ID)
 	}
@@ -22,7 +27,7 @@ func (a *app) startTerminal(v *layout.View) error {
 		if project.Name != v.ProjectName {
 			continue
 		}
-		session, err := a.terminals.Create(project.Name, project.CWD, invalidate)
+		session, err := a.terminals.Create(project.Name, cmp.Or(dir, project.CWD), invalidate)
 		if err != nil {
 			a.terminalErrors[v.ID] = err
 			return err
