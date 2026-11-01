@@ -3,7 +3,10 @@ package agent
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os/exec"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -34,6 +37,37 @@ func Foreground(ttys []string) (map[string]Kind, error) {
 		return nil, fmt.Errorf("list foreground processes: %w", err)
 	}
 	return ParseForeground(out), nil
+}
+
+// ParseBusy reads `ps -o pid=,pgid=,tpgid=,tty=,comm=` output and returns
+// the command leading each terminal's foreground process group, for the
+// terminals (tty → shell pid) where that is not their shell.
+func ParseBusy(output string, shells map[string]int) map[string]string {
+	busy := map[string]string{}
+	for _, line := range strings.Split(output, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 5 || f[0] != f[2] {
+			continue
+		}
+		shell, ok := shells[f[3]]
+		if pid, err := strconv.Atoi(f[0]); ok && err == nil && pid != shell {
+			busy[f[3]] = filepath.Base(strings.Join(f[4:], " "))
+		}
+	}
+	return busy
+}
+
+// Busy returns the command in the foreground of each of the terminals
+// (tty → shell pid) whose shell is not idle.
+func Busy(shells map[string]int) (map[string]string, error) {
+	if len(shells) == 0 {
+		return map[string]string{}, nil
+	}
+	out, err := ps("-o", "pid=,pgid=,tpgid=,tty=,comm=", "-t", strings.Join(slices.Collect(maps.Keys(shells)), ","))
+	if err != nil {
+		return nil, fmt.Errorf("list foreground processes: %w", err)
+	}
+	return ParseBusy(out, shells), nil
 }
 
 // TTYs returns the terminal of each running process.

@@ -103,6 +103,9 @@ func (a *app) saveInBackground() {
 }
 
 func (a *app) beforeClose(event *mygo.CloseEvent) {
+	if a.holdClose(event) {
+		return
+	}
 	if err := a.saveLayout(); err != nil {
 		event.PreventDefault()
 		a.saveFailed(err, true)
