@@ -91,8 +91,8 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	}
 	addColumn()
 	review := a.state.CurrentPerspective()
-	open(review.Columns[0], layout.ViewFile)
-	open(review.Columns[1], layout.ViewFile)
+	open(review.Columns[0], layout.ViewDiff)
+	open(review.Columns[1], layout.ViewDiff)
 	open(review.Columns[1], layout.ViewDiff)
 	open(review.Bottom, layout.ViewTerminal)
 	if err := a.state.SelectPerspective(a.state.CurrentProject().Perspectives[0].ID); err != nil {

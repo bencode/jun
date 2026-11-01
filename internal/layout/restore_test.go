@@ -68,13 +68,21 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 			v := s.CurrentPerspective().Columns[0].Views[0]
 			v.Kind, v.ProjectName = ViewAgents, ""
 		},
-		"terminal in Global": func(s *State) { s.Global.Views[0].Kind, s.Global.Views[0].ProjectName = ViewTerminal, "Jun" },
-		"terminal in side":   func(s *State) { s.CurrentPerspective().Side.Views[0].Kind = ViewTerminal },
-		"side kind twice":    func(s *State) { s.CurrentPerspective().Side.Views[1].Kind = ViewTree },
-		"side project":       func(s *State) { s.CurrentPerspective().Side.Views[0].ProjectName = "" },
-		"Global project":     func(s *State) { s.Global.Views[0].ProjectName = "Jun" },
-		"nil side":           func(s *State) { s.CurrentPerspective().Side = nil },
-		"side width":         func(s *State) { s.CurrentPerspective().SideWidth = 0 },
+		"terminal in Global":       func(s *State) { s.Global.Views[0].Kind, s.Global.Views[0].ProjectName = ViewTerminal, "Jun" },
+		"terminal in side":         func(s *State) { s.CurrentPerspective().Side.Views[0].Kind = ViewTerminal },
+		"side kind twice":          func(s *State) { s.CurrentPerspective().Side.Views[1].Kind = ViewTree },
+		"side project":             func(s *State) { s.CurrentPerspective().Side.Views[0].ProjectName = "" },
+		"Global project":           func(s *State) { s.Global.Views[0].ProjectName = "Jun" },
+		"nil side":                 func(s *State) { s.CurrentPerspective().Side = nil },
+		"side width":               func(s *State) { s.CurrentPerspective().SideWidth = 0 },
+		"file view without a file": func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = ViewFile },
+		"file outside the repository": func(s *State) {
+			v := s.CurrentPerspective().Columns[0].Views[0]
+			v.Kind, v.File = ViewFile, &FileRef{Source: "main", Path: "../secret"}
+		},
+		"file on a terminal": func(s *State) {
+			s.CurrentPerspective().Columns[0].Views[0].File = &FileRef{Source: "main", Path: "README.md"}
+		},
 		"no ID space": func(s *State) {
 			side := s.CurrentPerspective().Side
 			side.Views, side.Active = side.Views[1:], side.Views[1].ID

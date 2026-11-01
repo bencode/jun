@@ -33,6 +33,9 @@ func (a *app) title(v *layout.View) string {
 	if session := a.sessionFor(v.ID); session != nil {
 		return a.sessionTitle(session)
 	}
+	if v.File != nil {
+		return path.Base(v.File.Path)
+	}
 	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewTree, layout.ViewSessions, layout.ViewSkills}, v.Kind) {
 		return a.kindName(v.Kind)
 	}

@@ -2,7 +2,9 @@ package layout
 
 import (
 	"fmt"
+	"path"
 	"slices"
+	"strings"
 )
 
 func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (ViewID, error) {
@@ -13,7 +15,7 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	if s.Fixed(target) {
 		return 0, errFixed
 	}
-	if !slices.Contains(tabKinds, kind) {
+	if kind == ViewFile || !slices.Contains(tabKinds, kind) {
 		return 0, fmt.Errorf("view kind %s cannot be opened in a tab", kind)
 	}
 	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
@@ -22,6 +24,43 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	id := s.appendView(r, kind, projectName)
 	s.reveal(r)
 	return id, nil
+}
+
+// OpenFile shows the file in the target region: the view there showing it,
+// else the preview view, which it replaces, else a new view.
+func (s *State) OpenFile(target RegionID, project string, ref FileRef, preview ViewID) (ViewID, error) {
+	r := s.Region(target)
+	if r == nil {
+		return 0, fmt.Errorf("region not found")
+	}
+	if s.Fixed(target) {
+		return 0, errFixed
+	}
+	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == project }) {
+		return 0, fmt.Errorf("source project not found: %s", project)
+	}
+	if !validFilePath(ref.Path) || ref.Source == "" {
+		return 0, fmt.Errorf("invalid file %q in %q", ref.Path, ref.Source)
+	}
+	shows := func(v *View) bool { return v.Kind == ViewFile && v.ProjectName == project && *v.File == ref }
+	isPreview := func(v *View) bool { return v.ID == preview && v.Kind == ViewFile }
+	if i := slices.IndexFunc(r.Views, shows); i >= 0 {
+		r.Active = r.Views[i].ID
+	} else if i := slices.IndexFunc(r.Views, isPreview); i >= 0 {
+		r.Views[i].ProjectName, r.Views[i].File = project, &ref
+		r.Active = preview
+	} else {
+		s.appendView(r, ViewFile, project)
+		r.Views[len(r.Views)-1].File = &ref
+	}
+	s.reveal(r)
+	return r.Active, nil
+}
+
+// validFilePath reports whether name is a slash-separated path relative to
+// a repository's top level, inside it.
+func validFilePath(name string) bool {
+	return name != "" && path.Clean(name) == name && !path.IsAbs(name) && name != ".." && !strings.HasPrefix(name, "../")
 }
 
 var errFixed = fmt.Errorf("views of Global and side regions cannot be opened, moved or closed")

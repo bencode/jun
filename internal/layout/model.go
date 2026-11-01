@@ -30,6 +30,15 @@ type View struct {
 	Kind         ViewKind     `json:"kind"`
 	ProjectName  string       `json:"projectName"`
 	AgentsLayout AgentsLayout `json:"agentsLayout,omitempty"`
+	File         *FileRef     `json:"file,omitempty"` // a file view's file
+}
+
+// FileRef is a file a file view shows: its path in a source of the view's
+// project's repository, which Source names: a local branch, or the
+// directory of a detached worktree.
+type FileRef struct {
+	Source string `json:"source"`
+	Path   string `json:"path"` // relative to the repository's top level, slash-separated
 }
 type Region struct {
 	ID     RegionID `json:"id"`

@@ -98,6 +98,9 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View, fixed 
 				if session := a.sessionFor(v.ID); session != nil {
 					tab.Tooltip(session.ProjectName + "\n" + session.CWD)
 				}
+				if v.File != nil {
+					tab.Tooltip(v.File.Source + "\n" + v.File.Path)
+				}
 				if a.pendingFocus == r.ID && v.ID == r.Active && v.Kind != layout.ViewTerminal {
 					tab.Focus()
 					a.pendingFocus = 0
@@ -106,6 +109,9 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View, fixed 
 					title := ui.Text(c, a.title(v)).MinWidth(0).MaxWidth(160).SingleLine().Ellipsis("…")
 					if v.ID != r.Active {
 						title.TextColor(a.theme.TextMuted)
+					}
+					if a.previewTabs[r.ID] == v.ID {
+						title.Italic()
 					}
 					if !fixed && (v.ID == r.Active || tab.Hovered() || tab.FocusWithin()) {
 						iconButton(c, closeIcon, fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v)), 20, 12).

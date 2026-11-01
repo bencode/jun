@@ -36,7 +36,10 @@ func migrateV2(s *layout.State) error {
 			p.SideWidth = layout.DefaultSideWidth
 		}
 		for _, r := range append(slices.Clone(p.Columns), p.Bottom) {
-			removeViews(r, func(v *layout.View) bool { return v.Kind == layout.ViewAgents || v.Kind == layout.ViewTree })
+			// Version 1's file views were placeholders, with no file.
+			removeViews(r, func(v *layout.View) bool {
+				return v.Kind == layout.ViewAgents || v.Kind == layout.ViewTree || v.Kind == layout.ViewFile && v.File == nil
+			})
 		}
 	}
 	if s.Global != nil {
