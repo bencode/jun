@@ -24,6 +24,7 @@ type paletteItem struct {
 // openPalette shows the command palette with query typed in it: "~/" to
 // open a project, "" for commands.
 func (a *app) openPalette(query string) {
+	a.leaveThemes()
 	a.palette.open, a.palette.query, a.palette.highlight = true, query, 0
 }
 
@@ -104,10 +105,20 @@ func tilde(path, home string) string {
 	return path
 }
 
-// paletteItems lists what the query matches: the directory it names and
-// those it begins, or the commands whose titles contain it.
+// paletteItems lists what the query matches: the themes whose names
+// contain it, while choosing one; else the directory it names and those it
+// begins, or the commands whose titles contain it.
 func (a *app) paletteItems() ([]paletteItem, error) {
 	q := strings.TrimSpace(a.palette.query)
+	if a.palette.themes != nil {
+		var items []paletteItem
+		for _, name := range a.palette.themes {
+			if strings.Contains(strings.ToLower(name), strings.ToLower(q)) {
+				items = append(items, paletteItem{title: name, run: func() { a.chooseTheme(name) }})
+			}
+		}
+		return items, nil
+	}
 	if !isPath(q) {
 		q = strings.ToLower(q)
 		var items []paletteItem
@@ -158,6 +169,7 @@ func (a *app) commands() []paletteItem {
 			}
 		}},
 		{title: a.text("New Perspective…", "新建视角…"), run: func() { a.openPerspectiveForm(0) }},
+		{title: a.text("Theme…", "主题…"), run: a.openThemePalette},
 		{title: a.text("Toggle Global", "展开或收起 Global"), run: a.toggleGlobal},
 		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), run: a.toggleSide},
 		{title: a.text("Toggle Project Names", "展开或收起项目名称"), run: func() {
@@ -184,16 +196,27 @@ func (a *app) runPaletteItem(item paletteItem) {
 }
 
 // paletteDialog is the command palette: Up and Down move among its items,
-// Enter runs one, and Tab goes into the directory highlighted.
+// Enter runs one, and Tab goes into the directory highlighted. While
+// choosing a theme, the highlighted one shows, until the palette closes
+// without one chosen.
 func (a *app) paletteDialog(c *ui.Context) {
 	p := &a.palette
+	defer func() {
+		if !p.open {
+			a.leaveThemes()
+		}
+	}()
 	ui.Modal(c, &p.open, func() {
 		items, err := a.paletteItems()
 		p.highlight = max(min(p.highlight, len(items)-1), 0)
-		moved := false
+		moved := p.reveal
+		p.reveal = false
 		ui.Column(c).Width(560).Gap(8).Children(func() {
-			input := ui.TextInput(c, &p.query).Label(a.text("Command or directory", "命令或目录")).
-				Placeholder(a.text("Type a command, or a directory such as ~/", "输入命令，或者 ~/ 这样的目录")).AutoFocus().FillWidth()
+			label, placeholder := a.text("Command or directory", "命令或目录"), a.text("Type a command, or a directory such as ~/", "输入命令，或者 ~/ 这样的目录")
+			if p.themes != nil {
+				label, placeholder = a.text("Theme", "主题"), a.text("Type a theme’s name", "输入主题名称")
+			}
+			input := ui.TextInput(c, &p.query).Label(label).Placeholder(placeholder).AutoFocus().FillWidth()
 			if p.caretEnd {
 				n := utf8.RuneCountInString(p.query)
 				input.SetTextSelection(n, n)
@@ -218,6 +241,13 @@ func (a *app) paletteDialog(c *ui.Context) {
 			if input.Submitted() && p.highlight < len(items) {
 				a.runPaletteItem(items[p.highlight])
 				return
+			}
+			if p.themes != nil && p.highlight < len(items) && items[p.highlight].title != p.previewed {
+				p.previewed = items[p.highlight].title
+				if previewErr := a.applyTheme(p.previewed); previewErr != nil {
+					err = previewErr
+				}
+				c.Invalidate()
 			}
 			if err != nil {
 				ui.Text(c, err.Error()).TextColor(a.theme.Danger)

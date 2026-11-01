@@ -62,6 +62,7 @@ type State struct {
 	GlobalVisible bool       `json:"globalVisible"`
 	RailExpanded  bool       `json:"railExpanded"`
 	Chinese       bool       `json:"chinese,omitempty"`
+	Theme         string     `json:"theme,omitempty"` // a Ghostty theme's name; Jun's own when empty
 	CenterPercent float32    `json:"centerPercent"`
 	nextID        uint64
 }

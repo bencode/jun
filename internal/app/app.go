@@ -29,7 +29,10 @@ type app struct {
 		highlight int
 		// caretEnd puts the caret after a query the palette completed, once
 		// its input shows it.
-		caretEnd bool
+		caretEnd  bool
+		themes    []string // the themes listed, in theme mode; nil otherwise
+		previewed string   // the theme shown while choosing
+		reveal    bool     // scrolls the highlight into view once, on opening
 	}
 	perspectiveForm struct {
 		open        bool
@@ -61,7 +64,7 @@ type app struct {
 }
 
 func newApp(runtimeDir string) *app {
-	return &app{state: layout.New(), theme: theme.UI(), scroll: map[layout.ViewID]*ui.ScrollState{},
+	return &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
 		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
 		agentViews: map[layout.ViewID]*agentsViewState{}}
@@ -93,6 +96,7 @@ func Run() error {
 	} else {
 		a.restoreConfig(path)
 	}
+	a.useSavedTheme()
 	mygo.App.OnSecondInstance(func(args []string, wd string) {
 		if a.window == nil {
 			return
@@ -111,6 +115,7 @@ func Run() error {
 			Title: "Jun", Width: 1440, Height: 900, MinWidth: 1000, MinHeight: 640,
 			Content: ui.View(a.view),
 		})
+		a.matchAppearance()
 		stopAgents := make(chan struct{})
 		a.window.OnClose(a.beforeClose)
 		a.window.OnClosed(func() {
