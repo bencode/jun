@@ -39,7 +39,7 @@ func TestExitSelectsNeighborAndEmptyRegion(t *testing.T) {
 }
 
 func TestBackgroundExitDoesNotChangeCurrentWork(t *testing.T) {
-	for _, location := range []string{"column", "inactive tab", "bottom", "global", "perspective", "project"} {
+	for _, location := range []string{"column", "inactive tab", "bottom", "perspective", "project"} {
 		t.Run(location, func(t *testing.T) {
 			a, tt := testApp(t)
 			p := a.state.CurrentPerspective()
@@ -55,9 +55,6 @@ func TestBackgroundExitDoesNotChangeCurrentWork(t *testing.T) {
 			case "bottom":
 				a.moveView(background.ID, p.Bottom.ID, 0)
 				p.BottomVisible = false
-			case "global":
-				a.moveView(background.ID, a.state.Global.ID, 0)
-				a.state.GlobalVisible = false
 			case "perspective":
 				a.selectPerspective(a.state.CurrentProject().Perspectives[1].ID)
 				r = a.state.CurrentPerspective().Columns[0]

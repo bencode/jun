@@ -153,12 +153,13 @@ func (a *app) commands() []paletteItem {
 		{title: a.text("Open Project…", "打开项目…"), run: func() { a.openPalette("~/") }},
 		{title: a.text("Browse for Project…", "浏览项目目录…"), run: a.chooseProject},
 		{title: a.text("New Terminal", "新建终端"), run: func() {
-			if r := a.targetRegion(); r != nil {
+			if r := a.tabsTarget(); r != nil {
 				a.newTerminal(r.ID)
 			}
 		}},
 		{title: a.text("New Perspective…", "新建视角…"), run: func() { a.openPerspectiveForm(0) }},
 		{title: a.text("Toggle Global", "展开或收起 Global"), run: a.toggleGlobal},
+		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), run: a.toggleSide},
 		{title: a.text("Toggle Project Names", "展开或收起项目名称"), run: func() {
 			a.state.RailExpanded = !a.state.RailExpanded
 			a.layoutChanged()

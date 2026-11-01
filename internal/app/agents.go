@@ -148,9 +148,9 @@ func (a *app) waitingByProject() map[string]int {
 	return counts
 }
 
-// revealSession shows the session's tab, reopening it in from when its tab
-// was closed.
-func (a *app) revealSession(id terminal.ID, from layout.RegionID) {
+// revealSession shows the session's tab. When its tab was closed, it
+// reopens where new tabs go, in the session's project.
+func (a *app) revealSession(id terminal.ID) {
 	session := a.terminals.Get(id)
 	if session == nil {
 		a.report(fmt.Errorf("terminal %d is gone", id))
@@ -173,12 +173,23 @@ func (a *app) revealSession(id terminal.ID, from layout.RegionID) {
 		}
 		return
 	}
-	view, err := a.state.OpenView(from, layout.ViewTerminal, session.ProjectName)
+	if session.ProjectName != a.state.ActiveProject {
+		a.selectProject(session.ProjectName)
+		if a.state.ActiveProject != session.ProjectName {
+			return
+		}
+	}
+	target := a.tabsTarget()
+	if target == nil {
+		a.report(fmt.Errorf("no region to reopen terminal %d in", id))
+		return
+	}
+	view, err := a.state.OpenView(target.ID, layout.ViewTerminal, session.ProjectName)
 	if err != nil {
 		a.report(err)
 		return
 	}
 	a.bindings[view] = id
 	a.layoutChanged()
-	a.focusRegion(from)
+	a.focusRegion(target.ID)
 }

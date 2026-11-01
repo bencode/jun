@@ -20,7 +20,11 @@ func (s *State) Restore() error {
 	if err != nil {
 		return err
 	}
+	if maximum >= math.MaxUint64-s.missingPresetViews() {
+		return fmt.Errorf("no ID space for preset views")
+	}
 	s.nextID = maximum
+	s.fillPresets()
 	return nil
 }
 
@@ -41,7 +45,7 @@ func (s *State) validatedMaxID() (uint64, error) {
 	if !percentage(s.CenterPercent) {
 		return 0, fmt.Errorf("centerPercent must be between 0 and 100")
 	}
-	if err := check.region(s.Global); err != nil {
+	if err := check.region(s.Global, fixedKinds, "", true); err != nil {
 		return 0, fmt.Errorf("global: %w", err)
 	}
 	for _, p := range s.Projects {
@@ -91,7 +95,7 @@ func (c *restoreCheck) project(p *Project) error {
 				return fmt.Errorf("duplicate perspective name %q", perspective.Name)
 			}
 		}
-		if err := c.perspective(perspective); err != nil {
+		if err := c.perspective(perspective, p.Name); err != nil {
 			return fmt.Errorf("perspective %q: %w", perspective.Name, err)
 		}
 		active = active || perspective.ID == p.ActivePerspective
@@ -102,7 +106,7 @@ func (c *restoreCheck) project(p *Project) error {
 	return nil
 }
 
-func (c *restoreCheck) perspective(p *Perspective) error {
+func (c *restoreCheck) perspective(p *Perspective, project string) error {
 	if err := c.identifier(uint64(p.ID)); err != nil {
 		return err
 	}
@@ -121,18 +125,27 @@ func (c *restoreCheck) perspective(p *Perspective) error {
 	if !percentage(p.TopPercent) {
 		return fmt.Errorf("invalid topPercent")
 	}
+	if !percentage(p.SidePercent) {
+		return fmt.Errorf("invalid sidePercent")
+	}
 	for i, r := range p.Columns {
-		if err := c.region(r); err != nil {
+		if err := c.region(r, tabKinds, "", false); err != nil {
 			return fmt.Errorf("column %d: %w", i+1, err)
 		}
 	}
-	if err := c.region(p.Bottom); err != nil {
+	if err := c.region(p.Bottom, tabKinds, "", false); err != nil {
 		return fmt.Errorf("bottom: %w", err)
+	}
+	if err := c.region(p.Side, fixedKinds, project, true); err != nil {
+		return fmt.Errorf("side: %w", err)
 	}
 	return nil
 }
 
-func (c *restoreCheck) region(r *Region) error {
+// region checks a region's views. A tabs region holds kinds of any
+// project. A fixed region holds each of its kinds once, all of project:
+// its own for a side region, none for Global.
+func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed bool) error {
 	if r == nil {
 		return fmt.Errorf("region is missing")
 	}
@@ -140,25 +153,30 @@ func (c *restoreCheck) region(r *Region) error {
 		return err
 	}
 	active := len(r.Views) == 0 && r.Active == 0
-	for _, v := range r.Views {
+	for i, v := range r.Views {
 		if v == nil {
 			return fmt.Errorf("view is missing")
 		}
 		if err := c.identifier(uint64(v.ID)); err != nil {
 			return err
 		}
-		if !slices.Contains([]ViewKind{ViewTerminal, ViewTree, ViewDiff, ViewFile, ViewAgents}, v.Kind) {
-			return fmt.Errorf("unknown view kind %q", v.Kind)
+		if !slices.Contains(kinds, v.Kind) {
+			return fmt.Errorf("view %d: kind %q does not belong in this region", v.ID, v.Kind)
 		}
 		if v.Kind == ViewAgents {
-			if v.ProjectName != "" {
-				return fmt.Errorf("Agents view cannot have a source project")
-			}
 			if !slices.Contains([]AgentsLayout{AgentsAuto, AgentsCards, AgentsList}, v.AgentsLayout) {
 				return fmt.Errorf("unknown agents layout %q", v.AgentsLayout)
 			}
 		} else if v.AgentsLayout != AgentsAuto {
 			return fmt.Errorf("view %d is not an Agents view but has an agents layout", v.ID)
+		}
+		if fixed {
+			if v.ProjectName != project {
+				return fmt.Errorf("view %d source project %q does not match its region", v.ID, v.ProjectName)
+			}
+			if slices.ContainsFunc(r.Views[:i], func(previous *View) bool { return previous.Kind == v.Kind }) {
+				return fmt.Errorf("view kind %q appears twice", v.Kind)
+			}
 		} else if !c.projects[v.ProjectName] {
 			return fmt.Errorf("view %d source project %q does not exist", v.ID, v.ProjectName)
 		}

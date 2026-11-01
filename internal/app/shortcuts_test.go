@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/bencode/jun/internal/layout"
@@ -11,7 +12,7 @@ import (
 func TestShortcutsTargetFocusedRegionAndRespectModals(t *testing.T) {
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
-	for _, r := range []*layout.Region{p.Columns[0], p.Bottom, a.state.Global} {
+	for _, r := range []*layout.Region{p.Columns[0], p.Bottom} {
 		if r == p.Bottom {
 			p.BottomVisible = true
 		}
@@ -54,6 +55,21 @@ func TestShortcutsTargetFocusedRegionAndRespectModals(t *testing.T) {
 		case <-session.Terminal.Done():
 			t.Fatal("close shortcut terminated session")
 		default:
+		}
+	}
+	// From Global and the side region, ⌘T opens where tabs were last
+	// focused and ⌘W closes nothing.
+	p.SideVisible = true
+	for _, r := range []*layout.Region{a.state.Global, p.Side} {
+		a.focusRegion(p.Columns[1].ID)
+		tt.Frame()
+		a.focusRegion(r.ID)
+		tt.Frame()
+		views, before := slices.Clone(r.Views), len(p.Columns[1].Views)
+		tt.Key(ui.Super, ui.KeyW)
+		tt.Key(ui.Super, ui.KeyT)
+		if !slices.Equal(r.Views, views) || len(p.Columns[1].Views) != before+1 {
+			t.Fatalf("region %d: ⌘W closed a fixed view or ⌘T missed the last column", r.ID)
 		}
 	}
 	a.errorOpen = true
@@ -131,8 +147,8 @@ func TestTabShortcutsSelectByPositionAndWrap(t *testing.T) {
 func TestRegionShortcutsFollowLayout(t *testing.T) {
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
-	p.BottomVisible, a.state.GlobalVisible = true, true
-	c1, c2, bottom, global := p.Columns[0], p.Columns[1], p.Bottom, a.state.Global
+	p.BottomVisible, p.SideVisible, a.state.GlobalVisible = true, true, true
+	side, c1, c2, bottom, global := p.Side, p.Columns[0], p.Columns[1], p.Bottom, a.state.Global
 	a.focusRegion(c1.ID)
 	tt.Frame()
 	press := func(mods ui.Modifiers, key ui.Key, want *layout.Region) {
@@ -143,7 +159,10 @@ func TestRegionShortcutsFollowLayout(t *testing.T) {
 		}
 	}
 	arrow := ui.Super | ui.Alt
-	press(arrow, ui.KeyLeft, c1)
+	press(arrow, ui.KeyLeft, side)
+	press(arrow, ui.KeyLeft, side)
+	press(arrow, ui.KeyDown, side)
+	press(arrow, ui.KeyRight, c1)
 	press(arrow, ui.KeyRight, c2)
 	press(arrow, ui.KeyRight, global)
 	press(arrow, ui.KeyRight, global)
@@ -151,8 +170,11 @@ func TestRegionShortcutsFollowLayout(t *testing.T) {
 	press(arrow, ui.KeyDown, bottom)
 	press(arrow, ui.KeyUp, c1)
 	press(arrow, ui.KeyDown, bottom)
+	press(arrow, ui.KeyLeft, side)
+	press(arrow, ui.KeyRight, c1)
+	press(arrow, ui.KeyDown, bottom)
 	press(arrow, ui.KeyRight, global)
-	for _, want := range []*layout.Region{c1, c2, bottom, global, c1} {
+	for _, want := range []*layout.Region{side, c1, c2, bottom, global, side} {
 		press(ui.Super, ui.KeyBracketRight, want)
 	}
 	press(ui.Super, ui.KeyBracketLeft, global)
@@ -161,6 +183,17 @@ func TestRegionShortcutsFollowLayout(t *testing.T) {
 	press(ui.Super, ui.KeyBracketRight, global)
 	press(arrow, ui.KeyLeft, c2)
 	press(arrow, ui.KeyDown, c2)
+	// ⌘B hides the focused side region, focusing the first column, and shows it again leaving focus.
+	a.focusRegion(side.ID)
+	tt.Frame()
+	press(ui.Super, ui.KeyB, c1)
+	if p.SideVisible {
+		t.Fatal("⌘B did not hide the side region")
+	}
+	press(ui.Super, ui.KeyB, c1)
+	if !p.SideVisible {
+		t.Fatal("⌘B did not show the side region")
+	}
 }
 
 func TestPerspectiveAndProjectShortcuts(t *testing.T) {

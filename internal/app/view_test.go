@@ -91,14 +91,16 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	}
 	addColumn()
 	review := a.state.CurrentPerspective()
-	open(review.Columns[0], layout.ViewTree)
+	open(review.Columns[0], layout.ViewFile)
 	open(review.Columns[1], layout.ViewFile)
 	open(review.Columns[1], layout.ViewDiff)
 	open(review.Bottom, layout.ViewTerminal)
 	if err := a.state.SelectPerspective(a.state.CurrentProject().Perspectives[0].ID); err != nil {
 		t.Fatal(err)
 	}
-	open(a.state.Global, layout.ViewAgents)
+	// Most tests leave the side region aside; those about it show it.
+	a.state.CurrentPerspective().SideVisible = false
+	a.state.GlobalVisible = true
 	a.restoreTerminals()
 	return a, ui.NewTester(a.view, 1440, 900)
 }
@@ -117,13 +119,9 @@ func TestRegionOpenMoveCloseAndFocus(t *testing.T) {
 	if !p.BottomVisible || p.Bottom.Active != opened.ID || !tt.Focused(contentLabel(a, opened)) {
 		t.Fatal("move did not reveal/focus bottom")
 	}
-	chooseTabMenu(t, tt, a, opened, "Move Tab To", "Global")
-	if a.state.Global.Active != opened.ID || !tt.Focused(contentLabel(a, opened)) {
-		t.Fatal("move to Global lost focus")
-	}
 	chooseTabMenu(t, tt, a, opened, "Close Tab")
-	if len(a.state.Global.Views) != 1 || !tt.Focused("Agents") {
-		t.Fatal("close did not focus adjacent tab")
+	if len(p.Bottom.Views) != 0 || !tt.Focused(fmt.Sprintf("Region menu %d", p.Bottom.ID)) {
+		t.Fatal("close did not focus the emptied region")
 	}
 	click(t, tt, "Close "+a.title(right.Views[0]))
 	if len(right.Views) != 0 || right.Active != 0 || !tt.Focused(fmt.Sprintf("Region menu %d", right.ID)) {
@@ -200,7 +198,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	}
 	a.state.Chinese = true
 	tt.Frame()
-	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("布局预览") {
+	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("将在后续迭代接入。") {
 		t.Fatal("Chinese labels missing")
 	}
 	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "打开视图", "新建终端")
@@ -271,7 +269,6 @@ func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 			t.Fatal("narrow region menu did not create a View")
 		}
 	}
-	menu(t, tt, a, a.state.Global, "Open View", "New Terminal")
 	for len(p.Columns) > 1 {
 		menu(t, tt, a, p.Columns[len(p.Columns)-1], "Remove This Column")
 	}

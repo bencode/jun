@@ -101,6 +101,10 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 			tt.Key(0, ui.KeyEnter)
 		},
 		"global": func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
+		"side bar": func(t *testing.T, a *app, tt *ui.Tester) {
+			tt.Key(ui.Super, ui.KeyB)
+			click(t, tt, "Skills")
+		},
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
 			perspectiveMenu(t, tt, "Show Bottom Region")
 		},
@@ -117,7 +121,7 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 			chooseTabMenu(t, tt, a, a.state.CurrentPerspective().Columns[0].Views[0], "Close Tab")
 		},
 		"move view": func(t *testing.T, a *app, tt *ui.Tester) {
-			chooseTabMenu(t, tt, a, a.state.CurrentPerspective().Columns[0].Views[0], "Move Tab To", "Global")
+			chooseTabMenu(t, tt, a, a.state.CurrentPerspective().Columns[0].Views[0], "Move Tab To", "Jun / Work / Bottom Region")
 		},
 		"select tab": func(t *testing.T, a *app, tt *ui.Tester) {
 			region := a.state.CurrentPerspective().Columns[0]
@@ -307,7 +311,8 @@ func TestProjectSubmissionIsSavedAndRestored(t *testing.T) {
 	tt.Advance(400 * time.Millisecond)
 	restored := testNewApp(t)
 	restored.restoreConfig(path)
-	if restored.state.ActiveProject != "Jun" || restored.state.CurrentProject().CWD != cwd || restored.state.GlobalVisible || len(restored.state.Global.Views) != 0 {
+	if restored.state.ActiveProject != "Jun" || restored.state.CurrentProject().CWD != cwd || restored.state.GlobalVisible || len(restored.state.Global.Views) != 1 ||
+		!restored.state.CurrentPerspective().SideVisible {
 		t.Fatal("project/default layout did not survive restart")
 	}
 	if len(restored.state.CurrentPerspective().Columns) != 1 || len(restored.state.CurrentPerspective().Columns[0].Views) != 1 {

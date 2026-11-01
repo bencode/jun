@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
@@ -19,9 +20,10 @@ func (a *app) text(en, zh string) string {
 
 func (a *app) kindName(kind layout.ViewKind) string {
 	names := map[layout.ViewKind][2]string{
-		layout.ViewTerminal: {"Terminal", "终端"}, layout.ViewTree: {"Files", "文件树"},
+		layout.ViewTerminal: {"Terminal", "终端"}, layout.ViewTree: {"Files", "文件"},
 		layout.ViewDiff: {"Diff", "差异"}, layout.ViewFile: {"File", "文件"},
-		layout.ViewAgents: {"Agents", "Agents"},
+		layout.ViewAgents: {"Agents", "Agents"}, layout.ViewSessions: {"Sessions", "会话"},
+		layout.ViewSkills: {"Skills", "Skills"},
 	}
 	pair := names[kind]
 	return a.text(pair[0], pair[1])
@@ -31,7 +33,7 @@ func (a *app) title(v *layout.View) string {
 	if session := a.sessionFor(v.ID); session != nil {
 		return a.sessionTitle(session)
 	}
-	if v.Kind == layout.ViewAgents {
+	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewTree, layout.ViewSessions, layout.ViewSkills}, v.Kind) {
 		return a.kindName(v.Kind)
 	}
 	return fmt.Sprintf("%s %d", a.kindName(v.Kind), v.ID)

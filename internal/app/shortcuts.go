@@ -14,15 +14,16 @@ var digitKeys = []ui.Key{ui.Key1, ui.Key2, ui.Key3, ui.Key4, ui.Key5, ui.Key6, u
 
 func (a *app) shortcuts(c *ui.Context) {
 	c.OnShortcut(ui.Super, ui.KeyT, func() {
-		if r := a.targetRegion(); r != nil {
+		if r := a.tabsTarget(); r != nil {
 			a.newTerminal(r.ID)
 		}
 	})
 	c.OnShortcut(ui.Super, ui.KeyW, func() {
-		if r := a.targetRegion(); r != nil && r.Active != 0 {
+		if r := a.targetRegion(); r != nil && r.Active != 0 && !a.state.Fixed(r.ID) {
 			a.closeView(r.ID, r.Active)
 		}
 	})
+	c.OnShortcut(ui.Super, ui.KeyB, a.toggleSide)
 	c.OnShortcut(ui.Ctrl, ui.KeyTab, func() { a.cycleTab(1) })
 	c.OnShortcut(ui.Ctrl|ui.Shift, ui.KeyTab, func() { a.cycleTab(-1) })
 	c.OnShortcut(ui.Super|ui.Shift, ui.KeyBracketRight, func() { a.cycleTab(1) })

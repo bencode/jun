@@ -12,21 +12,6 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// regionOf finds the shown region holding the view.
-func (a *app) regionOf(view layout.ViewID) layout.RegionID {
-	regions := []*layout.Region{a.state.Global}
-	if p := a.state.CurrentPerspective(); p != nil {
-		regions = append(regions, p.Bottom)
-		regions = append(regions, p.Columns...)
-	}
-	for _, r := range regions {
-		if slices.ContainsFunc(r.Views, func(v *layout.View) bool { return v.ID == view }) {
-			return r.ID
-		}
-	}
-	return 0
-}
-
 // agentsViewState is what an Agents view keeps between frames.
 type agentsViewState struct {
 	room     ui.Rect      // the area under the counts, measured last frame
@@ -45,7 +30,7 @@ func (a *app) agentsState(view layout.ViewID) *agentsViewState {
 }
 
 func (a *app) agentsView(c *ui.Context, v *layout.View) {
-	sessions, region := a.agentSessions(), a.regionOf(v.ID)
+	sessions := a.agentSessions()
 	ui.Column(c.Key(v.ID)).Fill().Gap(8).Padding(12).Children(func() {
 		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Start).Children(func() {
 			a.agentCounts(c, sessions)
@@ -75,7 +60,7 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 		area.Children(func() {
 			width, height, fits := cardGrid(room.W, room.H, len(sessions))
 			if v.AgentsLayout == layout.AgentsList || v.AgentsLayout == layout.AgentsAuto && !fits {
-				a.agentList(c, st, sessions, room.H, region, follow)
+				a.agentList(c, st, sessions, room.H, follow)
 				return
 			}
 			if !fits {
@@ -86,7 +71,7 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 			}
 			// Under the width of the cards, as GridView rounds down its columns.
 			ui.GridView(c, &st.grid, len(sessions), width-0.5, height, func(i int) {
-				a.agentCard(c, sessions[i], region)
+				a.agentCard(c, sessions[i])
 			}).Fill()
 		})
 	})
@@ -116,7 +101,7 @@ func (a *app) agentsLayoutChoice(c *ui.Context, v *layout.View) {
 // agentList lists the agents under a heading for each status, in compact
 // rows when rows would not fit, and with the idle ones folded under their
 // heading when compact rows would not either.
-func (a *app) agentList(c *ui.Context, st *agentsViewState, sessions []*terminal.Session, height float32, region layout.RegionID, follow bool) {
+func (a *app) agentList(c *ui.Context, st *agentsViewState, sessions []*terminal.Session, height float32, follow bool) {
 	var groups [][]*terminal.Session
 	for i, s := range sessions {
 		if i == 0 || a.agents[s.ID].Status != a.agents[sessions[i-1].ID].Status {
@@ -140,7 +125,7 @@ func (a *app) agentList(c *ui.Context, st *agentsViewState, sessions []*terminal
 					ui.Text(c, heading).FontSize(theme.Caption).TextColor(a.theme.TextMuted)
 				})
 				for _, s := range group {
-					row := a.agentRow(c, s, region, compact)
+					row := a.agentRow(c, s, compact)
 					if follow && s.ID == a.lastTerminal {
 						row.ScrollIntoView()
 					}
@@ -186,7 +171,7 @@ func (a *app) countChip(c *ui.Context, name string, n int, dot *ui.Color) {
 // agentRow shows an agent in a list: its title over its project and kind,
 // or, compact, its title beside its project's tile. The current agent is
 // marked as the rail marks the current project.
-func (a *app) agentRow(c *ui.Context, s *terminal.Session, region layout.RegionID, compact bool) ui.Element {
+func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Element {
 	info := a.agents[s.ID]
 	height, content := rowHeight, func() { a.agentHeading(c, s, info, false) }
 	if compact {
@@ -205,7 +190,7 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, region layout.RegionI
 	if info.Status == agent.Waiting {
 		row.Background(a.statusColor(agent.Waiting).Alpha(0.14))
 	}
-	row.OnClick(func() { a.revealSession(s.ID, region) })
+	row.OnClick(func() { a.revealSession(s.ID) })
 	return row
 }
 
@@ -218,7 +203,7 @@ func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo)
 	})
 }
 
-func (a *app) agentCard(c *ui.Context, s *terminal.Session, region layout.RegionID) {
+func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
 	info := a.agents[s.ID]
 	border := a.theme.Border
 	if info.Status == agent.Waiting {
@@ -239,7 +224,7 @@ func (a *app) agentCard(c *ui.Context, s *terminal.Session, region layout.Region
 			ui.Box(c).Absolute().Top(0).Left(8).Right(8).Height(2).Background(a.theme.Accent)
 		}
 	})
-	card.OnClick(func() { a.revealSession(s.ID, region) })
+	card.OnClick(func() { a.revealSession(s.ID) })
 }
 
 // cardScreen shows a live copy of the agent's screen.

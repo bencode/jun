@@ -15,7 +15,7 @@ func TestRegionMenusRespectScope(t *testing.T) {
 	p := a.state.CurrentPerspective()
 	p.BottomVisible = true
 	tt.Frame()
-	for _, r := range []*layout.Region{p.Columns[0], p.Bottom, a.state.Global} {
+	for _, r := range []*layout.Region{p.Columns[0], p.Bottom} {
 		click(t, tt, fmt.Sprintf("Region menu %d", r.ID))
 		items := tt.Menu()
 		for _, name := range []string{"Open View", "Reopen Terminal"} {
@@ -34,7 +34,7 @@ func TestRegionMenusRespectScope(t *testing.T) {
 				t.Fatalf("region %d has incorrect column capability", r.ID)
 			}
 		}
-		if slices.Contains(items, "Hide Bottom Region") != (r == p.Bottom) || slices.Contains(items, "Hide Global") != (r == a.state.Global) {
+		if slices.Contains(items, "Hide Bottom Region") != (r == p.Bottom) || slices.Contains(items, "Hide Global") || slices.Contains(items, "Hide Side Bar") {
 			t.Fatal("hide action controls another region")
 		}
 		tt.CloseMenu()

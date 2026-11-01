@@ -28,6 +28,7 @@ func (a *app) applicationMenu() *mygo.Menu {
 		{Role: mygo.RoleEditMenu},
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
+			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Click: action(a.toggleSide)},
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -46,6 +47,18 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 		a.pendingFocus = 0
 	}
 	button.Menu(func(m *ui.Menu) {
+		if r == a.state.Global {
+			if m.Item(a.text("Hide Global", "收起 Global")).Chosen() {
+				a.toggleGlobal()
+			}
+			return
+		}
+		if p := a.state.CurrentPerspective(); p != nil && r == p.Side {
+			if m.Item(a.text("Hide Side Bar", "收起侧边栏")).Shortcut(ui.Super, ui.KeyB).Chosen() {
+				a.toggleSide()
+			}
+			return
+		}
 		m.Submenu(a.text("Open View", "打开视图"), func(m *ui.Menu) { a.openViewMenu(m, r.ID) })
 		m.Submenu(a.text("Reopen Terminal", "重新打开终端"), func(m *ui.Menu) {
 			projectName := ""
@@ -70,11 +83,6 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 			}
 			if r == p.Bottom && m.Item(a.text("Hide Bottom Region", "收起底部区域")).Chosen() {
 				a.setBottomVisible(r.ID, false)
-			}
-		}
-		if r == a.state.Global {
-			if m.Item(a.text("Hide Global", "收起 Global")).Chosen() {
-				a.toggleGlobal()
 			}
 		}
 	})

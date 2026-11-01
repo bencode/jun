@@ -10,18 +10,21 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	if r == nil {
 		return 0, fmt.Errorf("region not found")
 	}
-	if !slices.Contains([]ViewKind{ViewTerminal, ViewTree, ViewDiff, ViewFile, ViewAgents}, kind) {
-		return 0, fmt.Errorf("unknown view kind: %s", kind)
+	if s.Fixed(target) {
+		return 0, errFixed
 	}
-	if kind == ViewAgents {
-		projectName = ""
-	} else if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
+	if !slices.Contains(tabKinds, kind) {
+		return 0, fmt.Errorf("view kind %s cannot be opened in a tab", kind)
+	}
+	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
 		return 0, fmt.Errorf("source project not found: %s", projectName)
 	}
 	id := s.appendView(r, kind, projectName)
 	s.reveal(r)
 	return id, nil
 }
+
+var errFixed = fmt.Errorf("views of Global and side regions cannot be opened, moved or closed")
 
 func (s *State) SelectView(region RegionID, view ViewID) error {
 	r := s.Region(region)
@@ -47,6 +50,9 @@ func (s *State) MoveView(view ViewID, target RegionID, before ViewID) error {
 	if source == nil || destination == nil {
 		return fmt.Errorf("view or target region not found")
 	}
+	if s.Fixed(source.ID) || s.Fixed(destination.ID) {
+		return errFixed
+	}
 	if before != 0 && !slices.ContainsFunc(destination.Views, func(v *View) bool { return v.ID == before }) {
 		return fmt.Errorf("destination tab not found")
 	}
@@ -69,6 +75,9 @@ func (s *State) CloseView(view ViewID) error {
 	r, i := s.locate(view)
 	if r == nil {
 		return fmt.Errorf("view not found")
+	}
+	if s.Fixed(r.ID) {
+		return errFixed
 	}
 	removeView(r, i)
 	return nil

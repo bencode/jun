@@ -25,7 +25,6 @@ func (a *app) placeholder(c *ui.Context, v *layout.View) {
 	ui.Scroll(c.Key(v.ID)).Fill().TrackScroll(a.scroll[v.ID]).Children(func() {
 		ui.Column(c).Padding(28).Gap(12).FillWidth().Children(func() {
 			ui.Text(c, a.kindName(v.Kind)).FontSize(theme.Heading).Bold()
-			ui.Text(c, a.text("Layout preview", "布局预览")).TextColor(a.theme.Accent)
 			if v.ProjectName != "" {
 				ui.Text(c, v.ProjectName).Bold()
 				for _, p := range a.state.Projects {
@@ -34,8 +33,7 @@ func (a *app) placeholder(c *ui.Context, v *layout.View) {
 					}
 				}
 			}
-			ui.Text(c, a.text("Content arrives in I05.", "内容将在 I05 接入。")).TextColor(a.theme.TextMuted)
-			ui.Text(c, a.text("Move this tab between columns, the bottom region, and Global.", "可以将标签移动到其他列、底部区域或 Global。")).TextColor(a.theme.TextMuted)
+			ui.Text(c, a.text("Arrives in a later iteration.", "将在后续迭代接入。")).TextColor(a.theme.TextMuted)
 		})
 	})
 }

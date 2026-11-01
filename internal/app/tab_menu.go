@@ -32,5 +32,4 @@ func (a *app) moveMenu(m *ui.Menu, source *layout.Region, view layout.ViewID) {
 		}
 		target(p.Bottom, prefix+a.text("Bottom Region", "底部区域"))
 	}
-	target(a.state.Global, "Global")
 }

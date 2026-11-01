@@ -9,11 +9,24 @@ import (
 
 func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
 	ui.Column(c).Key(p.ID).Fill().Children(func() {
-		top := func() { a.columns(c, slices.Clone(p.Columns), p.ColumnSplits, 0, width) }
-		if p.BottomVisible {
-			ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom) }).Fill().OnChange(a.layoutChanged)
+		main := func(width float32) {
+			top := func() { a.columns(c, slices.Clone(p.Columns), p.ColumnSplits, 0, width) }
+			if p.BottomVisible {
+				ui.SplitVerticalPercent(c, &p.TopPercent, top, func() { a.region(c, p.Bottom) }).Fill().OnChange(a.layoutChanged)
+			} else {
+				top()
+			}
+		}
+		if side := p.SideVisible; side {
+			constrainedSplit(c, &p.SidePercent, width, minimumRegionWidth, columnsMinimum(len(p.Columns)),
+				func() { a.region(c, p.Side) }, func() {
+					// The side region's own menu can hide it during this build.
+					if a.state.CurrentPerspective() == p && p.SideVisible == side {
+						main((width - 1) * (1 - p.SidePercent/100))
+					}
+				}, a.layoutChanged)
 		} else {
-			top()
+			main(width)
 		}
 		ui.Row(c).Absolute().Top(4).Right(4).Width(32).Height(32).Background(a.theme.Surface).
 			Children(func() { a.globalToggle(c) })
@@ -26,10 +39,10 @@ func (a *app) columns(c *ui.Context, columns []*layout.Region, splits []float32,
 		return
 	}
 	p := a.state.CurrentPerspective()
-	count, bottom := len(p.Columns), p.BottomVisible
+	count, bottom, side := len(p.Columns), p.BottomVisible, p.SideVisible
 	constrainedSplit(c, &splits[index], width, minimumRegionWidth, columnsMinimum(len(columns)-1),
 		func() { a.region(c, columns[0]) }, func() {
-			if a.state.CurrentPerspective() != p || len(p.Columns) != count || p.BottomVisible != bottom {
+			if a.state.CurrentPerspective() != p || len(p.Columns) != count || p.BottomVisible != bottom || p.SideVisible != side {
 				return
 			}
 			a.columns(c, columns[1:], splits, index+1, (width-1)*(1-splits[index]/100))
