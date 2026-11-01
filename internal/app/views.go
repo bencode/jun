@@ -15,6 +15,14 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.agentsView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewTree {
+		a.filesView(c, v)
+		return
+	}
+	if v.Kind == layout.ViewFile {
+		a.fileView(c, v)
+		return
+	}
 	a.placeholder(c, v)
 }
 

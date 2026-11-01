@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"maps"
 	"slices"
 
 	"github.com/bencode/jun/internal/layout"
@@ -163,6 +164,9 @@ func (a *app) dropViews(views []*layout.View) []terminal.ID {
 		delete(a.scroll, v.ID)
 		delete(a.terminalErrors, v.ID)
 		delete(a.agentViews, v.ID)
+		delete(a.trees, v.ID)
+		delete(a.fileViews, v.ID)
+		maps.DeleteFunc(a.previewTabs, func(_ layout.RegionID, id layout.ViewID) bool { return id == v.ID })
 	}
 	return sessions
 }

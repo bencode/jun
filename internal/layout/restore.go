@@ -170,6 +170,12 @@ func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed
 		} else if v.AgentsLayout != AgentsAuto {
 			return fmt.Errorf("view %d is not an Agents view but has an agents layout", v.ID)
 		}
+		if (v.Kind == ViewFile) != (v.File != nil) {
+			return fmt.Errorf("view %d: only a file view has a file, and it must", v.ID)
+		}
+		if v.File != nil && (v.File.Source == "" || !validFilePath(v.File.Path)) {
+			return fmt.Errorf("view %d: invalid file %q in %q", v.ID, v.File.Path, v.File.Source)
+		}
 		if fixed {
 			if v.ProjectName != project {
 				return fmt.Errorf("view %d source project %q does not match its region", v.ID, v.ProjectName)

@@ -321,7 +321,7 @@ func TestRemovingEmptyColumnPreservesDestinationSelection(t *testing.T) {
 		if first {
 			source, target = target, source
 		}
-		view, err := s.OpenView(target.ID, ViewFile, "A")
+		view, err := s.OpenView(target.ID, ViewDiff, "A")
 		if err != nil {
 			t.Fatal(err)
 		}
