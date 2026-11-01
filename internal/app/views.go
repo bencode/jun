@@ -31,6 +31,10 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.transcriptView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewDiff {
+		a.diffView(c, v)
+		return
+	}
 	a.placeholder(c, v)
 }
 

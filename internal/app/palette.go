@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -18,6 +19,7 @@ const maxCompletions = 50
 // (path) that it opens.
 type paletteItem struct {
 	title, path string
+	detail      string // shown muted at the row's end
 	run         func()
 }
 
@@ -185,7 +187,7 @@ func (a *app) commands() []paletteItem {
 			items = append(items, paletteItem{title: a.text("Perspective: ", "视角：") + p.Name, run: func() { a.selectPerspective(p.ID) }})
 		}
 	}
-	return items
+	return append(items, a.reviewItems()...)
 }
 
 // runPaletteItem closes the palette before running item, which can open it
@@ -255,9 +257,13 @@ func (a *app) paletteDialog(c *ui.Context) {
 			ui.Scroll(c).MaxHeight(360).FillWidth().Children(func() {
 				ui.Column(c).FillWidth().Gap(2).Children(func() {
 					for i, item := range items {
-						row := ui.ButtonBase(c.Key(i)).FillWidth().Height(32).Padding(0, 10).Radius(6).Justify(ui.Start).
+						row := ui.ButtonBase(c.Key(i)).FillWidth().Height(32).Padding(0, 10).Gap(10).Radius(6).Justify(ui.Start).
 							Label(item.title).Children(func() {
-							ui.Text(c, item.title).SingleLine().Ellipsis("…")
+							ui.Text(c, item.title).MinWidth(0).SingleLine().Ellipsis("…")
+							if item.detail != "" {
+								ui.Spacer(c)
+								ui.Text(c, item.detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Shrink(0)
+							}
 						}).OnClick(func() { a.runPaletteItem(item) })
 						if i == p.highlight {
 							row.Background(a.theme.SurfaceHover)

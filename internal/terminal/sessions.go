@@ -111,10 +111,12 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
 		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
-		// ⌘K is Jun's command palette; Control+L clears the screen. ⌘+, ⌘−
-		// and ⌘0 change Jun's text size, of all terminals and file tabs.
+		// ⌘K is Jun's command palette; Control+L clears the screen. ⇧⌘D
+		// reviews changes, where Ghostty would split. ⌘+, ⌘− and ⌘0 change
+		// Jun's text size, of all terminals and file tabs.
 		Keybinds: []ghostty.Keybind{
 			{Mods: ui.Super, Key: ui.KeyK, Action: ghostty.ActionNone},
+			{Mods: ui.Super | ui.Shift, Key: ui.KeyD, Action: ghostty.ActionNone},
 			{Mods: ui.Super, Key: ui.KeyEqual, Action: ghostty.ActionNone},
 			{Mods: ui.Super | ui.Shift, Key: ui.KeyEqual, Action: ghostty.ActionNone},
 			{Mods: ui.Super, Key: ui.KeyMinus, Action: ghostty.ActionNone},

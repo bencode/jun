@@ -185,17 +185,7 @@ func Read(top string, s Source, name string, limit int64) (data []byte, size int
 		data, err = io.ReadAll(io.LimitReader(f, limit))
 		return data, info.Size(), err
 	}
-	object := s.Branch + ":" + name
-	out, err := git(top, "cat-file", "-s", object)
-	if err != nil {
-		return nil, 0, err
-	}
-	size, err = strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
-	if err != nil || size > limit {
-		return nil, size, err
-	}
-	data, err = git(top, "cat-file", "blob", object)
-	return data, size, err
+	return ReadAt(top, s.Branch, name, limit)
 }
 
 // Valid reports whether name is a slash-separated path relative to a

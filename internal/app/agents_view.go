@@ -190,7 +190,7 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Elem
 	if info.Status == agent.Waiting {
 		row.Background(a.statusColor(agent.Waiting).Alpha(0.14))
 	}
-	row.OnClick(func() { a.revealSession(s.ID) })
+	row.OnClick(func() { a.revealSession(s.ID) }).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
 	return row
 }
 
@@ -224,7 +224,7 @@ func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
 			ui.Box(c).Absolute().Top(0).Left(8).Right(8).Height(2).Background(a.theme.Accent)
 		}
 	})
-	card.OnClick(func() { a.revealSession(s.ID) })
+	card.OnClick(func() { a.revealSession(s.ID) }).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
 }
 
 // cardScreen shows a live copy of the agent's screen.

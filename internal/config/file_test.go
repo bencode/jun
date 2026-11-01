@@ -36,7 +36,7 @@ func snapshot(t *testing.T) *layout.State {
 	p.ColumnSplits[0] = 39
 	p.BottomVisible = true
 	p.SideVisible, p.SideWidth, p.Side.Active = true, 300, p.Side.Views[0].ID
-	if _, err := s.OpenView(p.Bottom.ID, layout.ViewDiff, "Jun"); err != nil {
+	if _, err := s.OpenView(p.Bottom.ID, layout.ViewTerminal, "Jun"); err != nil {
 		t.Fatal(err)
 	}
 	s.GlobalVisible = false

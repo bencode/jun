@@ -91,9 +91,11 @@ func testApp(t *testing.T) (*app, *ui.Tester) {
 	}
 	addColumn()
 	review := a.state.CurrentPerspective()
-	open(review.Columns[0], layout.ViewDiff)
-	open(review.Columns[1], layout.ViewDiff)
-	open(review.Columns[1], layout.ViewDiff)
+	for i, source := range []string{"a", "b", "c"} {
+		if _, err := a.state.OpenDiff(review.Columns[min(i, 1)].ID, "Jun", layout.DiffRef{Source: source}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	open(review.Bottom, layout.ViewTerminal)
 	if err := a.state.SelectPerspective(a.state.CurrentProject().Perspectives[0].ID); err != nil {
 		t.Fatal(err)
@@ -198,7 +200,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	}
 	a.state.Chinese = true
 	tt.Frame()
-	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("将在后续迭代接入。") {
+	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("不是 Git 仓库") {
 		t.Fatal("Chinese labels missing")
 	}
 	menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "打开视图", "新建终端")

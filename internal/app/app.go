@@ -71,6 +71,7 @@ type app struct {
 	sessionLists    map[string]*sessionList           // projects' agent sessions, by project directory
 	sessionViews    map[layout.ViewID]*sessionsViewState
 	transcripts     map[layout.ViewID]*transcriptState
+	diffs           map[layout.ViewID]*diffViewState
 }
 
 func newApp(runtimeDir string) *app {
@@ -79,7 +80,8 @@ func newApp(runtimeDir string) *app {
 		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
-		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{}}
+		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},
+		diffs: map[layout.ViewID]*diffViewState{}}
 }
 
 func Run() error {
