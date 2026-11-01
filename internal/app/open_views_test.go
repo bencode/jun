@@ -81,17 +81,13 @@ func TestFixedRegionsKeepTheirViews(t *testing.T) {
 	if !p.SideVisible {
 		t.Fatal("Perspective menu did not show the side region")
 	}
-	for _, label := range []string{"Files", "Sessions", "Skills", "Agents"} {
+	for _, label := range []string{"Files", "Agents"} {
 		if _, ok := tt.Find(label); !ok {
 			t.Fatalf("fixed tab %s is missing", label)
 		}
 		if _, ok := tt.Find("Close " + label); ok {
 			t.Fatalf("fixed tab %s can be closed", label)
 		}
-	}
-	click(t, tt, "Sessions")
-	if p.Side.Active != p.Side.Views[1].ID || !tt.HasText("Arrives in a later iteration.") {
-		t.Fatal("clicking a side tab did not show its placeholder")
 	}
 	for r, item := range map[*layout.Region]string{p.Side: "Hide Side Bar", a.state.Global: "Hide Global"} {
 		click(t, tt, fmt.Sprintf("Region menu %d", r.ID))

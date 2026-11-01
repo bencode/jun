@@ -74,7 +74,7 @@ func TestLoadV1PreservesStateAndSavesV3(t *testing.T) {
 			if p.Name != name || p.ID <= 501 || !reflect.DeepEqual(p.Columns, previous.Columns) ||
 				!reflect.DeepEqual(p.Bottom, previous.Bottom) || p.BottomVisible != previous.BottomVisible ||
 				!reflect.DeepEqual(p.ColumnSplits, previous.ColumnSplits) || p.TopPercent != previous.TopPercent ||
-				p.Side == nil || len(p.Side.Views) != 3 || p.SideVisible {
+				p.Side == nil || len(p.Side.Views) != 1 || p.SideVisible {
 				t.Fatal("migration lost perspective state")
 			}
 		}
@@ -211,7 +211,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 		t.Fatal("migration lost Global's or Work's state")
 	}
 	for _, p := range []*layout.Perspective{work, review, brain.Perspectives[0]} {
-		if p.SideVisible || p.SideWidth != layout.DefaultSideWidth || len(p.Side.Views) != 3 || p.Side.ID <= 19 {
+		if p.SideVisible || p.SideWidth != layout.DefaultSideWidth || len(p.Side.Views) != 1 || p.Side.ID <= 19 {
 			t.Fatalf("perspective %d: side region %+v", p.ID, p.Side)
 		}
 	}

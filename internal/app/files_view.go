@@ -41,8 +41,15 @@ func (a *app) filesView(c *ui.Context, v *layout.View) {
 		a.trees[v.ID] = st
 	}
 	ui.Column(c.Key(v.ID)).Fill().Gap(0).Children(func() {
-		ui.Row(c).FillWidth().Height(32).Padding(0, 8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, project.Name).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+		// One row: the search, in a source, and refreshing.
+		var s repo.Source
+		ui.Row(c).FillWidth().Height(36).Padding(0, 6, 0, 8).Gap(4).AlignItems(ui.Center).Children(func() {
+			if len(r.sources) > 0 {
+				s = a.searchSource(r, st, project.Name)
+				a.fileSearchBar(c, r, st, s)
+			} else {
+				ui.Spacer(c)
+			}
 			if iconButton(c, refreshIcon, a.text("Refresh", "刷新"), 24, 14).Clicked() {
 				a.refreshRepo(r, project.CWD)
 			}
@@ -54,8 +61,6 @@ func (a *app) filesView(c *ui.Context, v *layout.View) {
 		if len(r.sources) == 0 {
 			return
 		}
-		s := a.searchSource(r, st, project.Name)
-		a.fileSearchBar(c, r, st, s)
 		if strings.TrimSpace(st.search.query) != "" {
 			a.fileSearchResults(c, r, st, s, project.Name)
 			return

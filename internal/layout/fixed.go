@@ -11,7 +11,7 @@ const DefaultSideWidth float32 = 260
 var (
 	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff}
 	fixedKinds   = []ViewKind{ViewTree, ViewSessions, ViewSkills, ViewAgents}
-	sidePreset   = []ViewKind{ViewTree, ViewSessions, ViewSkills}
+	sidePreset   = []ViewKind{ViewTree}
 	globalPreset = []ViewKind{ViewAgents}
 )
 
