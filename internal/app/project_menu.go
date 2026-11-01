@@ -7,6 +7,7 @@ import (
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -30,7 +31,7 @@ func (a *app) projectRenameDialog(c *ui.Context) {
 	}
 	modal := ui.Modal(c, &f.open, func() {
 		ui.Column(c).Width(400).Gap(12).Children(func() {
-			ui.Text(c, a.text("Rename Project", "重命名项目")).FontSize(18).Bold()
+			ui.Text(c, a.text("Rename Project", "重命名项目")).FontSize(theme.Title).Bold()
 			ui.Text(c, f.project).TextColor(a.theme.TextMuted)
 			ui.TextInput(c, &f.name).Label(a.text("Project name", "项目名称")).AutoFocus().FillWidth().OnSubmit(a.submitProjectRename)
 			if f.error != "" {

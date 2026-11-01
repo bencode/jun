@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -51,7 +52,7 @@ func (a *app) center(c *ui.Context, width float32) {
 		ui.Row(c).Height(40).FillWidth().Justify(ui.End).Children(func() { a.globalToggle(c) })
 		ui.Column(c).Grow(1).FillWidth().AlignItems(ui.Center).Justify(ui.Center).Gap(12).Children(func() {
 			ui.Icon(c, logoIcon).Height(48).TextColor(a.theme.Accent)
-			ui.Text(c, a.text("Your agents. Your perspective.", "你的 Agents，你的工作视角。")).FontSize(23).Bold()
+			ui.Text(c, a.text("Your agents. Your perspective.", "你的 Agents，你的工作视角。")).FontSize(theme.Heading).Bold()
 			ui.Text(c, a.text("Open a directory to start a project.", "打开目录，开始一个项目。")).TextColor(a.theme.TextMuted)
 			ui.PrimaryButton(c, a.text("Open Project…", "打开项目…")).OnClick(func() { a.openPalette("~/") })
 		})

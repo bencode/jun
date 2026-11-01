@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -86,10 +87,10 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home 
 		}
 		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
 			ui.Text(c, p.Name).SingleLine().Ellipsis("…")
-			ui.Text(c, shortPath(p.CWD, home)).FontSize(11).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
+			ui.Text(c, shortPath(p.CWD, home)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
 		})
 		if waiting > 0 {
-			ui.Text(c, fmt.Sprintf("●%d", waiting)).FontSize(11).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
+			ui.Text(c, fmt.Sprintf("●%d", waiting)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
 		}
 	})
 	if active {
@@ -205,7 +206,7 @@ func (a *app) chooseProject() {
 func (a *app) projectDialog(c *ui.Context) {
 	ui.Modal(c, &a.projectForm.open, func() {
 		ui.Column(c).Width(440).Gap(12).Children(func() {
-			ui.Text(c, a.text("Open Project", "打开项目")).FontSize(18).Bold()
+			ui.Text(c, a.text("Open Project", "打开项目")).FontSize(theme.Title).Bold()
 			ui.Text(c, a.projectForm.path).TextColor(a.theme.TextMuted)
 			ui.TextInput(c, &a.projectForm.name).Label(a.text("Project name", "项目名称")).AutoFocus().FillWidth().OnSubmit(a.submitProject)
 			if a.projectForm.error != "" {

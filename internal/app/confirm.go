@@ -1,6 +1,9 @@
 package app
 
-import "github.com/egoist/mygo/ui"
+import (
+	"github.com/bencode/jun/internal/theme"
+	"github.com/egoist/mygo/ui"
+)
 
 // confirmation asks before an action that cannot be undone.
 type confirmation struct {
@@ -23,7 +26,7 @@ func (a *app) confirmDialog(c *ui.Context) {
 	}
 	modal := ui.Modal(c, &f.open, func() {
 		ui.Column(c).Width(400).Gap(12).Children(func() {
-			ui.Text(c, f.title).FontSize(18).Bold()
+			ui.Text(c, f.title).FontSize(theme.Title).Bold()
 			ui.Text(c, f.detail).TextColor(a.theme.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).FillWidth().Children(func() {
 				ui.Button(c, a.text("Cancel", "取消")).OnClick(cancel)

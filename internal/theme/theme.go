@@ -6,6 +6,14 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// Text sizes besides the theme's body size: captions, dialog titles and
+// headings.
+const (
+	Caption float32 = 11
+	Title   float32 = 16
+	Heading float32 = 22
+)
+
 // UI is Jun's dark theme: MyGo's, in the cool blue-grays of the logo.
 func UI() *ui.Theme {
 	t := ui.DarkTheme()
