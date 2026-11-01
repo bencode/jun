@@ -12,8 +12,8 @@ const (
 	ViewDiff     ViewKind = "diff"
 	ViewFile     ViewKind = "file"
 	ViewAgents   ViewKind = "agents"   // in Global
-	ViewSessions ViewKind = "sessions" // in the side region
-	ViewSkills   ViewKind = "skills"   // in the side region
+	ViewSessions ViewKind = "sessions" // placeholders an earlier side preset had, which loading drops
+	ViewSkills   ViewKind = "skills"   // likewise
 )
 
 // AgentsLayout is how an Agents view shows the agents.

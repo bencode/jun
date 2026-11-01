@@ -68,30 +68,28 @@ func (a *app) searchSource(r *repoState, st *filesViewState, project string) rep
 }
 
 // fileSearchBar is the search field and, before it, the source it searches
-// in, which a menu changes.
+// in, which a menu changes, compact to share a row.
 func (a *app) fileSearchBar(c *ui.Context, r *repoState, st *filesViewState, s repo.Source) {
 	f := &st.search
-	ui.Row(c).FillWidth().Padding(0, 8).Gap(6).AlignItems(ui.Center).Children(func() {
-		ui.MenuButton(c, sourceName(s), func(m *ui.Menu) {
-			for _, o := range r.sources {
-				if m.Item(sourceName(o)).Checked(o.Key() == s.Key()).Chosen() {
-					f.source = o.Key()
-				}
+	ui.MenuButton(c, sourceName(s), func(m *ui.Menu) {
+		for _, o := range r.sources {
+			if m.Item(sourceName(o)).Checked(o.Key() == s.Key()).Chosen() {
+				f.source = o.Key()
 			}
-		}).Label(a.text("Search in", "搜索范围")).MaxWidth(120).Shrink(1)
-		field := ui.SearchField(c, &f.query).Label(a.text("Search files", "搜索文件")).
-			Placeholder(a.text("Search files", "搜索文件")).Grow(1).MinWidth(60)
-		if a.focusFileSearch {
-			field.Focus()
-			a.focusFileSearch = false
 		}
-		if field.Shortcut(0, ui.KeyDown) {
-			f.focusResults = true
-		}
-		if field.Submitted() {
-			f.focusResults, f.pinFirst = true, true
-		}
-	})
+	}).Label(a.text("Search in", "搜索范围")).Height(26).FontSize(theme.Caption).MaxWidth(110).Shrink(1)
+	field := ui.SearchField(c, &f.query).Label(a.text("Search files", "搜索文件")).
+		Placeholder(a.text("Search files", "搜索文件")).Height(26).FontSize(theme.Caption).Grow(1).MinWidth(60)
+	if a.focusFileSearch {
+		field.Focus()
+		a.focusFileSearch = false
+	}
+	if field.Shortcut(0, ui.KeyDown) {
+		f.focusResults = true
+	}
+	if field.Submitted() {
+		f.focusResults, f.pinFirst = true, true
+	}
 }
 
 // fileSearchResults shows the source's files matching the query, as a tree

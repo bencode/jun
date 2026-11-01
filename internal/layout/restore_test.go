@@ -68,9 +68,12 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 			v := s.CurrentPerspective().Columns[0].Views[0]
 			v.Kind, v.ProjectName = ViewAgents, ""
 		},
-		"terminal in Global":       func(s *State) { s.Global.Views[0].Kind, s.Global.Views[0].ProjectName = ViewTerminal, "Jun" },
-		"terminal in side":         func(s *State) { s.CurrentPerspective().Side.Views[0].Kind = ViewTerminal },
-		"side kind twice":          func(s *State) { s.CurrentPerspective().Side.Views[1].Kind = ViewTree },
+		"terminal in Global": func(s *State) { s.Global.Views[0].Kind, s.Global.Views[0].ProjectName = ViewTerminal, "Jun" },
+		"terminal in side":   func(s *State) { s.CurrentPerspective().Side.Views[0].Kind = ViewTerminal },
+		"side kind twice": func(s *State) {
+			side := s.CurrentPerspective().Side
+			side.Views = append(side.Views, &View{ID: 999, Kind: ViewTree, ProjectName: "Jun"})
+		},
 		"side project":             func(s *State) { s.CurrentPerspective().Side.Views[0].ProjectName = "" },
 		"Global project":           func(s *State) { s.Global.Views[0].ProjectName = "Jun" },
 		"nil side":                 func(s *State) { s.CurrentPerspective().Side = nil },
@@ -85,7 +88,7 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		},
 		"no ID space": func(s *State) {
 			side := s.CurrentPerspective().Side
-			side.Views, side.Active = side.Views[1:], side.Views[1].ID
+			side.Views, side.Active = nil, 0
 			s.CurrentPerspective().Bottom.ID = RegionID(math.MaxUint64 - 1)
 		},
 	}
@@ -128,10 +131,11 @@ func TestValidateDoesNotRewindLiveAllocator(t *testing.T) {
 func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	s := decodedLayout(t)
 	side := s.CurrentPerspective().Side
-	skills := side.Views[2]
-	// A view a later preset no longer has, selected, in place of Files and Sessions.
-	dropped := &View{ID: 900, Kind: ViewAgents, ProjectName: "Jun"}
-	side.Views, side.Active = []*View{skills, dropped}, dropped.ID
+	files := side.Views[0]
+	// The placeholders an earlier preset had, one selected, around Files.
+	sessions := &View{ID: 900, Kind: ViewSessions, ProjectName: "Jun"}
+	skills := &View{ID: 901, Kind: ViewSkills, ProjectName: "Jun"}
+	side.Views, side.Active = []*View{sessions, files, skills}, skills.ID
 	s.Global.Views, s.Global.Active = nil, 0
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
@@ -139,11 +143,8 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	var kinds []ViewKind
 	for _, v := range side.Views {
 		kinds = append(kinds, v.Kind)
-		if v.ProjectName != "Jun" || v.Kind != ViewSkills && v.ID <= 900 {
-			t.Fatalf("side view %d (%s) of %q", v.ID, v.Kind, v.ProjectName)
-		}
 	}
-	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[2] != skills || side.Active != side.Views[0].ID {
+	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != files || side.Active != files.ID {
 		t.Fatalf("side region restored as %v, active %d", kinds, side.Active)
 	}
 	if len(s.Global.Views) != 1 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {

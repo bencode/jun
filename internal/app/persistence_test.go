@@ -103,7 +103,6 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 		"global": func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
 		"side bar": func(t *testing.T, a *app, tt *ui.Tester) {
 			tt.Key(ui.Super, ui.KeyB)
-			click(t, tt, "Skills")
 		},
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
 			perspectiveMenu(t, tt, "Show Bottom Region")
