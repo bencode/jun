@@ -148,7 +148,7 @@ func (a *app) dropViews(views []*layout.View) []terminal.ID {
 		delete(a.bindings, v.ID)
 		delete(a.scroll, v.ID)
 		delete(a.terminalErrors, v.ID)
-		delete(a.agentWide, v.ID)
+		delete(a.agentViews, v.ID)
 	}
 	return sessions
 }

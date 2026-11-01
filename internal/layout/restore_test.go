@@ -59,6 +59,7 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"invalid ratio":  func(s *State) { s.CenterPercent = 100 },
 		"invalid splits": func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
 		"unknown kind":   func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
+		"agents layout":  func(s *State) { s.CurrentPerspective().Columns[0].Views[0].AgentsLayout = AgentsList },
 		"duplicate name": func(s *State) { p := *s.CurrentProject(); p.Name = "JUN"; s.Projects = append(s.Projects, &p) },
 	}
 	for name, modify := range cases {
