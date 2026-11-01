@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -23,6 +25,18 @@ func (a *app) settingsMenu(m *ui.Menu) {
 		}
 		if m.Item("简体中文").Radio(a.state.Chinese).Chosen() {
 			a.setLanguage(true)
+		}
+	})
+	m.Submenu(a.text("File Text Size", "文件字号"), func(m *ui.Menu) {
+		for _, size := range []float32{11, 12, 13, 14, 15, 16, 18, 20} {
+			label := fmt.Sprintf("%.0f", size)
+			if size == defaultFileTextSize {
+				label += a.text(" (Default)", "（默认）")
+			}
+			if m.Item(label).Radio(size == a.fileTextSize()).Chosen() {
+				a.state.FileTextSize = size
+				a.layoutChanged()
+			}
 		}
 	})
 	if m.Item(a.text("Theme…", "主题…")).Chosen() {

@@ -32,8 +32,9 @@ func (s *sourceRender) update(data []byte) {
 	}
 }
 
-func (s *sourceRender) view(c *ui.Context) {
+func (s *sourceRender) view(c *ui.Context, size float32) {
 	if s.editor != nil {
+		s.editor.Font.Size = size // in the system's monospaced font, as Family is empty
 		editor.View(c, s.editor).Grow(1).FillWidth()
 	}
 }

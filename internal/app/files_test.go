@@ -213,3 +213,70 @@ func TestFileViewRendersMarkdownAndImages(t *testing.T) {
 		t.Fatalf("the image did not show with its size: %v", tt.Texts())
 	}
 }
+
+func TestFileTabsZoomFromTheDefaultSize(t *testing.T) {
+	dir := gitRepo(t)
+	for _, name := range []string{"a.go", "b.go"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", dir); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	if _, err := a.state.AddColumn(p.Columns[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]layout.ViewID, 2)
+	for i, name := range []string{"a.go", "b.go"} {
+		id, err := a.state.OpenFile(p.Columns[i].ID, "Jun", layout.FileRef{Source: "main", Path: name}, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids[i] = id
+	}
+	tt := ui.NewTester(a.view, 1200, 700)
+	tt.Frame()
+	sizes := func() [2]float32 {
+		t.Helper()
+		tt.Frame()
+		var got [2]float32
+		for i, id := range ids {
+			for _, render := range a.fileViews[id].renders {
+				if s, ok := render.(*sourceRender); ok && s.editor != nil {
+					got[i] = s.editor.Font.Size
+				}
+			}
+		}
+		return got
+	}
+
+	a.focusRegion(p.Columns[0].ID)
+	tt.Key(ui.Super, ui.KeyEqual)
+	tt.Key(ui.Super|ui.Shift, ui.KeyEqual)
+	if got := sizes(); got != [2]float32{15, 13} {
+		t.Fatalf("zooming one tab gave sizes %v", got)
+	}
+	a.state.FileTextSize = 16
+	if got := sizes(); got != [2]float32{18, 16} {
+		t.Fatalf("a new default gave sizes %v", got)
+	}
+	tt.Key(ui.Super, ui.Key0)
+	if got := sizes(); got != [2]float32{16, 16} {
+		t.Fatalf("⌘0 gave sizes %v", got)
+	}
+
+	data, err := json.Marshal(a.state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := &layout.State{}
+	if err := json.Unmarshal(data, restored); err != nil {
+		t.Fatal(err)
+	}
+	if err := restored.Restore(); err != nil || restored.FileTextSize != 16 {
+		t.Fatalf("the default size did not survive saving: %v, %v", restored.FileTextSize, err)
+	}
+}

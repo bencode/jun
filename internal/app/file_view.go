@@ -28,7 +28,11 @@ type fileViewState struct {
 	kinds   []int        // the renderKinds that can show the file
 	renders []fileRender // one for each of kinds
 	shown   int          // the index in renders of the one showing
+	zoom    int          // DIPs the tab's text is larger than the default, or smaller
 }
+
+// Text sizes a file tab zooms between.
+const minFileTextSize, maxFileTextSize float32 = 8, 40
 
 // fileView shows a file of a source of the project's repository, read
 // again as the worktree it is read from changes.
@@ -56,6 +60,9 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			if st.read && st.err == nil {
 				ui.Text(c, byteSize(st.size)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine()
 			}
+			if st.zoom != 0 {
+				ui.Text(c, fmt.Sprintf("%.0f pt", a.fileSize(st))).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine()
+			}
 			if len(st.renders) > 0 {
 				if detail := st.renders[st.shown].detail(); detail != "" {
 					ui.Text(c, detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine()
@@ -79,13 +86,38 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			return
 		}
 		if len(st.renders) > 0 {
-			st.renders[st.shown].view(c)
+			st.renders[st.shown].view(c, a.fileSize(st))
 			return
 		}
 		if st.read {
 			a.fileProblem(c, r, project.CWD, st, nil, s)
 		}
 	})
+}
+
+// fileSize is the size of a file tab's text: the default, zoomed.
+func (a *app) fileSize(st *fileViewState) float32 {
+	return min(max(a.fileTextSize()+float32(st.zoom), minFileTextSize), maxFileTextSize)
+}
+
+// zoomFile makes the text of the file tab new tabs go beside larger or
+// smaller by delta DIPs, or with 0 the default size again.
+func (a *app) zoomFile(delta int) {
+	r := a.tabsTarget()
+	if r == nil {
+		return
+	}
+	v := activeView(r)
+	if v == nil || v.File == nil || a.fileViews[v.ID] == nil {
+		return
+	}
+	st := a.fileViews[v.ID]
+	if delta == 0 {
+		st.zoom = 0
+		return
+	}
+	st.zoom += delta
+	st.zoom = int(a.fileSize(st) - a.fileTextSize()) // past the limits, the zoom stops where the size does
 }
 
 // readFile reads the file in the background, then gives its content to

@@ -25,6 +25,7 @@ Tab shortcuts act on the active region: the side bar, column, bottom region or G
 | Previous / next region | ⌘[ / ⌘] |
 | Show / hide the side bar | ⌘B |
 | Search files in Files | ⌘P |
+| Larger / smaller / default text in a file tab | ⌘+ / ⌘− / ⌘0 |
 
 Arrow keys move by position. The side bar sits to the left of the first column and the bottom region, Global to the right of the last column. The bottom region sits below the columns; ⌘⌥↑ from the bottom region focuses the first column, and so does ⌘⌥→ from the side bar. Arrows stop at the edge. ⌘[ and ⌘] cycle through the visible regions in the order side bar, columns, bottom, Global, and wrap around. Hiding the focused side bar focuses the first column.
 

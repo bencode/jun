@@ -15,9 +15,21 @@ import (
 // fileRender is one way a file view shows a file: its state, kept as the
 // file is read again so that its place (scroll, selection) stays.
 type fileRender interface {
-	update(data []byte) // the content, read (again); on the UI thread
-	view(c *ui.Context)
-	detail() string // what the header adds, as an image's size; "" for nothing
+	update(data []byte)               // the content, read (again); on the UI thread
+	view(c *ui.Context, size float32) // size: the text size in DIPs, as the tab zooms
+	detail() string                   // what the header adds, as an image's size; "" for nothing
+}
+
+// defaultFileTextSize is file tabs' text size until Settings changes it,
+// the editor's own.
+const defaultFileTextSize float32 = 13
+
+// fileTextSize is the size file tabs' text starts at.
+func (a *app) fileTextSize() float32 {
+	if a.state.FileTextSize > 0 {
+		return a.state.FileTextSize
+	}
+	return defaultFileTextSize
 }
 
 // renderKind is a way of showing files: which files it can show, and how

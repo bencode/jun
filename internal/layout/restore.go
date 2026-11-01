@@ -42,6 +42,9 @@ func (s *State) validatedMaxID() (uint64, error) {
 	if err := check.projectNames(s); err != nil {
 		return 0, err
 	}
+	if s.FileTextSize != 0 && (s.FileTextSize < 8 || s.FileTextSize > 40) {
+		return 0, fmt.Errorf("fileTextSize must be 0, or between 8 and 40")
+	}
 	if !percentage(s.CenterPercent) {
 		return 0, fmt.Errorf("centerPercent must be between 0 and 100")
 	}
