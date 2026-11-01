@@ -74,7 +74,7 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"side project":       func(s *State) { s.CurrentPerspective().Side.Views[0].ProjectName = "" },
 		"Global project":     func(s *State) { s.Global.Views[0].ProjectName = "Jun" },
 		"nil side":           func(s *State) { s.CurrentPerspective().Side = nil },
-		"side percent":       func(s *State) { s.CurrentPerspective().SidePercent = 0 },
+		"side width":         func(s *State) { s.CurrentPerspective().SideWidth = 0 },
 		"no ID space": func(s *State) {
 			side := s.CurrentPerspective().Side
 			side.Views, side.Active = side.Views[1:], side.Views[1].ID

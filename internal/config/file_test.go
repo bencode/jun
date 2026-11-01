@@ -35,7 +35,7 @@ func snapshot(t *testing.T) *layout.State {
 	p.TopPercent = 62
 	p.ColumnSplits[0] = 39
 	p.BottomVisible = true
-	p.SideVisible, p.SidePercent, p.Side.Active = true, 23, p.Side.Views[1].ID
+	p.SideVisible, p.SideWidth, p.Side.Active = true, 300, p.Side.Views[1].ID
 	if _, err := s.OpenView(p.Bottom.ID, layout.ViewDiff, "Jun"); err != nil {
 		t.Fatal(err)
 	}

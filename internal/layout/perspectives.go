@@ -12,7 +12,7 @@ func (s *State) newPerspective(project, name string) *Perspective {
 	s.nextID++
 	id := PerspectiveID(s.nextID)
 	p := &Perspective{ID: id, Name: name, Columns: []*Region{s.newRegion()}, Bottom: s.newRegion(), TopPercent: 75,
-		Side: s.newRegion(), SidePercent: DefaultSidePercent}
+		Side: s.newRegion(), SideWidth: DefaultSideWidth}
 	s.fill(p.Side, sidePreset, project)
 	return p
 }

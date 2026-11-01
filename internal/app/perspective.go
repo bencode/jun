@@ -18,13 +18,17 @@ func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
 			}
 		}
 		if side := p.SideVisible; side {
-			constrainedSplit(c, &p.SidePercent, width, minimumRegionWidth, columnsMinimum(len(p.Columns)),
-				func() { a.region(c, p.Side) }, func() {
-					// The side region's own menu can hide it during this build.
-					if a.state.CurrentPerspective() == p && p.SideVisible == side {
-						main((width - 1) * (1 - p.SidePercent/100))
-					}
-				}, a.layoutChanged)
+			room, columns := width-1, columnsMinimum(len(p.Columns))
+			shown := fitSide(p.SideWidth, room, columns)
+			ui.Split(c, &shown, func() { a.region(c, p.Side) }, func() {
+				// The side region's own menu can hide it during this build.
+				if a.state.CurrentPerspective() == p && p.SideVisible == side {
+					main(room - shown)
+				}
+			}).Fill().OnChange(func() {
+				p.SideWidth = fitSide(shown, room, columns)
+				a.layoutChanged()
+			})
 		} else {
 			main(width)
 		}
@@ -54,6 +58,16 @@ const minimumRegionWidth float32 = 200
 
 func columnsMinimum(count int) float32 {
 	return float32(count)*minimumRegionWidth + float32(count-1)
+}
+
+// fitSide is the width a side region of width takes in room, beside
+// columns needing columnsMinimum: its own, within the minimums, or, with
+// room short for both, a share in proportion to them.
+func fitSide(width, room, columnsMinimum float32) float32 {
+	if room <= minimumRegionWidth+columnsMinimum {
+		return max(0, room) * minimumRegionWidth / (minimumRegionWidth + columnsMinimum)
+	}
+	return min(max(width, minimumRegionWidth), room-columnsMinimum)
 }
 
 func constrainedSplit(c *ui.Context, percent *float32, width, firstMinimum, secondMinimum float32, first, second, changed func()) ui.Element {

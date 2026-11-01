@@ -290,3 +290,22 @@ func TestColumnMenusSurviveNarrowSplitsAndWindowResize(t *testing.T) {
 	click(t, tt, "Hide Global")
 	click(t, tt, "Show Global")
 }
+
+func TestSideKeepsItsWidthAsGlobalMoves(t *testing.T) {
+	a, tt := testApp(t)
+	p := a.state.CurrentPerspective()
+	p.SideVisible, a.state.GlobalVisible = true, true
+	sideMenu := func() ui.Rect {
+		tt.Frame()
+		r, ok := tt.Find(fmt.Sprintf("Region menu %d", p.Side.ID))
+		if !ok {
+			t.Fatal("missing side region menu")
+		}
+		return r
+	}
+	before := sideMenu()
+	a.state.CenterPercent = 60
+	if after := sideMenu(); after.X != before.X || p.SideWidth != layout.DefaultSideWidth {
+		t.Fatalf("side region moved from %v to %v as Global widened", before.X, after.X)
+	}
+}

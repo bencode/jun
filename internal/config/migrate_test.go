@@ -210,7 +210,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 		t.Fatal("migration lost Global's or Work's state")
 	}
 	for _, p := range []*layout.Perspective{work, review, brain.Perspectives[0]} {
-		if p.SideVisible || p.SidePercent != layout.DefaultSidePercent || len(p.Side.Views) != 3 || p.Side.ID <= 19 {
+		if p.SideVisible || p.SideWidth != layout.DefaultSideWidth || len(p.Side.Views) != 3 || p.Side.ID <= 19 {
 			t.Fatalf("perspective %d: side region %+v", p.ID, p.Side)
 		}
 	}

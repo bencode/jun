@@ -2,9 +2,8 @@ package layout
 
 import "slices"
 
-// DefaultSidePercent is the share of its perspective's width a side region
-// starts with.
-const DefaultSidePercent float32 = 22
+// DefaultSideWidth is the width, in DIPs, a side region starts with.
+const DefaultSideWidth float32 = 260
 
 // Tabs regions (columns and bottom regions) hold views that are opened,
 // moved and closed. Fixed regions (Global and the side regions) hold their

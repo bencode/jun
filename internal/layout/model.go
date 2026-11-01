@@ -47,7 +47,7 @@ type Perspective struct {
 	// Side is the perspective's fixed region, left of its columns.
 	Side        *Region `json:"side"`
 	SideVisible bool    `json:"sideVisible"`
-	SidePercent float32 `json:"sidePercent"`
+	SideWidth   float32 `json:"sideWidth"` // in DIPs, so that the side keeps it as the room around changes
 }
 type Project struct {
 	Name              string         `json:"name"`

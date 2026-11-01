@@ -125,8 +125,8 @@ func (c *restoreCheck) perspective(p *Perspective, project string) error {
 	if !percentage(p.TopPercent) {
 		return fmt.Errorf("invalid topPercent")
 	}
-	if !percentage(p.SidePercent) {
-		return fmt.Errorf("invalid sidePercent")
+	if !(p.SideWidth > 0 && p.SideWidth <= 10000) {
+		return fmt.Errorf("invalid sideWidth")
 	}
 	for i, r := range p.Columns {
 		if err := c.region(r, tabKinds, "", false); err != nil {

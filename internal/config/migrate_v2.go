@@ -32,8 +32,8 @@ func migrateV2(s *layout.State) error {
 			maximum++
 			p.Side = &layout.Region{ID: layout.RegionID(maximum)}
 		}
-		if p.SidePercent == 0 {
-			p.SidePercent = layout.DefaultSidePercent
+		if p.SideWidth == 0 {
+			p.SideWidth = layout.DefaultSideWidth
 		}
 		for _, r := range append(slices.Clone(p.Columns), p.Bottom) {
 			removeViews(r, func(v *layout.View) bool { return v.Kind == layout.ViewAgents || v.Kind == layout.ViewTree })

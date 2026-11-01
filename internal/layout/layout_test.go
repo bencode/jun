@@ -269,7 +269,7 @@ func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 		t.Fatal(err)
 	}
 	review := s.CurrentProject().Perspective(id)
-	if review.SideVisible || !reflect.DeepEqual(kinds(review.Side), sidePreset) || review.SidePercent != DefaultSidePercent {
+	if review.SideVisible || !reflect.DeepEqual(kinds(review.Side), sidePreset) || review.SideWidth != DefaultSideWidth {
 		t.Fatal("a new perspective should have a hidden side region")
 	}
 	if err := s.Validate(); err != nil {
