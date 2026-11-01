@@ -29,7 +29,8 @@ func (a *app) confirmDialog(c *ui.Context) {
 			ui.Text(c, f.title).FontSize(theme.Title).Bold()
 			ui.Text(c, f.detail).TextColor(a.theme.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).FillWidth().Children(func() {
-				ui.Button(c, a.text("Cancel", "取消")).OnClick(cancel)
+				// Cancel takes Enter: confirming ends what cannot come back.
+				ui.Button(c, a.text("Cancel", "取消")).AutoFocus().OnClick(cancel)
 				ui.PrimaryButton(c, f.action).OnClick(func() {
 					f.open = false
 					f.run()

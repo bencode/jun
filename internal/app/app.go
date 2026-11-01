@@ -48,6 +48,7 @@ type app struct {
 		project, name, error string
 	}
 	confirmation    confirmation
+	quitConfirmed   bool // the user agreed to end the terminals' programs
 	terminals       *terminal.Store
 	bindings        map[layout.ViewID]terminal.ID
 	terminalErrors  map[layout.ViewID]error

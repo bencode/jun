@@ -19,3 +19,20 @@ func TestParseForeground(t *testing.T) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseBusy(t *testing.T) {
+	output := `
+70001 70001 70001 ttys009  -zsh
+70100 70001 70300 ttys010  -zsh
+70300 70300 70300 ttys010  /usr/local/bin/codex
+70301 70300 70300 ttys010  node
+70400 70400 70500 ttys011  -zsh
+70600 70600 70600 ttys012  sleep
+`
+	shells := map[string]int{"ttys009": 70001, "ttys010": 70100, "ttys011": 70400}
+	// Idle (009), its leader gone (011), and not one of Jun's terminals (012).
+	want := map[string]string{"ttys010": "codex"}
+	if got := ParseBusy(output, shells); !maps.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
