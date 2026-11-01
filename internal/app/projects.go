@@ -50,7 +50,6 @@ func (a *app) projectRail(c *ui.Context) {
 			})
 		})
 		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
-		a.perspectiveButton(c)
 		a.settingsButton(c)
 	})
 	if paths := rail.DroppedFiles(); paths != nil {

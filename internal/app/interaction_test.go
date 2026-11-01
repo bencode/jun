@@ -131,7 +131,7 @@ func TestPerspectiveMenuPreservesCommandTarget(t *testing.T) {
 	if a.targetRegion() != right {
 		t.Fatal("choosing current perspective reset active region")
 	}
-	perspectiveMenu(t, tt, "Show Bottom Region")
+	click(t, tt, "Show Bottom Region")
 	if !p.BottomVisible || a.targetRegion() != right || !tt.Focused(contentLabel(a, right.Views[len(right.Views)-1])) {
 		t.Fatal("showing bottom stole focus")
 	}
@@ -143,7 +143,7 @@ func TestPerspectiveMenuPreservesCommandTarget(t *testing.T) {
 	}
 	a.focusRegion(a.state.Global.ID)
 	tt.Frame()
-	perspectiveMenu(t, tt, "Show Bottom Region")
+	click(t, tt, "Show Bottom Region")
 	if a.targetRegion() != a.state.Global {
 		t.Fatal("Perspective layout operation stole Global focus")
 	}

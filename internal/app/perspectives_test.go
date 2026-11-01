@@ -97,10 +97,9 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	t.Cleanup(func() { mygo.App.SetMenu(originalMenu) })
 	path := filepath.Join(t.TempDir(), "config.json")
 	a.restoreConfig(path)
-	perspective, ok := tt.Find("Perspective")
 	settings, found := tt.Find("Settings")
-	if !ok || !found || perspective.X >= 56 || settings.X >= 56 || perspective.Y >= settings.Y || settings.Y < 850 {
-		t.Fatal("rail controls are not fixed at its bottom")
+	if !found || settings.X >= 56 || settings.Y < 850 {
+		t.Fatal("Settings is not fixed at the rail's bottom")
 	}
 	click(t, tt, "Settings")
 	if err := tt.ChooseMenuItem("Language", "简体中文"); err != nil {
@@ -120,17 +119,16 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	}
 	click(t, tt, "展开或收起项目名称")
 	tt.Frame()
-	if !tt.HasText("Work") || a.projectRailWidth() != 192 {
-		t.Fatal("expanded rail did not show the current perspective")
+	if a.projectRailWidth() != 192 {
+		t.Fatal("the rail did not expand")
 	}
 	longName := "设计文档与工作流程的长名称 Perspective"
 	if err := a.state.RenamePerspective(a.state.CurrentPerspective().ID, longName); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	button, _ := tt.Find("视角")
-	if button.X+button.W > 192 {
-		t.Fatal("long name escaped the rail")
+	if button, _ := tt.Find("视角"); button.W > 170 {
+		t.Fatalf("long name widened the view bar's perspective to %v", button.W)
 	}
 	click(t, tt, "设置")
 	if err := tt.ChooseMenuItem("语言", "English"); err != nil {

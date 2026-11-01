@@ -24,6 +24,7 @@ func (a *app) region(c *ui.Context, r *layout.Region) {
 		return p != nil && a.state.CurrentPerspective() == p && len(p.Columns) == count && p.BottomVisible == bottom &&
 			p.SideVisible == side && (slices.Contains(p.Columns, r) || r == p.Bottom && bottom || r == p.Side && side)
 	}
+	bar := false
 	region := ui.Column(c.Key(r.ID)).Fill().MinWidth(0).Clip().Children(func() {
 		if !current() {
 			return
@@ -35,7 +36,7 @@ func (a *app) region(c *ui.Context, r *layout.Region) {
 				a.tabs(c, r, views, fixed)
 				a.regionMenu(c, r)
 				if p := a.state.CurrentPerspective(); p != nil && r == p.Columns[len(p.Columns)-1] {
-					ui.Box(c).Width(36).Shrink(0)
+					bar = a.viewBar(c).FocusWithin()
 				}
 			})
 		})
@@ -60,7 +61,7 @@ func (a *app) region(c *ui.Context, r *layout.Region) {
 			}
 		})
 	})
-	if current() && region.FocusWithin() {
+	if current() && region.FocusWithin() && !bar {
 		a.activeRegion = r.ID
 		if !fixed {
 			a.lastTabs = r.ID

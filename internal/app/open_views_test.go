@@ -77,7 +77,7 @@ func TestOpenViewEntrypoints(t *testing.T) {
 func TestFixedRegionsKeepTheirViews(t *testing.T) {
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
-	perspectiveMenu(t, tt, "Show Side Bar")
+	click(t, tt, "Show Side Bar")
 	if !p.SideVisible {
 		t.Fatal("Perspective menu did not show the side region")
 	}

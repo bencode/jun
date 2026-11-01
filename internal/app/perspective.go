@@ -32,8 +32,6 @@ func (a *app) perspective(c *ui.Context, p *layout.Perspective, width float32) {
 		} else {
 			main(width)
 		}
-		ui.Row(c).Absolute().Top(4).Right(4).Width(32).Height(32).Background(a.theme.Surface).
-			Children(func() { a.globalToggle(c) })
 	})
 }
 
