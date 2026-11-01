@@ -75,7 +75,7 @@ type preview struct {
 // for a frame once its view fits a new grid.
 func newPreview(invalidate func()) (*preview, error) {
 	p := &preview{conn: &discardConn{done: make(chan struct{})}, seen: time.Now()}
-	term, err := ghostty.New(ghostty.Options{Conn: p.conn, ResizeByConn: true, Theme: theme.Terminal(), Scrollback: -1})
+	term, err := ghostty.New(ghostty.Options{Conn: p.conn, ResizeByConn: true, Theme: theme.JunTerminal(), Scrollback: -1})
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +172,7 @@ func (a *app) previewFor(session *terminal.Session) *preview {
 		log.Printf("Jun: preview terminal %d: %v", session.ID, err)
 		return nil
 	}
+	p.term.SetTheme(a.terminals.Theme(), nil)
 	a.previews[session.ID] = p
 	return p
 }
