@@ -20,9 +20,12 @@ type fileNode struct {
 	path   string
 }
 
-// listing is a source's files: each directory's children, sorted.
+// listing is a source's files: their paths, and each directory's
+// children, sorted.
 type listing struct {
+	files    []string
 	children map[string][]fileNode // by directory, "" for the top level
+	reads    int                   // counts reads, so that searches redo theirs
 	loading  bool
 	err      error
 }
@@ -118,7 +121,8 @@ func (a *app) loadListing(r *repoState, s repo.Source, l *listing) {
 		if load != r.loads || r.listings[s.Key()] != l {
 			return
 		}
-		l.children, l.err, l.loading = index(s.Key(), files), err, false
+		l.files, l.children, l.err, l.loading = files, index(s.Key(), files), err, false
+		l.reads++
 		if err == nil && s.Worktree != "" {
 			a.watch(r, s.Worktree)
 		}

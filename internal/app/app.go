@@ -65,6 +65,7 @@ type app struct {
 	trees           map[layout.ViewID]*filesViewState // Files views' trees
 	fileViews       map[layout.ViewID]*fileViewState  // what file views read
 	previewTabs     map[layout.RegionID]layout.ViewID // each region's preview tab, which the next file opened replaces
+	focusFileSearch bool                              // ⌘P asked to focus Files' search field
 }
 
 func newApp(runtimeDir string) *app {

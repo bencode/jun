@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
@@ -15,17 +16,18 @@ import (
 var refreshIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>`))
 
 // filesViewState is a Files view's tree: which items are open and chosen,
-// and the file it last showed as current.
+// and the file it last showed as current; and its search.
 type filesViewState struct {
 	outline  ui.OutlineState[fileNode]
 	selected int
 	opened   bool // the first source opened, once
 	current  fileNode
+	search   fileSearch
 }
 
 // filesView lists the sources of the project's repository, each with its
-// files: a click shows a file in a preview tab, a double click or Enter in
-// a tab of its own.
+// files, or a search's results in one of them: a click shows a file in a
+// preview tab, a double click or Enter in a tab of its own.
 func (a *app) filesView(c *ui.Context, v *layout.View) {
 	project := a.project(v.ProjectName)
 	if project == nil {
@@ -49,7 +51,16 @@ func (a *app) filesView(c *ui.Context, v *layout.View) {
 			a.filesMessage(c, r, project.CWD)
 			return
 		}
-		if !st.opened && len(r.sources) > 0 {
+		if len(r.sources) == 0 {
+			return
+		}
+		s := a.searchSource(r, st, project.Name)
+		a.fileSearchBar(c, r, st, s)
+		if strings.TrimSpace(st.search.query) != "" {
+			a.fileSearchResults(c, r, st, s, project.Name)
+			return
+		}
+		if !st.opened {
 			st.opened = true
 			st.outline.Open.Add(fileNode{source: r.sources[0].Key()})
 		}
@@ -93,14 +104,23 @@ func (a *app) filesTree(c *ui.Context, r *repoState, st *filesViewState, project
 		}
 		return a.listingFor(r, s).children[n.path]
 	}
-	outline := ui.Outline(c, &st.outline, roots, children, func(n fileNode) {
+	a.fileOutline(c, r, &st.outline, roots, children, project)
+	a.followCurrentFile(st, project)
+}
+
+// fileOutline shows files and directories: a click shows a file in a
+// preview tab, a double click or Enter keeps it in a tab of its own, or
+// opens or closes a directory.
+func (a *app) fileOutline(c *ui.Context, r *repoState, st *ui.OutlineState[fileNode], roots []fileNode, children func(fileNode) []fileNode, project string) ui.Element {
+	outline := ui.Outline(c, st, roots, children, func(n fileNode) {
 		a.fileRow(c, r, n, children(n) != nil)
 	}).Grow(1).FillWidth()
 	chosen := func() (fileNode, bool) {
-		if st.selected < 0 || st.selected >= st.outline.Rows() {
+		i := *st.List.Selected
+		if i < 0 || i >= st.Rows() {
 			return fileNode{}, false
 		}
-		n := st.outline.Item(st.selected)
+		n := st.Item(i)
 		return n, children(n) == nil
 	}
 	if outline.Changed() {
@@ -111,25 +131,31 @@ func (a *app) filesTree(c *ui.Context, r *repoState, st *filesViewState, project
 	if outline.Submitted() {
 		if n, file := chosen(); file {
 			a.openFile(project, n, true)
-		} else if st.outline.Open.Has(n) {
-			st.outline.Open.Remove(n)
+		} else if st.Open.Has(n) {
+			st.Open.Remove(n)
 		} else {
-			st.outline.Open.Add(n)
+			st.Open.Add(n)
 		}
 	}
-	a.followCurrentFile(st, project)
+	return outline
+}
+
+// currentFile is the file the tabs' target shows, if it is the project's.
+func (a *app) currentFile(project string) (layout.FileRef, bool) {
+	if target := a.tabsTarget(); target != nil {
+		if v := activeView(target); v != nil && v.File != nil && v.ProjectName == project {
+			return *v.File, true
+		}
+	}
+	return layout.FileRef{}, false
 }
 
 // followCurrentFile chooses the row of the file the tabs' target shows, as
 // that file changes.
 func (a *app) followCurrentFile(st *filesViewState, project string) {
-	target := a.tabsTarget()
-	if target == nil {
-		return
-	}
 	var current fileNode
-	if v := activeView(target); v != nil && v.File != nil && v.ProjectName == project {
-		current = fileNode{source: v.File.Source, path: v.File.Path}
+	if ref, ok := a.currentFile(project); ok {
+		current = fileNode{source: ref.Source, path: ref.Path}
 	}
 	if current == st.current {
 		return
