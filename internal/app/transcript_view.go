@@ -148,6 +148,11 @@ func (a *app) transcriptHeader(c *ui.Context, project *layout.Project, s history
 				if st.read && st.err == nil {
 					muted(fmt.Sprintf(a.text("%d messages", "%d 条消息"), len(st.messages)))
 				}
+				ui.Text(c, s.ID).FontSize(theme.Caption).Font("monospace").TextColor(a.theme.TextMuted).
+					MinWidth(0).SingleLine().Ellipsis("…").Selectable()
+				if iconButton(c, copyIcon, a.text("Copy Session ID", "复制会话 ID"), 20, 12).Clicked() {
+					mygo.Clipboard.WriteText(s.ID)
+				}
 			})
 		})
 		ui.PrimaryButton(c, a.text("Resume", "Resume")).Shrink(0).

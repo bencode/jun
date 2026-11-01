@@ -75,7 +75,7 @@ func TestSessionsListSearchShowAndResume(t *testing.T) {
 	if shown == nil || shown.Transcript == nil || shown.Transcript.ID != "c2" || a.previewTabs[column.ID] != shown.ID {
 		t.Fatalf("a click showed %+v", shown)
 	}
-	if !tt.HasText("Plan the sessions list") || !tt.HasText("· 1 tool step") {
+	if !tt.HasText("Plan the sessions list") || !tt.HasText("· 1 tool step") || !tt.HasText("c2") {
 		t.Fatalf("the transcript shows %v", tt.Texts())
 	}
 

@@ -9,11 +9,13 @@ import (
 	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/theme"
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
 var (
 	claudeIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M6 .5 11.5 6 6 11.5.5 6Z" fill="currentColor"/></svg>`))
+	copyIcon   = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`))
 	codexIcon  = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>`))
 )
 
@@ -169,6 +171,9 @@ func (a *app) sessionRow(c *ui.Context, s history.Session, project string) {
 		}
 		if m.Item(a.text("Open", "打开")).Chosen() {
 			a.openTranscript(project, s, true)
+		}
+		if m.Item(a.text("Copy Session ID", "复制会话 ID")).Chosen() {
+			mygo.Clipboard.WriteText(s.ID)
 		}
 	}).Children(func() {
 		a.agentIcon(c, s.Agent, 11).Margin(3, 0, 0, 0)
