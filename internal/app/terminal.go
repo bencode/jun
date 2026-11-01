@@ -61,6 +61,10 @@ func (a *app) terminalView(c *ui.Context, v *layout.View) {
 		}
 		if element.FocusWithin() {
 			a.focusedTerminal = v.ID
+			if a.lastTerminal != session.ID {
+				a.lastTerminal = session.ID
+				c.Invalidate() // an Agents view built earlier this frame marks the old one
+			}
 		}
 		return
 	}

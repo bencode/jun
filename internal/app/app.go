@@ -55,14 +55,15 @@ type app struct {
 	ttys            map[terminal.ID]string
 	previews        map[terminal.ID]*preview
 	agentPolling    bool
-	agentWide       map[layout.ViewID]bool
+	agentViews      map[layout.ViewID]*agentsViewState
+	lastTerminal    terminal.ID // the session of the terminal last focused
 }
 
 func newApp(runtimeDir string) *app {
 	return &app{state: layout.New(), theme: theme.UI(), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
 		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
-		agentWide: map[layout.ViewID]bool{}}
+		agentViews: map[layout.ViewID]*agentsViewState{}}
 }
 
 func Run() error {

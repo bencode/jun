@@ -154,6 +154,11 @@ func (c *restoreCheck) region(r *Region) error {
 			if v.ProjectName != "" {
 				return fmt.Errorf("Agents view cannot have a source project")
 			}
+			if !slices.Contains([]AgentsLayout{AgentsAuto, AgentsCards, AgentsList}, v.AgentsLayout) {
+				return fmt.Errorf("unknown agents layout %q", v.AgentsLayout)
+			}
+		} else if v.AgentsLayout != AgentsAuto {
+			return fmt.Errorf("view %d is not an Agents view but has an agents layout", v.ID)
 		} else if !c.projects[v.ProjectName] {
 			return fmt.Errorf("view %d source project %q does not exist", v.ID, v.ProjectName)
 		}

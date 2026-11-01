@@ -14,10 +14,20 @@ const (
 	ViewAgents   ViewKind = "agents"
 )
 
+// AgentsLayout is how an Agents view shows the agents.
+type AgentsLayout string
+
+const (
+	AgentsAuto  AgentsLayout = "" // cards when they all fit, else a list
+	AgentsCards AgentsLayout = "cards"
+	AgentsList  AgentsLayout = "list"
+)
+
 type View struct {
-	ID          ViewID   `json:"id"`
-	Kind        ViewKind `json:"kind"`
-	ProjectName string   `json:"projectName"`
+	ID           ViewID       `json:"id"`
+	Kind         ViewKind     `json:"kind"`
+	ProjectName  string       `json:"projectName"`
+	AgentsLayout AgentsLayout `json:"agentsLayout,omitempty"`
 }
 type Region struct {
 	ID     RegionID `json:"id"`
