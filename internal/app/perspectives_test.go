@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bencode/jun/internal/config"
+	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -24,6 +25,11 @@ func TestPerspectiveFormCreatesEmptyAndRenamesLiveTerminal(t *testing.T) {
 	if len(a.bindings) != count {
 		t.Fatal("terminal shortcuts crossed the perspective modal")
 	}
+	// The suggestion is selected, so one Backspace clears it.
+	if a.perspectiveForm.name != "Monitor" {
+		t.Fatalf("suggested %q beside Work and Review", a.perspectiveForm.name)
+	}
+	tt.Key(0, ui.KeyBackspace)
 	click(t, tt, "Create")
 	if !a.perspectiveForm.open || a.perspectiveForm.error == "" {
 		t.Fatal("blank name was accepted")
@@ -177,5 +183,28 @@ func TestDeletePerspectiveClosesItsTerminals(t *testing.T) {
 	click(t, tt, "Perspective")
 	if err := tt.ChooseMenuItem("Delete Perspective…"); err == nil {
 		t.Fatal("the last perspective could be deleted")
+	}
+}
+
+func TestSuggestedPerspectiveName(t *testing.T) {
+	project := func(names ...string) *layout.Project {
+		p := &layout.Project{}
+		for _, name := range names {
+			p.Perspectives = append(p.Perspectives, &layout.Perspective{Name: name})
+		}
+		return p
+	}
+	for _, c := range []struct {
+		names []string
+		want  string
+	}{
+		{[]string{"Work"}, "Review"},
+		{[]string{"work", "REVIEW", "Debug"}, "Monitor"},
+		{[]string{"Work", "Review", "Monitor", "Debug", "Notes"}, "Perspective 6"},
+		{[]string{"Work", "Review", "Monitor", "Debug", "Notes", "Perspective 7"}, "Perspective 8"},
+	} {
+		if got := suggestedPerspectiveName(project(c.names...)); got != c.want {
+			t.Errorf("beside %v: %q, want %q", c.names, got, c.want)
+		}
 	}
 }
