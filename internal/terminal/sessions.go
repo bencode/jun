@@ -31,6 +31,7 @@ type Store struct {
 	sessions   []*Session
 	runtimeDir string
 	theme      *ghostty.Theme
+	textSize   float32 // 0 for Ghostty's own
 }
 
 // NewStore keeps sessions whose shells report their process IDs in
@@ -44,6 +45,15 @@ func (s *Store) SetTheme(t *ghostty.Theme) {
 	s.theme = t
 	for _, session := range s.sessions {
 		session.Terminal.SetTheme(t, nil)
+	}
+}
+
+// SetTextSize gives the sessions, and those created later, text of size
+// DIPs.
+func (s *Store) SetTextSize(size float32) {
+	s.textSize = size
+	for _, session := range s.sessions {
+		session.Terminal.SetFont(ghostty.Font{Size: size})
 	}
 }
 
@@ -100,10 +110,17 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	}
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
-		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
-		// ⌘K is Jun's command palette; Control+L clears the screen.
-		Keybinds: []ghostty.Keybind{{Mods: ui.Super, Key: ui.KeyK, Action: ghostty.ActionNone}},
-		OnTitle:  func(string) { notify() }, OnExit: func(int) { notify() },
+		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
+		// ⌘K is Jun's command palette; Control+L clears the screen. ⌘+, ⌘−
+		// and ⌘0 change Jun's text size, of all terminals and file tabs.
+		Keybinds: []ghostty.Keybind{
+			{Mods: ui.Super, Key: ui.KeyK, Action: ghostty.ActionNone},
+			{Mods: ui.Super, Key: ui.KeyEqual, Action: ghostty.ActionNone},
+			{Mods: ui.Super | ui.Shift, Key: ui.KeyEqual, Action: ghostty.ActionNone},
+			{Mods: ui.Super, Key: ui.KeyMinus, Action: ghostty.ActionNone},
+			{Mods: ui.Super, Key: ui.Key0, Action: ghostty.ActionNone},
+		},
+		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
 	})
 	if err != nil {
 		return nil, err

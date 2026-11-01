@@ -78,6 +78,7 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"Global project":           func(s *State) { s.Global.Views[0].ProjectName = "Jun" },
 		"nil side":                 func(s *State) { s.CurrentPerspective().Side = nil },
 		"side width":               func(s *State) { s.CurrentPerspective().SideWidth = 0 },
+		"text size":                func(s *State) { s.TextSize = 100 },
 		"file view without a file": func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = ViewFile },
 		"file outside the repository": func(s *State) {
 			v := s.CurrentPerspective().Columns[0].Views[0]

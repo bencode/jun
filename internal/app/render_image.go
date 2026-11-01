@@ -35,7 +35,7 @@ func (m *imageRender) update(data []byte) {
 	})
 }
 
-func (m *imageRender) view(c *ui.Context) {
+func (m *imageRender) view(c *ui.Context, _ float32) {
 	if m.err != nil {
 		ui.Text(c, fmt.Sprintf("%s: %v", m.a.text("Cannot show the image", "无法显示图片"), m.err)).
 			TextColor(m.a.theme.Danger).Padding(28)

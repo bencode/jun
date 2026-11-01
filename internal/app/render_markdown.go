@@ -23,7 +23,7 @@ var markdownKind = renderKind{
 	},
 	make: func(f fileEnv) fileRender {
 		m := &markdownRender{f: f, top: f.r.top}
-		m.options = markdown.Options{LoadImage: m.loadImage, OnLink: m.openLink}
+		m.options = markdown.Options{Theme: &m.theme, LoadImage: m.loadImage, OnLink: m.openLink}
 		return m
 	},
 }
@@ -32,12 +32,14 @@ type markdownRender struct {
 	f       fileEnv
 	top     string // the repository's, for images loading off the UI thread
 	text    string
+	theme   markdown.Theme // its text size; the window theme's for the rest
 	options markdown.Options
 }
 
 func (m *markdownRender) update(data []byte) { m.text = string(data) }
 
-func (m *markdownRender) view(c *ui.Context) {
+func (m *markdownRender) view(c *ui.Context, size float32) {
+	m.theme.FontSize = size
 	ui.Scroll(c).Grow(1).FillWidth().Children(func() {
 		ui.Column(c).FillWidth().Padding(28, 32).AlignItems(ui.Center).Children(func() {
 			markdown.View(c, m.text, &m.options).FillWidth().MaxWidth(760)

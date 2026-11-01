@@ -79,7 +79,7 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			return
 		}
 		if len(st.renders) > 0 {
-			st.renders[st.shown].view(c)
+			st.renders[st.shown].view(c, a.textSize())
 			return
 		}
 		if st.read {
