@@ -9,9 +9,9 @@ const DefaultSideWidth float32 = 260
 // moved and closed. Fixed regions (Global and the side regions) hold their
 // preset's views, in its order.
 var (
-	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff}
+	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript}
 	fixedKinds   = []ViewKind{ViewTree, ViewSessions, ViewSkills, ViewAgents}
-	sidePreset   = []ViewKind{ViewTree}
+	sidePreset   = []ViewKind{ViewTree, ViewSessions}
 	globalPreset = []ViewKind{ViewAgents}
 )
 

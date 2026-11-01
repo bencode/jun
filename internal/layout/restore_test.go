@@ -133,7 +133,7 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	s := decodedLayout(t)
 	side := s.CurrentPerspective().Side
 	files := side.Views[0]
-	// The placeholders an earlier preset had, one selected, around Files.
+	// Sessions before Files, and a placeholder an earlier preset had, selected.
 	sessions := &View{ID: 900, Kind: ViewSessions, ProjectName: "Jun"}
 	skills := &View{ID: 901, Kind: ViewSkills, ProjectName: "Jun"}
 	side.Views, side.Active = []*View{sessions, files, skills}, skills.ID
@@ -145,7 +145,7 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	for _, v := range side.Views {
 		kinds = append(kinds, v.Kind)
 	}
-	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != files || side.Active != files.ID {
+	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != files || side.Views[1] != sessions || side.Active != files.ID {
 		t.Fatalf("side region restored as %v, active %d", kinds, side.Active)
 	}
 	if len(s.Global.Views) != 1 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {

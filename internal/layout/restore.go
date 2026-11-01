@@ -179,6 +179,14 @@ func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed
 		if v.File != nil && (v.File.Source == "" || !validFilePath(v.File.Path)) {
 			return fmt.Errorf("view %d: invalid file %q in %q", v.ID, v.File.Path, v.File.Source)
 		}
+		if (v.Kind == ViewTranscript) != (v.Transcript != nil) {
+			return fmt.Errorf("view %d: only a transcript view has a session, and it must", v.ID)
+		}
+		if v.Transcript != nil {
+			if err := validSession(*v.Transcript); err != nil {
+				return fmt.Errorf("view %d: %w", v.ID, err)
+			}
+		}
 		if fixed {
 			if v.ProjectName != project {
 				return fmt.Errorf("view %d source project %q does not match its region", v.ID, v.ProjectName)

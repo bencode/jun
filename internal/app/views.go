@@ -23,6 +23,14 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.fileView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewSessions {
+		a.sessionsView(c, v)
+		return
+	}
+	if v.Kind == layout.ViewTranscript {
+		a.transcriptView(c, v)
+		return
+	}
 	a.placeholder(c, v)
 }
 

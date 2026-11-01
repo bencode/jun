@@ -400,8 +400,8 @@ func TestRenameAndRemoveProjectFollowItsViews(t *testing.T) {
 		t.Fatal(err)
 	}
 	removed, err := s.RemoveProject("Lesscap")
-	// Work's terminal, Review's and the one moved into Brain, besides each perspective's Files.
-	if err != nil || len(removed) != 5 || s.ActiveProject != "Brain" || len(s.Global.Views) != 1 || s.Validate() != nil {
+	// Work's terminal, Review's and the one moved into Brain, besides each perspective's Files and Sessions.
+	if err != nil || len(removed) != 7 || s.ActiveProject != "Brain" || len(s.Global.Views) != 1 || s.Validate() != nil {
 		t.Fatalf("removed %d views, active %q: %v, %v", len(removed), s.ActiveProject, err, s.Validate())
 	}
 	for _, name := range []string{"Brain", "Docs"} {

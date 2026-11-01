@@ -1,7 +1,10 @@
 package layout
 
 import (
+	"path/filepath"
+
 	"fmt"
+	"github.com/bencode/jun/internal/history"
 	"path"
 	"slices"
 	"strings"
@@ -15,7 +18,7 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	if s.Fixed(target) {
 		return 0, errFixed
 	}
-	if kind == ViewFile || !slices.Contains(tabKinds, kind) {
+	if kind == ViewFile || kind == ViewTranscript || !slices.Contains(tabKinds, kind) {
 		return 0, fmt.Errorf("view kind %s cannot be opened in a tab", kind)
 	}
 	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
@@ -55,6 +58,47 @@ func (s *State) OpenFile(target RegionID, project string, ref FileRef, preview V
 	}
 	s.reveal(r)
 	return r.Active, nil
+}
+
+// OpenTranscript shows the session in the target region: the view there
+// showing it, else the preview view, which it replaces when that is a
+// transcript too, else a new view.
+func (s *State) OpenTranscript(target RegionID, project string, ref SessionRef, preview ViewID) (ViewID, error) {
+	r := s.Region(target)
+	if r == nil {
+		return 0, fmt.Errorf("region not found")
+	}
+	if s.Fixed(target) {
+		return 0, errFixed
+	}
+	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == project }) {
+		return 0, fmt.Errorf("source project not found: %s", project)
+	}
+	if err := validSession(ref); err != nil {
+		return 0, err
+	}
+	shows := func(v *View) bool { return v.Transcript != nil && v.ProjectName == project && *v.Transcript == ref }
+	isPreview := func(v *View) bool { return v.ID == preview && v.Kind == ViewTranscript }
+	if i := slices.IndexFunc(r.Views, shows); i >= 0 {
+		r.Active = r.Views[i].ID
+	} else if i := slices.IndexFunc(r.Views, isPreview); i >= 0 {
+		r.Views[i].ProjectName, r.Views[i].Transcript = project, &ref
+		r.Active = preview
+	} else {
+		s.appendView(r, ViewTranscript, project)
+		r.Views[len(r.Views)-1].Transcript = &ref
+	}
+	s.reveal(r)
+	return r.Active, nil
+}
+
+// validSession checks a session reference: an agent, a plain ID and an
+// absolute file.
+func validSession(ref SessionRef) error {
+	if !history.Known(ref.Agent) || !history.ValidID(ref.ID) || !filepath.IsAbs(ref.Path) {
+		return fmt.Errorf("invalid session %q of %q", ref.ID, ref.Agent)
+	}
+	return nil
 }
 
 // validFilePath reports whether name is a slash-separated path relative to

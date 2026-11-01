@@ -7,13 +7,14 @@ type PerspectiveID uint64
 type ViewKind string
 
 const (
-	ViewTerminal ViewKind = "terminal"
-	ViewTree     ViewKind = "tree" // Files, in the side region
-	ViewDiff     ViewKind = "diff"
-	ViewFile     ViewKind = "file"
-	ViewAgents   ViewKind = "agents"   // in Global
-	ViewSessions ViewKind = "sessions" // placeholders an earlier side preset had, which loading drops
-	ViewSkills   ViewKind = "skills"   // likewise
+	ViewTerminal   ViewKind = "terminal"
+	ViewTree       ViewKind = "tree" // Files, in the side region
+	ViewDiff       ViewKind = "diff"
+	ViewFile       ViewKind = "file"
+	ViewAgents     ViewKind = "agents"     // in Global
+	ViewSessions   ViewKind = "sessions"   // agents' sessions, in the side region
+	ViewSkills     ViewKind = "skills"     // a placeholder an earlier side preset had, which loading drops
+	ViewTranscript ViewKind = "transcript" // an agent session, read-only
 )
 
 // AgentsLayout is how an Agents view shows the agents.
@@ -30,7 +31,15 @@ type View struct {
 	Kind         ViewKind     `json:"kind"`
 	ProjectName  string       `json:"projectName"`
 	AgentsLayout AgentsLayout `json:"agentsLayout,omitempty"`
-	File         *FileRef     `json:"file,omitempty"` // a file view's file
+	File         *FileRef     `json:"file,omitempty"`       // a file view's file
+	Transcript   *SessionRef  `json:"transcript,omitempty"` // a transcript view's session
+}
+
+// SessionRef is an agent session a transcript view shows.
+type SessionRef struct {
+	Agent string `json:"agent"` // history's name of the agent: "claude" or "codex"
+	ID    string `json:"id"`
+	Path  string `json:"path"` // the session's file, absolute
 }
 
 // FileRef is a file a file view shows: its path in a source of the view's
