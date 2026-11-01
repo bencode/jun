@@ -30,11 +30,25 @@ type Store struct {
 	nextID     ID
 	sessions   []*Session
 	runtimeDir string
+	theme      *ghostty.Theme
 }
 
 // NewStore keeps sessions whose shells report their process IDs in
 // runtimeDir.
-func NewStore(runtimeDir string) *Store { return &Store{runtimeDir: runtimeDir} }
+func NewStore(runtimeDir string) *Store {
+	return &Store{runtimeDir: runtimeDir, theme: theme.JunTerminal()}
+}
+
+// SetTheme gives the sessions, and those created later, the theme.
+func (s *Store) SetTheme(t *ghostty.Theme) {
+	s.theme = t
+	for _, session := range s.sessions {
+		session.Terminal.SetTheme(t, nil)
+	}
+}
+
+// Theme returns the sessions' theme.
+func (s *Store) Theme() *ghostty.Theme { return s.theme }
 
 // shellCommand starts the user's login shell, as the terminal does by
 // default, after the shell's process writes its ID to report: exec keeps
@@ -86,7 +100,7 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	}
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
 	term, err := ghostty.New(ghostty.Options{
-		Command: shellCommand(report), Dir: cwd, Theme: theme.Terminal(), Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
+		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		// ⌘K is Jun's command palette; Control+L clears the screen.
 		Keybinds: []ghostty.Keybind{{Mods: ui.Super, Key: ui.KeyK, Action: ghostty.ActionNone}},
 		OnTitle:  func(string) { notify() }, OnExit: func(int) { notify() },

@@ -25,6 +25,9 @@ func (a *app) settingsMenu(m *ui.Menu) {
 			a.setLanguage(true)
 		}
 	})
+	if m.Item(a.text("Theme…", "主题…")).Chosen() {
+		a.openThemePalette()
+	}
 }
 
 func (a *app) setLanguage(chinese bool) {
