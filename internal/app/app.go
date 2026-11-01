@@ -40,6 +40,7 @@ type app struct {
 		project     string
 		id          layout.PerspectiveID
 		name, error string
+		selectName  bool // selects the name once, on opening
 	}
 	projectRename struct {
 		open                 bool

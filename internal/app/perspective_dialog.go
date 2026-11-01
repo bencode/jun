@@ -1,7 +1,10 @@
 package app
 
 import (
+	"fmt"
+	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/theme"
@@ -13,7 +16,7 @@ func (a *app) openPerspectiveForm(id layout.PerspectiveID) {
 	if project == nil {
 		return
 	}
-	name := ""
+	name := suggestedPerspectiveName(project)
 	if id != 0 {
 		p := project.Perspective(id)
 		if p == nil {
@@ -22,7 +25,7 @@ func (a *app) openPerspectiveForm(id layout.PerspectiveID) {
 		name = p.Name
 	}
 	f := &a.perspectiveForm
-	f.open, f.project, f.id, f.name, f.error = true, project.Name, id, name, ""
+	f.open, f.project, f.id, f.name, f.error, f.selectName = true, project.Name, id, name, "", true
 }
 
 func (a *app) perspectiveDialog(c *ui.Context) {
@@ -40,8 +43,11 @@ func (a *app) perspectiveDialog(c *ui.Context) {
 		}
 		ui.Column(c).Width(400).Gap(12).Children(func() {
 			ui.Text(c, title).FontSize(theme.Title).Bold()
-			ui.Text(c, f.project).TextColor(a.theme.TextMuted)
-			ui.TextInput(c, &f.name).Label(a.text("Perspective name", "视角名称")).AutoFocus().FillWidth().OnSubmit(a.submitPerspective)
+			input := ui.TextInput(c, &f.name).Label(a.text("Perspective name", "视角名称")).AutoFocus().FillWidth().OnSubmit(a.submitPerspective)
+			if f.selectName {
+				input.SetTextSelection(0, utf8.RuneCountInString(f.name))
+				f.selectName = false
+			}
 			if f.error != "" {
 				ui.Text(c, f.error).TextColor(a.theme.Danger)
 			}
@@ -95,4 +101,22 @@ func (a *app) submitPerspective() {
 		}
 	}
 	f.open, f.error = false, ""
+}
+
+// perspectiveNames are offered, in order, for a new perspective: its name
+// is the first one the project lacks, the field holding it selected.
+var perspectiveNames = []string{"Work", "Review", "Monitor", "Debug", "Notes"}
+
+func suggestedPerspectiveName(project *layout.Project) string {
+	taken := func(name string) bool {
+		return slices.ContainsFunc(project.Perspectives, func(p *layout.Perspective) bool { return strings.EqualFold(p.Name, name) })
+	}
+	if i := slices.IndexFunc(perspectiveNames, func(name string) bool { return !taken(name) }); i >= 0 {
+		return perspectiveNames[i]
+	}
+	for n := len(project.Perspectives) + 1; ; n++ {
+		if name := fmt.Sprintf("Perspective %d", n); !taken(name) {
+			return name
+		}
+	}
 }
