@@ -24,6 +24,7 @@ func (a *app) shortcuts(c *ui.Context) {
 		}
 	})
 	c.OnShortcut(ui.Super, ui.KeyB, a.toggleSide)
+	c.OnShortcut(ui.Super, ui.KeyP, a.searchFiles)
 	c.OnShortcut(ui.Ctrl, ui.KeyTab, func() { a.cycleTab(1) })
 	c.OnShortcut(ui.Ctrl|ui.Shift, ui.KeyTab, func() { a.cycleTab(-1) })
 	c.OnShortcut(ui.Super|ui.Shift, ui.KeyBracketRight, func() { a.cycleTab(1) })
