@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -27,17 +25,9 @@ func (a *app) settingsMenu(m *ui.Menu) {
 			a.setLanguage(true)
 		}
 	})
-	m.Submenu(a.text("Text Size", "字号"), func(m *ui.Menu) {
-		for _, size := range []float32{11, 12, 13, 14, 15, 16, 18, 20} {
-			label := fmt.Sprintf("%.0f", size)
-			if size == defaultTextSize {
-				label += a.text(" (Default)", "（默认）")
-			}
-			if m.Item(label).Radio(size == a.textSize()).Chosen() {
-				a.setTextSize(size)
-			}
-		}
-	})
+	if m.Item(a.text("Font…", "字体…")).Chosen() {
+		a.fontOpen = true
+	}
 	if m.Item(a.text("Theme…", "主题…")).Chosen() {
 		a.openThemePalette()
 	}

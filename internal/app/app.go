@@ -35,6 +35,7 @@ type app struct {
 		previewed string   // the theme shown while choosing
 		reveal    bool     // scrolls the highlight into view once, on opening
 	}
+	fontOpen        bool // the Font panel shows
 	perspectiveForm struct {
 		open        bool
 		project     string
