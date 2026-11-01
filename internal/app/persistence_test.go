@@ -105,7 +105,7 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 			tt.Key(ui.Super, ui.KeyB)
 		},
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
-			perspectiveMenu(t, tt, "Show Bottom Region")
+			click(t, tt, "Show Bottom Region")
 		},
 		"add column": func(t *testing.T, a *app, tt *ui.Tester) {
 			menu(t, tt, a, a.state.CurrentPerspective().Columns[0], "Add Column to Right")

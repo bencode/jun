@@ -181,9 +181,13 @@ func TestTabDragAndKeyboardSelection(t *testing.T) {
 
 func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	a, tt := testApp(t)
-	before, _ := tt.Find("Perspective")
-	if before.X >= 56 || before.Y < 800 {
-		t.Fatalf("perspective should be at the rail bottom: %+v", before)
+	// The view bar ends the last column's tab bar, right of its region menu.
+	p := a.state.CurrentPerspective()
+	last, _ := tt.Find(fmt.Sprintf("Region menu %d", p.Columns[len(p.Columns)-1].ID))
+	bar, _ := tt.Find("Perspective")
+	toggle, _ := tt.Find("Hide Global")
+	if bar.Y > 8 || bar.X < last.X+last.W || toggle.X < bar.X+bar.W {
+		t.Fatalf("view bar %+v, Global toggle %+v, region menu %+v", bar, toggle, last)
 	}
 	perspectiveMenu(t, tt, "Review")
 	if a.state.CurrentProject().ActivePerspective != a.state.CurrentProject().Perspectives[1].ID || !tt.HasText("Diff") {
@@ -215,10 +219,10 @@ func TestEmptyStartupAndColumnControls(t *testing.T) {
 	if !tt.HasText("Open Project…") || len(empty.state.Projects) != 0 {
 		t.Fatal("startup is not an empty project picker")
 	}
-	click(t, tt, "Perspective")
-	if tt.Menu() != nil {
-		t.Fatal("Perspective should be disabled without a project")
+	if _, ok := tt.Find("Perspective"); ok || !tt.HasText("Open Project…") {
+		t.Fatal("Perspective should not show without a project")
 	}
+	click(t, tt, "Show Global")
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
 	menu(t, tt, a, p.Columns[0], "Add Column to Right")
