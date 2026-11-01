@@ -27,15 +27,14 @@ func (a *app) settingsMenu(m *ui.Menu) {
 			a.setLanguage(true)
 		}
 	})
-	m.Submenu(a.text("File Text Size", "文件字号"), func(m *ui.Menu) {
+	m.Submenu(a.text("Text Size", "字号"), func(m *ui.Menu) {
 		for _, size := range []float32{11, 12, 13, 14, 15, 16, 18, 20} {
 			label := fmt.Sprintf("%.0f", size)
-			if size == defaultFileTextSize {
+			if size == defaultTextSize {
 				label += a.text(" (Default)", "（默认）")
 			}
-			if m.Item(label).Radio(size == a.fileTextSize()).Chosen() {
-				a.state.FileTextSize = size
-				a.layoutChanged()
+			if m.Item(label).Radio(size == a.textSize()).Chosen() {
+				a.setTextSize(size)
 			}
 		}
 	})
@@ -48,4 +47,27 @@ func (a *app) setLanguage(chinese bool) {
 	a.state.Chinese = chinese
 	a.layoutChanged()
 	mygo.App.SetMenu(a.applicationMenu())
+}
+
+// defaultTextSize is terminals' and file tabs' text size until it is
+// changed: the editor's own, and Ghostty's.
+const defaultTextSize float32 = 13
+
+// Text sizes ⌘+ and ⌘− zoom between.
+const minTextSize, maxTextSize float32 = 8, 40
+
+// textSize is the size of terminals' and file tabs' text.
+func (a *app) textSize() float32 {
+	if a.state.TextSize > 0 {
+		return a.state.TextSize
+	}
+	return defaultTextSize
+}
+
+// setTextSize gives terminals and file tabs text of size DIPs, within
+// the limits, and saves it.
+func (a *app) setTextSize(size float32) {
+	a.state.TextSize = min(max(size, minTextSize), maxTextSize)
+	a.terminals.SetTextSize(a.state.TextSize)
+	a.layoutChanged()
 }

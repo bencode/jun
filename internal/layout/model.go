@@ -71,8 +71,8 @@ type State struct {
 	GlobalVisible bool       `json:"globalVisible"`
 	RailExpanded  bool       `json:"railExpanded"`
 	Chinese       bool       `json:"chinese,omitempty"`
-	Theme         string     `json:"theme,omitempty"`        // a Ghostty theme's name; Jun's own when empty
-	FileTextSize  float32    `json:"fileTextSize,omitempty"` // file tabs' text size in DIPs; Jun's default when 0
+	Theme         string     `json:"theme,omitempty"`    // a Ghostty theme's name; Jun's own when empty
+	TextSize      float32    `json:"textSize,omitempty"` // terminals' and file tabs' text size in DIPs; Jun's default when 0
 	CenterPercent float32    `json:"centerPercent"`
 	nextID        uint64
 }

@@ -214,7 +214,7 @@ func TestFileViewRendersMarkdownAndImages(t *testing.T) {
 	}
 }
 
-func TestFileTabsZoomFromTheDefaultSize(t *testing.T) {
+func TestTextSizeZoomsEveryFileTab(t *testing.T) {
 	dir := gitRepo(t)
 	for _, name := range []string{"a.go", "b.go"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0o644); err != nil {
@@ -253,19 +253,19 @@ func TestFileTabsZoomFromTheDefaultSize(t *testing.T) {
 		return got
 	}
 
-	a.focusRegion(p.Columns[0].ID)
 	tt.Key(ui.Super, ui.KeyEqual)
 	tt.Key(ui.Super|ui.Shift, ui.KeyEqual)
-	if got := sizes(); got != [2]float32{15, 13} {
-		t.Fatalf("zooming one tab gave sizes %v", got)
-	}
-	a.state.FileTextSize = 16
-	if got := sizes(); got != [2]float32{18, 16} {
-		t.Fatalf("a new default gave sizes %v", got)
+	if got := sizes(); got != [2]float32{15, 15} {
+		t.Fatalf("⌘+ twice gave sizes %v", got)
 	}
 	tt.Key(ui.Super, ui.Key0)
-	if got := sizes(); got != [2]float32{16, 16} {
+	if got := sizes(); got != [2]float32{13, 13} {
 		t.Fatalf("⌘0 gave sizes %v", got)
+	}
+	a.setTextSize(100)
+	tt.Key(ui.Super, ui.KeyMinus)
+	if got := sizes(); got != [2]float32{39, 39} {
+		t.Fatalf("⌘− from the largest size gave sizes %v", got)
 	}
 
 	data, err := json.Marshal(a.state)
@@ -276,7 +276,7 @@ func TestFileTabsZoomFromTheDefaultSize(t *testing.T) {
 	if err := json.Unmarshal(data, restored); err != nil {
 		t.Fatal(err)
 	}
-	if err := restored.Restore(); err != nil || restored.FileTextSize != 16 {
-		t.Fatalf("the default size did not survive saving: %v, %v", restored.FileTextSize, err)
+	if err := restored.Restore(); err != nil || restored.TextSize != 39 {
+		t.Fatalf("the text size did not survive saving: %v, %v", restored.TextSize, err)
 	}
 }

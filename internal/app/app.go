@@ -103,6 +103,7 @@ func Run() error {
 		a.restoreConfig(path)
 	}
 	a.useSavedTheme()
+	a.terminals.SetTextSize(a.state.TextSize)
 	mygo.App.OnSecondInstance(func(args []string, wd string) {
 		if a.window == nil {
 			return
