@@ -2,6 +2,7 @@ package app
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -18,6 +19,10 @@ var (
 	copyIcon   = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`))
 	codexIcon  = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>`))
 )
+
+// sessionsLimit is how many sessions the list shows at most, the latest:
+// a search finds older ones.
+const sessionsLimit = 500
 
 // sessionsRescan is how old a list of sessions is before showing it reads
 // them again.
@@ -109,7 +114,12 @@ func (a *app) sessionsView(c *ui.Context, v *layout.View) {
 		if l.err != nil {
 			ui.Text(c, l.err.Error()).FontSize(theme.Caption).TextColor(a.theme.Danger).Padding(4, 12)
 		}
-		rows := sessionRows(matchSessions(l.sessions, st.query), time.Now(), a.text)
+		matches, more := matchSessions(l.sessions, st.query, sessionsLimit)
+		if more {
+			ui.Text(c, fmt.Sprintf(a.text("The latest %d shown; search to find older ones.", "只显示最近的 %d 个，搜索可找到更早的。"), sessionsLimit)).
+				FontSize(theme.Caption).TextColor(a.theme.TextMuted).Padding(2, 14, 4)
+		}
+		rows := sessionRows(matches, time.Now(), a.text)
 		if len(rows) == 0 {
 			a.sessionsMessage(c, l, st.query)
 			return
@@ -203,17 +213,22 @@ func sessionDetail(s history.Session) string {
 	return s.Branch + " · " + at
 }
 
-// matchSessions keeps the sessions whose title or first or last prompt has
-// every word of the query, ignoring case.
-func matchSessions(sessions []history.Session, query string) []history.Session {
+// matchSessions keeps the first limit sessions whose title or first or
+// last prompt has every word of the query, ignoring case; more reports
+// that others match too.
+func matchSessions(sessions []history.Session, query string, limit int) (matches []history.Session, more bool) {
 	words := strings.Fields(strings.ToLower(query))
-	if len(words) == 0 {
-		return sessions
-	}
-	return slices.DeleteFunc(slices.Clone(sessions), func(s history.Session) bool {
+	for _, s := range sessions {
 		text := strings.ToLower(s.Title + "\n" + s.FirstPrompt + "\n" + s.LastPrompt)
-		return slices.ContainsFunc(words, func(w string) bool { return !strings.Contains(text, w) })
-	})
+		if slices.ContainsFunc(words, func(w string) bool { return !strings.Contains(text, w) }) {
+			continue
+		}
+		if len(matches) == limit {
+			return matches, true
+		}
+		matches = append(matches, s)
+	}
+	return matches, false
 }
 
 // sessionRows heads each day's sessions, latest first, with the day:

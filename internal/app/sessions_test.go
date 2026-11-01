@@ -83,8 +83,11 @@ func TestSessionsListSearchShowAndResume(t *testing.T) {
 	// shows it.
 	a.sessionViews[sessions.ID].query = "LARGER"
 	tt.Frame()
-	if got := matchSessions(a.sessionLists[dir].sessions, "LARGER"); len(got) != 1 || got[0].ID != "c1" {
+	if got, more := matchSessions(a.sessionLists[dir].sessions, "LARGER", 1); len(got) != 1 || got[0].ID != "c1" || more {
 		t.Fatalf("searching found %+v", got)
+	}
+	if got, more := matchSessions(a.sessionLists[dir].sessions, "", 1); len(got) != 1 || got[0].ID != "c2" || !more {
+		t.Fatalf("the list kept %+v, more %v, past its limit", got, more)
 	}
 	tt.Click("Zoom the text")
 	tt.Frame()
