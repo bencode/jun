@@ -1,35 +1,33 @@
 package app
 
 import (
-	"bytes"
 	"fmt"
-	"path"
 	"path/filepath"
-	"unicode/utf8"
+	"slices"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
-	"github.com/egoist/mygo/ui/editor"
 )
 
 // fileLimit is the largest file a file view reads.
 const fileLimit = 10 << 20
 
-// fileViewState is what a file view read: the file's text in a read-only
-// editor, or why it shows none.
+// fileViewState is what a file view read: the renders that can show the
+// file, and the one that does, or why none can.
 type fileViewState struct {
 	ref     layout.FileRef
 	read    bool
 	source  repo.Source // as it was when read: a new commit or checkout reads again
 	version int         // the repository's when read
 	loading bool
-	editor  *editor.State
 	size    int64
-	binary  bool
 	err     error
+	kinds   []int        // the renderKinds that can show the file
+	renders []fileRender // one for each of kinds
+	shown   int          // the index in renders of the one showing
 }
 
 // fileView shows a file of a source of the project's repository, read
@@ -47,7 +45,7 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 	}
 	s, found := r.source(v.File.Source)
 	if found && !st.loading && (!st.read || st.source != s || s.Worktree != "" && st.version != r.version) {
-		a.readFile(r, s, st)
+		a.readFile(fileEnv{a, r, s, *v.File, v.ProjectName}, st)
 	}
 	ui.Column(c.Key(v.ID)).Fill().Gap(0).Children(func() {
 		ui.Row(c).FillWidth().Height(28).Padding(0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
@@ -58,6 +56,19 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			if st.read && st.err == nil {
 				ui.Text(c, byteSize(st.size)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine()
 			}
+			if len(st.renders) > 0 {
+				if detail := st.renders[st.shown].detail(); detail != "" {
+					ui.Text(c, detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine()
+				}
+			}
+			if len(st.kinds) > 1 {
+				ui.Spacer(c)
+				labels := make([]string, len(st.kinds))
+				for i, k := range st.kinds {
+					labels[i] = renderKinds[k].label(a)
+				}
+				ui.Segmented(c, &st.shown, labels...).Label(a.text("Show as", "显示方式")).Height(22).FontSize(theme.Caption)
+			}
 		})
 		if !found && r.sources != nil {
 			a.fileProblem(c, r, project.CWD, st, fmt.Errorf("%s: %s", a.text("No longer in the repository", "仓库里已经没有它"), v.File.Source), s)
@@ -67,8 +78,8 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			a.fileProblem(c, r, project.CWD, st, st.err, s)
 			return
 		}
-		if st.editor != nil {
-			editor.View(c, st.editor).Grow(1).FillWidth()
+		if len(st.renders) > 0 {
+			st.renders[st.shown].view(c)
 			return
 		}
 		if st.read {
@@ -77,34 +88,40 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 	})
 }
 
-// readFile reads the file in the background: text into the editor, kept
-// with its place as the text changes, else whether it is binary or too
-// large.
-func (a *app) readFile(r *repoState, s repo.Source, st *fileViewState) {
+// readFile reads the file in the background, then gives its content to
+// the renders that can show it: those it had, keeping their state, unless
+// they differ, or the source moved on.
+func (a *app) readFile(f fileEnv, st *fileViewState) {
 	st.loading = true
-	top, version, ref := r.top, r.version, st.ref
+	top, version := f.r.top, f.r.version
 	var data []byte
 	var size int64
 	var err error
-	a.background(func() { data, size, err = repo.Read(top, s, ref.Path, fileLimit) }, func() {
-		st.loading, st.read, st.source, st.version, st.size, st.err = false, true, s, version, size, err
-		st.binary = bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data)
-		if err != nil || size > fileLimit || st.binary {
-			st.editor = nil
-			return
+	a.background(func() { data, size, err = repo.Read(top, f.s, f.ref.Path, fileLimit) }, func() {
+		moved := st.source != f.s
+		st.loading, st.read, st.source, st.version, st.size, st.err = false, true, f.s, version, size, err
+		kinds := []int{}
+		if err == nil && size <= fileLimit {
+			kinds = kindsFor(f.ref.Path, data)
 		}
-		if st.editor == nil {
-			buffer := editor.NewBuffer(string(data))
-			buffer.SetLanguage(editor.LanguageFor(path.Base(ref.Path)))
-			st.editor = &editor.State{Buffer: buffer, ReadOnly: true, Label: ref.Path}
-		} else if text := string(data); st.editor.Buffer.String() != text {
-			st.editor.Buffer.Reset(text)
+		if moved || !slices.Equal(kinds, st.kinds) {
+			if !slices.Equal(kinds, st.kinds) {
+				st.shown = 0
+			}
+			st.kinds, st.renders = kinds, make([]fileRender, len(kinds))
+			for i, k := range kinds {
+				st.renders[i] = renderKinds[k].make(f)
+			}
+		}
+		for _, render := range st.renders {
+			render.update(data)
 		}
 	})
 }
 
-// fileProblem says why a file view shows no text: an error, with a retry,
-// or a binary or too large file, which a worktree's default app can open.
+// fileProblem says why a file view shows nothing: an error, with a retry,
+// or a file too large or no render shows, which a worktree's default app
+// can open.
 func (a *app) fileProblem(c *ui.Context, r *repoState, dir string, st *fileViewState, err error, s repo.Source) {
 	ui.Column(c).Padding(28).Gap(12).FillWidth().AlignItems(ui.Start).Children(func() {
 		if err != nil {
@@ -115,9 +132,9 @@ func (a *app) fileProblem(c *ui.Context, r *repoState, dir string, st *fileViewS
 			}
 			return
 		}
-		message := a.text("Too large to show", "文件太大，不显示")
-		if st.binary {
-			message = a.text("Binary file", "二进制文件")
+		message := a.text("Binary file", "二进制文件")
+		if st.size > fileLimit {
+			message = a.text("Too large to show", "文件太大，不显示")
 		}
 		ui.Text(c, message).TextColor(a.theme.TextMuted)
 		if s.Worktree != "" && ui.Button(c, a.text("Open with Default App", "用默认应用打开")).Clicked() {

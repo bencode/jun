@@ -1,8 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,11 +62,11 @@ func TestFilesOpensPreviewAndPinnedTabs(t *testing.T) {
 
 	click(t, tt, "main.go")
 	preview := shown()
-	if preview.File.Path != "main.go" || a.previewTabs[column.ID] != preview.ID || a.fileViews[preview.ID].editor.Buffer.String() != "package main\n" {
+	if preview.File.Path != "main.go" || a.previewTabs[column.ID] != preview.ID || fileText(a, preview.ID) != "package main\n" {
 		t.Fatal("a click did not show the file in a preview tab")
 	}
 	click(t, tt, "README.md")
-	if v := shown(); v.ID != preview.ID || v.File.Path != "README.md" || a.fileViews[v.ID].editor.Buffer.String() != "# Jun\n" {
+	if v := shown(); v.ID != preview.ID || v.File.Path != "README.md" || fileText(a, v.ID) != "# Jun\n" {
 		t.Fatal("the next click did not replace the preview with an uncommitted file")
 	}
 	tt.Key(0, ui.KeyEnter)
@@ -135,5 +138,78 @@ func TestFilesSearchShowsMatchesAsATree(t *testing.T) {
 	tt.Frame()
 	if !tt.HasText("No files match") {
 		t.Fatal("letters out of order matched")
+	}
+}
+
+// fileText is the text a file view's source render holds.
+func fileText(a *app, id layout.ViewID) string {
+	for _, render := range a.fileViews[id].renders {
+		if s, ok := render.(*sourceRender); ok && s.editor != nil {
+			return s.editor.Buffer.String()
+		}
+	}
+	return ""
+}
+
+func TestFileViewRendersMarkdownAndImages(t *testing.T) {
+	var dot bytes.Buffer
+	if err := png.Encode(&dot, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	dir := gitRepo(t)
+	files := map[string][]byte{
+		"docs/guide.md":    []byte("# The Guide\n\n![a dot](img/dot.png)\n\n[next](next.md)\n"),
+		"docs/next.md":     []byte("Next page\n"),
+		"docs/img/dot.png": dot.Bytes(),
+	}
+	for name, data := range files {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", dir); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	tt := ui.NewTester(a.view, 1200, 700)
+	tt.Frame()
+	search := &a.trees[p.Side.Active].search
+	open := func(query, name string) *layout.View {
+		t.Helper()
+		search.query = query
+		tt.Frame()
+		click(t, tt, name)
+		tt.Frame()
+		return activeView(p.Columns[0])
+	}
+
+	guide := open("guide", "guide.md")
+	if !tt.HasText("The Guide") || tt.HasText("# The Guide") || fileText(a, guide.ID) == "" {
+		t.Fatal("Markdown did not show as a page to read")
+	}
+	click(t, tt, "Source")
+	tt.Frame()
+	if a.fileViews[guide.ID].shown != 1 || tt.HasText("The Guide") {
+		t.Fatal("the switch did not show the source")
+	}
+	click(t, tt, "Reading")
+	tt.Frame()
+	// The paragraph, as wide as the page, shows "next" too: click its start.
+	link, ok := tt.Find("next")
+	if !ok {
+		t.Fatal("no link")
+	}
+	tt.ClickAt(link.X+8, link.Y+link.H/2)
+	tt.Frame()
+	if v := activeView(p.Columns[0]); v.File == nil || v.File.Path != "docs/next.md" {
+		t.Fatal("a link to a file of the repository did not open it")
+	}
+	open("dot", "dot.png")
+	if !tt.HasText("2 × 2") {
+		t.Fatalf("the image did not show with its size: %v", tt.Texts())
 	}
 }
