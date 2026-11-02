@@ -116,7 +116,7 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View, fixed 
 					}
 					if !fixed && (v.ID == r.Active || tab.Hovered() || tab.FocusWithin()) {
 						iconButton(c, closeIcon, fmt.Sprintf("%s %s", a.text("Close", "关闭"), a.title(v)), 20, 12).
-							Tooltip(a.text("Close Tab", "关闭标签")).OnClick(func() { a.closeView(r.ID, v.ID) })
+							Tooltip(a.text("Close Tab", "关闭标签") + " (" + closeTabKeys.String() + ")").OnClick(func() { a.closeView(r.ID, v.ID) })
 					}
 					// Last, so that coming and going it leaves the title and close button in place.
 					if v.ID == r.Active && r.ID == a.activeRegion {

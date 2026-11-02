@@ -39,12 +39,16 @@ func (a *app) projectRail(c *ui.Context) {
 				// Without a home, paths show in full.
 				home, _ := os.UserHomeDir()
 				waiting := a.waitingByProject()
-				for _, p := range a.state.Projects {
-					a.projectButton(c, p, waiting[p.Name], home)
+				for i, p := range a.state.Projects {
+					tip := p.Name + " " + p.CWD
+					if keys, ok := projectKeys(i); ok {
+						tip += "\n" + keys.String()
+					}
+					a.projectButton(c, p, waiting[p.Name], home, tip)
 				}
 				add := a.text("Add Project", "添加项目")
 				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
-					Label(add).Tooltip(add)).Children(func() {
+					Label(add).Tooltip(add + " (" + openProjectKeys.String() + ")")).Children(func() {
 					ui.Icon(c, addIcon).Size(18, 18).Shrink(0)
 				}).OnClick(func() { a.openPalette("~/") })
 			})
@@ -60,8 +64,8 @@ func (a *app) projectRail(c *ui.Context) {
 
 // projectButton shows a project as a colored tile of its abbreviation,
 // with its name and path beside it when the rail is expanded, and marks
-// the agents waiting in it.
-func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home string) {
+// the agents waiting in it; tip is its tooltip.
+func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home, tip string) {
 	expanded := a.state.RailExpanded
 	height := float32(40)
 	if expanded {
@@ -70,7 +74,7 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home 
 	waitingLabel := fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), waiting)
 	active := p.Name == a.state.ActiveProject
 	b := ui.ButtonBase(c.Key(p.Name)).Height(height).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
-		Label(p.Name).Tooltip(p.Name + " " + p.CWD).Children(func() {
+		Label(p.Name).Tooltip(tip).Children(func() {
 		if active {
 			ui.Box(c).Absolute().Left(0).Top((height - 16) / 2).Width(2).Height(16).Radius(1).Background(a.theme.Accent)
 		}

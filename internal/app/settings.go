@@ -31,6 +31,9 @@ func (a *app) settingsMenu(m *ui.Menu) {
 	if m.Item(a.text("Theme…", "主题…")).Chosen() {
 		a.openThemePalette()
 	}
+	if m.Item(a.text("Keyboard Shortcuts…", "键盘快捷键…")).Chosen() {
+		a.openShortcuts()
+	}
 }
 
 func (a *app) setLanguage(chinese bool) {
