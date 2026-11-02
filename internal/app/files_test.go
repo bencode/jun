@@ -268,15 +268,8 @@ func TestTextSizeZoomsEveryFileTab(t *testing.T) {
 		t.Fatalf("⌘− from the largest size gave sizes %v", got)
 	}
 
-	data, err := json.Marshal(a.state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	restored := &layout.State{}
-	if err := json.Unmarshal(data, restored); err != nil {
-		t.Fatal(err)
-	}
-	if err := restored.Restore(); err != nil || restored.TextSize != 39 {
-		t.Fatalf("the text size did not survive saving: %v, %v", restored.TextSize, err)
+	a.prefs.Font.Size = 0
+	if !a.readPrefs() || a.textSize() != 39 {
+		t.Fatalf("the text size was not saved in the settings file: %v, %v", a.textSize(), a.prefsErr)
 	}
 }

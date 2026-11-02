@@ -16,7 +16,13 @@ import (
 // Codex keeps sessions by date, sessions/<year>/<month>/<day>/rollout-…-<ID>.jsonl
 // under its home, each starting with a session_meta line; session_index.jsonl
 // names them.
-var codexKind = kind{name: "codex", list: codexList, read: codexRead, resume: "codex resume"}
+var codexKind = kind{
+	name:   "codex",
+	home:   func() (string, error) { return home("CODEX_HOME", ".codex") },
+	list:   codexList,
+	read:   codexRead,
+	resume: func(s Session) string { return "codex resume " + s.ID },
+}
 
 type codexRecord struct {
 	Type    string          `json:"type"`
@@ -46,11 +52,7 @@ type codexItem struct {
 // codexSteps are the items that are a tool's work.
 var codexSteps = []string{"function_call", "custom_tool_call", "local_shell_call", "web_search_call"}
 
-func codexList(dirs []string, c *cache) ([]Session, error) {
-	root, err := home("CODEX_HOME", ".codex")
-	if err != nil {
-		return nil, err
-	}
+func codexList(root string, dirs []string, c *cache) ([]Session, error) {
 	titles, err := codexTitles(filepath.Join(root, "session_index.jsonl"))
 	if err != nil {
 		return nil, err

@@ -43,12 +43,14 @@ type Message struct {
 // kind is an agent whose sessions Jun reads.
 type kind struct {
 	name string
-	// list gives the sessions in or under dirs, summarizing changed files
-	// with c.
-	list func(dirs []string, c *cache) ([]Session, error)
+	// home is the agent's directory unless others are given.
+	home func() (string, error)
+	// list gives the sessions of the agent's directory root in or under
+	// dirs, summarizing changed files with c.
+	list func(root string, dirs []string, c *cache) ([]Session, error)
 	read func(path string) ([]Message, error)
-	// resume is the command that resumes a session, before its ID.
-	resume string
+	// resume is the shell command that resumes the session.
+	resume func(s Session) string
 }
 
 var kinds = []kind{claudeKind, codexKind}
@@ -73,21 +75,42 @@ type Scanner struct {
 	c cache
 }
 
-// List gives every kind's sessions in or under dirs, the latest first.
-// An agent with no sessions on this machine has none; other failures
-// are returned with the sessions that could be read.
-func (s *Scanner) List(dirs []string) ([]Session, error) {
+// List gives every kind's sessions in or under dirs, the latest first,
+// from the agent's directories homes names by its kind's name, else from
+// its own. An agent with no sessions on this machine has none; other
+// failures are returned with the sessions that could be read.
+func (s *Scanner) List(dirs []string, homes map[string][]string) ([]Session, error) {
 	var all []Session
 	var errs []error
 	for _, k := range kinds {
-		sessions, err := k.list(cleanDirs(dirs), &s.c)
-		all = append(all, sessions...)
+		roots, err := k.roots(homes[k.name])
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", k.name, err))
+			continue
+		}
+		for _, root := range roots {
+			sessions, err := k.list(root, cleanDirs(dirs), &s.c)
+			all = append(all, sessions...)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", k.name, err))
+			}
 		}
 	}
 	slices.SortFunc(all, func(a, b Session) int { return b.Updated.Compare(a.Updated) })
 	return all, errors.Join(errs...)
+}
+
+// roots are the agent's directories to read: homes, each once, else its
+// own.
+func (k kind) roots(homes []string) ([]string, error) {
+	if roots := slices.Compact(slices.Sorted(slices.Values(cleanDirs(homes)))); len(roots) > 0 {
+		return roots, nil
+	}
+	root, err := k.home()
+	if err != nil {
+		return nil, err
+	}
+	return []string{root}, nil
 }
 
 // Read gives the session's prompts and answers, in order.
@@ -106,15 +129,20 @@ var validID = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z-]*$`)
 func ValidID(id string) bool { return validID.MatchString(id) }
 
 // ResumeCommand is the shell command that resumes the session.
-func ResumeCommand(agent, id string) (string, error) {
-	k, ok := kindOf(agent)
+func ResumeCommand(s Session) (string, error) {
+	k, ok := kindOf(s.Agent)
 	if !ok {
-		return "", fmt.Errorf("unknown agent %q", agent)
+		return "", fmt.Errorf("unknown agent %q", s.Agent)
 	}
-	if !ValidID(id) {
-		return "", fmt.Errorf("invalid session ID %q", id)
+	if !ValidID(s.ID) {
+		return "", fmt.Errorf("invalid session ID %q", s.ID)
 	}
-	return k.resume + " " + id, nil
+	return k.resume(s), nil
+}
+
+// shellQuote is s as one word of a POSIX shell's command.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 // cache keeps sessions summarized from files, while the files stay the

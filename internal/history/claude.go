@@ -12,7 +12,23 @@ import (
 
 // Claude Code keeps a session in projects/<its directory, encoded>/<ID>.jsonl
 // under its configuration directory; subagents' sessions are a level down.
-var claudeKind = kind{name: "claude", list: claudeList, read: claudeRead, resume: "claude --resume"}
+var claudeKind = kind{name: "claude", home: claudeHome, list: claudeList, read: claudeRead, resume: claudeResume}
+
+// claudeHome is the configuration directory Claude Code uses by default:
+// CLAUDE_CONFIG_DIR's, else ~/.claude.
+func claudeHome() (string, error) { return home("CLAUDE_CONFIG_DIR", ".claude") }
+
+// claudeResume resumes the session from its configuration directory, which
+// Claude Code is told unless it is the one it uses by default: told one,
+// it reads its state there rather than from ~/.claude.json.
+func claudeResume(s Session) string {
+	command := "claude --resume " + s.ID
+	root := filepath.Dir(filepath.Dir(filepath.Dir(s.Path)))
+	if def, err := claudeHome(); s.Path == "" || err == nil && filepath.Clean(def) == root {
+		return command
+	}
+	return "CLAUDE_CONFIG_DIR=" + shellQuote(root) + " " + command
+}
 
 // claudeRecord is what Jun reads of a line of a Claude Code session.
 type claudeRecord struct {
@@ -46,11 +62,7 @@ func claudeEncode(dir string) string {
 	}, dir)
 }
 
-func claudeList(dirs []string, c *cache) ([]Session, error) {
-	root, err := home("CLAUDE_CONFIG_DIR", ".claude")
-	if err != nil {
-		return nil, err
-	}
+func claudeList(root string, dirs []string, c *cache) ([]Session, error) {
 	projects := filepath.Join(root, "projects")
 	folders, err := os.ReadDir(projects)
 	if notInstalled(err) {

@@ -20,7 +20,11 @@ func (a *app) applicationMenu() *mygo.Menu {
 		}
 	}
 	return mygo.NewMenu([]*mygo.MenuItem{
-		{Label: "Jun", Submenu: []*mygo.MenuItem{{Role: mygo.RoleAbout}, mygo.Separator(), {Role: mygo.RoleQuit}}},
+		{Label: "Jun", Submenu: []*mygo.MenuItem{
+			{Role: mygo.RoleAbout}, mygo.Separator(),
+			{Label: a.text("Settings…", "设置…"), Accelerator: "CmdOrCtrl+,", Click: action(a.openSettings)},
+			mygo.Separator(), {Role: mygo.RoleQuit},
+		}},
 		{Label: a.text("File", "文件"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Command Palette…", "命令面板…"), Accelerator: "CmdOrCtrl+K", Click: action(func() { a.openPalette("") })},
 			{Label: a.text("Review Changes…", "查看改动…"), Accelerator: "CmdOrCtrl+Shift+D", Click: action(a.reviewChanges)},
@@ -33,8 +37,8 @@ func (a *app) applicationMenu() *mygo.Menu {
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
-			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.state.Chinese, Click: action(func() { a.setLanguage(false) })},
-			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.state.Chinese, Click: action(func() { a.setLanguage(true) })},
+			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.chinese(), Click: action(func() { a.setLanguage(false) })},
+			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.chinese(), Click: action(func() { a.setLanguage(true) })},
 		}},
 		{Role: mygo.RoleWindowMenu},
 	})

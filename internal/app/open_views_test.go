@@ -123,7 +123,7 @@ func TestGlobalShowsAgentsWithoutProject(t *testing.T) {
 		t.Fatalf("Global menu offers %v", items)
 	}
 	tt.CloseMenu()
-	a.state.Chinese = true
+	a.prefs.Language = "zh"
 	tt.Frame()
 	if !tt.HasText("没有正在运行的 agent") || len(a.state.Global.Views) != 1 || len(a.bindings) != 0 {
 		t.Fatal("Agents did not translate or started a shell")

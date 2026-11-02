@@ -35,6 +35,10 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.diffView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewSettings {
+		a.settingsView(c, v)
+		return
+	}
 	a.placeholder(c, v)
 }
 

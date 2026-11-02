@@ -36,10 +36,28 @@ func (a *app) moveView(view layout.ViewID, target layout.RegionID, before layout
 
 func (a *app) closeView(region layout.RegionID, view layout.ViewID) {
 	r := a.state.Region(region)
-	if r == nil || !slices.ContainsFunc(r.Views, func(v *layout.View) bool { return v.ID == view }) {
+	i := -1
+	if r != nil {
+		i = slices.IndexFunc(r.Views, func(v *layout.View) bool { return v.ID == view })
+	}
+	if i < 0 {
 		a.report(fmt.Errorf("view %d is not in region %d", view, region))
 		return
 	}
+	if r.Views[i].Kind == layout.ViewSettings && a.closingSettings(view) {
+		a.confirm(a.text("Discard Settings Changes?", "放弃设置的修改？"),
+			a.text("The settings file keeps what was last saved.", "设置文件保留上次保存的内容。"),
+			a.text("Discard", "放弃"), func() {
+				a.settingsTab = nil
+				a.closeKnownView(region, view)
+			})
+		return
+	}
+	a.closeKnownView(region, view)
+}
+
+// closeKnownView closes a view that is in the region.
+func (a *app) closeKnownView(region layout.RegionID, view layout.ViewID) {
 	err := a.state.CloseView(view)
 	a.report(err)
 	if err == nil {
@@ -47,6 +65,9 @@ func (a *app) closeView(region layout.RegionID, view layout.ViewID) {
 		delete(a.scroll, view)
 		delete(a.bindings, view)
 		delete(a.terminalErrors, view)
+		if a.countSettingsViews(0) == 0 {
+			a.settingsTab = nil // the next settings tab reads the file anew
+		}
 		a.focusRegion(region)
 	}
 }

@@ -14,7 +14,7 @@ func TestThemePalettePreviewsChoosesAndReverts(t *testing.T) {
 	tt.Frame()
 	tt.Type("Wez")
 	tt.Frame()
-	if a.theme.Background != black || a.terminals.Theme().Background != black || a.state.Theme != "" {
+	if a.theme.Background != black || a.terminals.Theme().Background != black || a.prefs.Theme != "" {
 		t.Fatal("highlighting Wez did not preview it, or saved it")
 	}
 	tt.Key(0, ui.KeyEscape)
@@ -35,10 +35,10 @@ func TestThemePalettePreviewsChoosesAndReverts(t *testing.T) {
 	tt.Frame()
 	tt.Type("Wez")
 	tt.Key(0, ui.KeyEnter)
-	if a.state.Theme != "Wez" || a.theme.Background != black || a.terminals.Theme().Background != black {
+	if a.prefs.Theme != "Wez" || a.theme.Background != black || a.terminals.Theme().Background != black {
 		t.Fatal("Enter did not choose and save Wez")
 	}
-	a.state.Theme = "No Such Theme"
+	a.prefs.Theme = "No Such Theme"
 	a.useSavedTheme()
 	if !a.errorOpen || a.theme.Background != theme.UI(theme.Default, nil).Background {
 		t.Fatal("a theme gone did not fall back to Jun's, saying why")

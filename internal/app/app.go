@@ -8,6 +8,7 @@ import (
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
@@ -35,7 +36,10 @@ type app struct {
 		previewed string   // the theme shown while choosing
 		reveal    bool     // scrolls the highlight into view once, on opening
 	}
-	fontOpen        bool // the Font panel shows
+	prefs           settings.Settings // the settings file's, as last read without error
+	prefsErr        error             // why the settings file last failed to read
+	settingsPath    string            // the settings file
+	settingsTab     *settingsTab      // the settings tab's editor, while it is open
 	perspectiveForm struct {
 		open        bool
 		project     string
@@ -113,8 +117,7 @@ func Run() error {
 	} else {
 		a.restoreConfig(path)
 	}
-	a.useSavedTheme()
-	a.terminals.SetTextSize(a.state.TextSize)
+	a.startPrefs()
 	mygo.App.OnSecondInstance(func(args []string, wd string) {
 		if a.window == nil {
 			return
@@ -143,6 +146,7 @@ func Run() error {
 		})
 		a.window.OnBlur(a.saveInBackground)
 		a.window.OnHide(a.saveInBackground)
+		a.watchPrefs()
 		a.restoreTerminals()
 		a.startAgentPoller(stopAgents)
 		a.focusCurrentPerspective()

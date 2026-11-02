@@ -102,7 +102,7 @@ func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
 		m{"id": "x1", "thread_name": "Old name"}, m{"id": "x1", "thread_name": "Diff review"})
 
 	var s Scanner
-	got, err := s.List([]string{project, "/work/jun/"})
+	got, err := s.List([]string{project, "/work/jun/"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
 	// Read again only as files change.
 	writeLines(t, filepath.Join(folder, "c1.jsonl"), day.Add(5*time.Hour),
 		claudeUser(project, "Plan the sessions list", nil), m{"type": "custom-title", "customTitle": "Renamed"})
-	if got, err = s.List([]string{project}); err != nil || got[0].Title != "Renamed" {
+	if got, err = s.List([]string{project}, nil); err != nil || got[0].Title != "Renamed" {
 		t.Fatalf("a changed session lists as %+v, %v", got[0], err)
 	}
 }
@@ -163,15 +163,43 @@ func TestReadKeepsPromptsAndAnswersAndCountsSteps(t *testing.T) {
 	}
 }
 
-func TestResumeCommandTakesOnlyPlainIDs(t *testing.T) {
-	if got, err := ResumeCommand("claude", "16f0057a-2970"); err != nil || got != "claude --resume 16f0057a-2970" {
-		t.Fatalf("Claude resumes with %q, %v", got, err)
+func TestListReadsEveryClaudeHomeOnce(t *testing.T) {
+	claude, _ := agentHomes(t)
+	other := t.TempDir()
+	project := "/work/jun"
+	day := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
+	writeLines(t, filepath.Join(claude, "projects", claudeEncode(project), "c1.jsonl"), day, claudeUser(project, "From the default", nil))
+	writeLines(t, filepath.Join(other, "projects", claudeEncode(project), "c2.jsonl"), day.Add(time.Hour), claudeUser(project, "From another", nil))
+	var s Scanner
+	got, err := s.List([]string{project}, map[string][]string{"claude": {other, claude, other + "/"}})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got, err := ResumeCommand("codex", "01a19689-cb83"); err != nil || got != "codex resume 01a19689-cb83" {
+	ids := make([]string, len(got))
+	for i, session := range got {
+		ids[i] = session.ID
+	}
+	if !slices.Equal(ids, []string{"c2", "c1"}) {
+		t.Fatalf("listed %v, want each home's sessions once", ids)
+	}
+}
+
+func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHome(t *testing.T) {
+	claude, _ := agentHomes(t)
+	at := func(home string) string { return filepath.Join(home, "projects", "-work", "16f0057a-2970.jsonl") }
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(claude)}); err != nil || got != "claude --resume 16f0057a-2970" {
+		t.Fatalf("Claude resumes from its default home with %q, %v", got, err)
+	}
+	other := filepath.Join(t.TempDir(), "Bob's config")
+	want := "CLAUDE_CONFIG_DIR='" + strings.ReplaceAll(other, "'", `'\''`) + "' claude --resume 16f0057a-2970"
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(other)}); err != nil || got != want {
+		t.Fatalf("Claude resumes from another home with %q, %v", got, err)
+	}
+	if got, err := ResumeCommand(Session{Agent: "codex", ID: "01a19689-cb83"}); err != nil || got != "codex resume 01a19689-cb83" {
 		t.Fatalf("Codex resumes with %q, %v", got, err)
 	}
 	for _, id := range []string{"", "x; rm -rf ~", "$(id)", "-h"} {
-		if _, err := ResumeCommand("claude", id); err == nil {
+		if _, err := ResumeCommand(Session{Agent: "claude", ID: id}); err == nil {
 			t.Fatalf("ID %q was taken", id)
 		}
 	}
