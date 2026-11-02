@@ -3,6 +3,7 @@ package app
 import (
 	"cmp"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -15,9 +16,7 @@ import (
 )
 
 var (
-	claudeIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M6 .5 11.5 6 6 11.5.5 6Z" fill="currentColor"/></svg>`))
-	copyIcon   = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`))
-	codexIcon  = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>`))
+	copyIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`))
 )
 
 // sessionsLimit is how many sessions the list shows at most, the latest:
@@ -125,7 +124,7 @@ func (a *app) sessionsView(c *ui.Context, v *layout.View) {
 			a.sessionsMessage(c, l, st.query)
 			return
 		}
-		a.sessionList(c, st, rows, project.Name)
+		a.sessionList(c, st, rows, project)
 	})
 }
 
@@ -139,7 +138,7 @@ func (a *app) sessionsMessage(c *ui.Context, l *sessionList, query string) {
 	ui.Text(c, message).TextColor(a.theme.TextMuted).Padding(12)
 }
 
-func (a *app) sessionList(c *ui.Context, st *sessionsViewState, rows []sessionRow, project string) {
+func (a *app) sessionList(c *ui.Context, st *sessionsViewState, rows []sessionRow, project *layout.Project) {
 	st.list.Key = func(i int) any {
 		if rows[i].day != "" {
 			return "day:" + rows[i].day
@@ -165,53 +164,87 @@ func (a *app) sessionList(c *ui.Context, st *sessionsViewState, rows []sessionRo
 	}
 	if list.Changed() {
 		if s, ok := chosen(); ok {
-			a.openTranscript(project, s, false)
+			a.openTranscript(project.Name, s, false)
 		}
 	}
 	if list.Submitted() {
 		if s, ok := chosen(); ok {
-			a.openTranscript(project, s, true)
+			a.openTranscript(project.Name, s, true)
 		}
 	}
 }
 
-func (a *app) sessionRow(c *ui.Context, s history.Session, project string) {
-	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Start).Padding(4, 8).ContextMenu(func(m *ui.Menu) {
+func (a *app) sessionRow(c *ui.Context, s history.Session, project *layout.Project) {
+	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Start).Padding(4, 8).Tooltip(sessionTip(s)).ContextMenu(func(m *ui.Menu) {
 		if m.Item(a.text("Resume", "Resume")).Chosen() {
-			a.resumeSession(project, s)
+			a.resumeSession(project.Name, s)
 		}
 		if m.Item(a.text("Open", "打开")).Chosen() {
-			a.openTranscript(project, s, true)
+			a.openTranscript(project.Name, s, true)
 		}
 		if m.Item(a.text("Copy Session ID", "复制会话 ID")).Chosen() {
 			mygo.Clipboard.WriteText(s.ID)
 		}
 	}).Children(func() {
-		a.agentIcon(c, s.Agent, 11).Margin(3, 0, 0, 0)
+		ui.Box(c).Shrink(0).Margin(2, 0, 0, 0).Children(func() { a.agentIcon(c, s.Agent, 14) })
 		ui.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 			ui.Text(c, s.Title).MinWidth(0).SingleLine().Ellipsis("…")
-			ui.Text(c, sessionDetail(s)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).MinWidth(0).SingleLine().Ellipsis("…")
+			ui.Text(c, sessionDetail(s, project.CWD)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).MinWidth(0).SingleLine().Ellipsis("…")
 		})
 	})
 }
 
-// agentIcon tells the agents apart: a diamond for Claude Code, a ring
-// for Codex.
-func (a *app) agentIcon(c *ui.Context, agent string, size float32) ui.Element {
-	if agent == "codex" {
-		return ui.Icon(c, codexIcon).Size(size, size).Shrink(0).TextColor(a.theme.Accent)
-	}
-	return ui.Icon(c, claudeIcon).Size(size, size).Shrink(0).TextColor(a.theme.Warning)
+// sessionDetail is a row's second line: where in the project the session
+// ran, its branch, the time of day it was last active, and how long it
+// ran; what is unknown is left out.
+func sessionDetail(s history.Session, root string) string {
+	parts := []string{sessionSubdir(s.CWD, root), s.Branch, s.Updated.Local().Format("15:04"), sessionDuration(s.Start, s.Updated)}
+	return strings.Join(slices.DeleteFunc(parts, func(p string) bool { return p == "" }), " · ")
 }
 
-// sessionDetail is a row's second line: the branch and the time of day
-// it was last active.
-func sessionDetail(s history.Session) string {
-	at := s.Updated.Local().Format("15:04")
-	if s.Branch == "" {
-		return at
+// sessionSubdir is the session's directory within the project's, "" at
+// the project's own or outside it.
+func sessionSubdir(cwd, root string) string {
+	rel, err := filepath.Rel(root, cwd)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+		return ""
 	}
-	return s.Branch + " · " + at
+	return rel
+}
+
+// sessionDuration is how long the session ran: "<1m", "25m", "2h",
+// "1h 10m"; "" when its start is unknown, or after its file's last
+// change, as in a copied file.
+func sessionDuration(start, end time.Time) string {
+	if start.IsZero() || end.Before(start) {
+		return ""
+	}
+	d := end.Sub(start)
+	hours, minutes := int(d.Hours()), int(d.Minutes())%60
+	if hours == 0 && minutes == 0 {
+		return "<1m"
+	}
+	if hours == 0 {
+		return fmt.Sprintf("%dm", minutes)
+	}
+	if minutes == 0 {
+		return fmt.Sprintf("%dh", hours)
+	}
+	return fmt.Sprintf("%dh %dm", hours, minutes)
+}
+
+// sessionTip is a row's tooltip: the last prompt's first line, the
+// session's ID and its directory.
+func sessionTip(s history.Session) string {
+	prompt, _, _ := strings.Cut(strings.TrimSpace(s.LastPrompt), "\n")
+	if r := []rune(prompt); len(r) > 120 {
+		prompt = string(r[:120]) + "…"
+	}
+	id := ""
+	if s.ID != "" {
+		id = "ID " + s.ID
+	}
+	return strings.Join(slices.DeleteFunc([]string{prompt, id, s.CWD}, func(l string) bool { return l == "" }), "\n")
 }
 
 // matchSessions keeps the first limit sessions whose title or first or
