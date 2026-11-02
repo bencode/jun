@@ -57,7 +57,7 @@ func TestSessionsListSearchShowAndResume(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := a.state.CurrentPerspective()
-	sessions := p.Side.Views[1]
+	sessions := p.Side.Views[0]
 	if err := a.state.SelectView(p.Side.ID, sessions.ID); err != nil {
 		t.Fatal(err)
 	}
