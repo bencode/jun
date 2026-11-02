@@ -20,6 +20,8 @@ const maxCompletions = 50
 type paletteItem struct {
 	title, path string
 	detail      string // shown muted at the row's end
+	keys        string // the shortcut doing the same, shown last
+	keywords    string // matched as the title is, not shown
 	run         func()
 }
 
@@ -125,7 +127,7 @@ func (a *app) paletteItems() ([]paletteItem, error) {
 		q = strings.ToLower(q)
 		var items []paletteItem
 		for _, item := range a.commands() {
-			if strings.Contains(strings.ToLower(item.title), q) {
+			if strings.Contains(strings.ToLower(item.title), q) || strings.Contains(item.keywords, q) {
 				items = append(items, item)
 			}
 		}
@@ -163,28 +165,37 @@ func (a *app) directoryItem(dir, home string) paletteItem {
 // commands are what the palette runs, besides opening directories.
 func (a *app) commands() []paletteItem {
 	items := []paletteItem{
-		{title: a.text("Open Project…", "打开项目…"), run: func() { a.openPalette("~/") }},
+		{title: a.text("Open Project…", "打开项目…"), keys: openProjectKeys.String(), run: func() { a.openPalette("~/") }},
 		{title: a.text("Browse for Project…", "浏览项目目录…"), run: a.chooseProject},
-		{title: a.text("New Terminal", "新建终端"), run: func() {
+		{title: a.text("New Terminal", "新建终端"), keys: newTerminalKeys.String(), run: func() {
 			if r := a.tabsTarget(); r != nil {
 				a.newTerminal(r.ID)
 			}
 		}},
-		{title: a.text("New Perspective…", "新建视角…"), run: func() { a.openPerspectiveForm(0) }},
+		{title: a.text("New Perspective…", "新建视角…"), keys: newPerspectiveKeys.String(), run: func() { a.openPerspectiveForm(0) }},
 		{title: a.text("Theme…", "主题…"), run: a.openThemePalette},
+		{title: a.text("Keyboard Shortcuts", "键盘快捷键"), keywords: "keyboard shortcuts keys 键盘快捷键", run: a.openShortcuts},
 		{title: a.text("Toggle Global", "展开或收起 Global"), run: a.toggleGlobal},
-		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), run: a.toggleSide},
+		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), keys: toggleSideKeys.String(), run: a.toggleSide},
 		{title: a.text("Toggle Project Names", "展开或收起项目名称"), run: func() {
 			a.state.RailExpanded = !a.state.RailExpanded
 			a.layoutChanged()
 		}},
 	}
-	for _, p := range a.state.Projects {
-		items = append(items, paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }})
+	for i, p := range a.state.Projects {
+		item := paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }}
+		if keys, ok := projectKeys(i); ok {
+			item.keys = keys.String()
+		}
+		items = append(items, item)
 	}
 	if project := a.state.CurrentProject(); project != nil {
-		for _, p := range project.Perspectives {
-			items = append(items, paletteItem{title: a.text("Perspective: ", "视角：") + p.Name, run: func() { a.selectPerspective(p.ID) }})
+		for i, p := range project.Perspectives {
+			item := paletteItem{title: a.text("Perspective: ", "视角：") + p.Name, run: func() { a.selectPerspective(p.ID) }}
+			if keys, ok := perspectiveKeys(i); ok {
+				item.keys = keys.String()
+			}
+			items = append(items, item)
 		}
 	}
 	return append(items, a.reviewItems()...)
@@ -260,9 +271,14 @@ func (a *app) paletteDialog(c *ui.Context) {
 						row := ui.ButtonBase(c.Key(i)).FillWidth().Height(32).Padding(0, 10).Gap(10).Radius(6).Justify(ui.Start).
 							Label(item.title).Children(func() {
 							ui.Text(c, item.title).MinWidth(0).SingleLine().Ellipsis("…")
-							if item.detail != "" {
+							if item.detail != "" || item.keys != "" {
 								ui.Spacer(c)
+							}
+							if item.detail != "" {
 								ui.Text(c, item.detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Shrink(0)
+							}
+							if item.keys != "" {
+								ui.Text(c, item.keys).TextColor(a.theme.TextMuted).Shrink(0)
 							}
 						}).OnClick(func() { a.runPaletteItem(item) })
 						if i == p.highlight {

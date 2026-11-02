@@ -102,7 +102,8 @@ func TestLayoutUIChangesAreSaved(t *testing.T) {
 		},
 		"global": func(t *testing.T, a *app, tt *ui.Tester) { click(t, tt, "Hide Global") },
 		"side bar": func(t *testing.T, a *app, tt *ui.Tester) {
-			tt.Key(ui.Super, ui.KeyB)
+			a.toggleSide() // ⌘B, the View menu's
+			tt.Frame()
 		},
 		"bottom": func(t *testing.T, a *app, tt *ui.Tester) {
 			click(t, tt, "Show Bottom Region")

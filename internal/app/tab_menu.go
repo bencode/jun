@@ -12,7 +12,7 @@ func (a *app) tabMenu(m *ui.Menu, region layout.RegionID, view layout.ViewID) {
 	if r == nil {
 		return
 	}
-	if m.Item(a.text("Close Tab", "关闭标签")).Chosen() {
+	if m.Item(a.text("Close Tab", "关闭标签")).Shortcut(closeTabKeys.mods, closeTabKeys.key).Chosen() {
 		a.closeView(region, view)
 	}
 	m.Submenu(a.text("Move Tab To", "移动标签到"), func(m *ui.Menu) { a.moveMenu(m, r, view) })

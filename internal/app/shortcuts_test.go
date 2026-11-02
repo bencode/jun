@@ -183,17 +183,19 @@ func TestRegionShortcutsFollowLayout(t *testing.T) {
 	press(ui.Super, ui.KeyBracketRight, global)
 	press(arrow, ui.KeyLeft, c2)
 	press(arrow, ui.KeyDown, c2)
-	// ⌘B hides the focused side region, focusing the first column, and shows it again leaving focus.
+	// ⌘B, the View menu's, hides the focused side region, focusing the first column, and shows it again leaving focus.
 	a.focusRegion(side.ID)
 	tt.Frame()
-	press(ui.Super, ui.KeyB, c1)
-	if p.SideVisible {
-		t.Fatal("⌘B did not hide the side region")
+	toggle := func(visible bool) {
+		t.Helper()
+		a.toggleSide()
+		tt.Frame()
+		if p.SideVisible != visible || a.targetRegion() != c1 {
+			t.Fatalf("⌘B left the side region visible %v, focus on region %d", p.SideVisible, a.targetRegion().ID)
+		}
 	}
-	press(ui.Super, ui.KeyB, c1)
-	if !p.SideVisible {
-		t.Fatal("⌘B did not show the side region")
-	}
+	toggle(false)
+	toggle(true)
 }
 
 func TestPerspectiveAndProjectShortcuts(t *testing.T) {
