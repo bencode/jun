@@ -262,7 +262,7 @@ func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 		return result
 	}
 	if !work.SideVisible || !reflect.DeepEqual(kinds(work.Side), sidePreset) || work.Side.Active != work.Side.Views[0].ID {
-		t.Fatal("Work should show a side region with Files, Sessions and Skills")
+		t.Fatal("Work should show a side region with Sessions and Files")
 	}
 	id, err := s.AddPerspective("Review")
 	if err != nil {
