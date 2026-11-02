@@ -13,7 +13,7 @@ import (
 // directory, and types the agent's command that resumes it: the shell
 // stays when the agent exits.
 func (a *app) resumeSession(project string, s history.Session) {
-	command, err := history.ResumeCommand(s.Agent, s.ID)
+	command, err := history.ResumeCommand(s)
 	if err != nil {
 		a.report(err)
 		return

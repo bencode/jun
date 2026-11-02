@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -100,5 +101,36 @@ func TestSessionsListSearchShowAndResume(t *testing.T) {
 	terminal := activeView(column)
 	if terminal.Kind != layout.ViewTerminal || a.sessionFor(terminal.ID) == nil || a.sessionFor(terminal.ID).CWD != dir {
 		t.Fatalf("Resume opened %+v", terminal)
+	}
+}
+
+func TestSessionsListsTheSettingsClaudeConfigFolders(t *testing.T) {
+	dir := gitRepo(t)
+	def, other := t.TempDir(), t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", def)
+	t.Setenv("CODEX_HOME", t.TempDir())
+	now := time.Now()
+	claudeSession(t, def, dir, "c1", "From the default", now.Add(-time.Hour), "Hi")
+	claudeSession(t, other, dir, "c2", "From another account", now, "Hello")
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", dir); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	sessions := p.Side.Views[slices.IndexFunc(p.Side.Views, func(v *layout.View) bool { return v.Kind == layout.ViewSessions })]
+	if err := a.state.SelectView(p.Side.ID, sessions.ID); err != nil {
+		t.Fatal(err)
+	}
+	tt := ui.NewTester(a.view, 1200, 700)
+	tt.Frame()
+	tt.Frame()
+	if !tt.HasText("From the default") || tt.HasText("From another account") {
+		t.Fatalf("listed %v before adding the folder", tt.Texts())
+	}
+	a.setPref([]string{"claude", "configDirs"}, []string{def, other})
+	tt.Frame()
+	tt.Frame()
+	if !tt.HasText("From the default") || !tt.HasText("From another account") {
+		t.Fatalf("listed %v from %v", tt.Texts(), a.prefs.Claude.ConfigDirs)
 	}
 }

@@ -36,10 +36,10 @@ func (a *app) matchAppearance() {
 	mygo.Theme.SetSource(source)
 }
 
-// useSavedTheme applies the layout's theme, or Jun's, saying why, when
-// the layout's is gone.
+// useSavedTheme applies the settings' theme, or Jun's, saying why, when
+// the settings' is gone.
 func (a *app) useSavedTheme() {
-	err := a.applyTheme(a.state.Theme)
+	err := a.applyTheme(a.prefs.Theme)
 	if err == nil {
 		return
 	}
@@ -52,7 +52,7 @@ func (a *app) useSavedTheme() {
 // openThemePalette lists the themes in the palette, at the current one,
 // which each highlighted theme replaces until one is chosen.
 func (a *app) openThemePalette() {
-	current := a.state.Theme
+	current := a.prefs.Theme
 	if current == "" {
 		current = theme.Default
 	}
@@ -70,7 +70,7 @@ func (a *app) leaveThemes() {
 		return
 	}
 	a.palette.themes = nil
-	if err := a.applyTheme(a.state.Theme); err != nil {
+	if err := a.applyTheme(a.prefs.Theme); err != nil {
 		a.report(err)
 	}
 }
@@ -80,7 +80,7 @@ func (a *app) chooseTheme(name string) {
 	a.palette.themes = nil
 	if err := a.applyTheme(name); err != nil {
 		a.report(err)
-		if err := a.applyTheme(a.state.Theme); err != nil {
+		if err := a.applyTheme(a.prefs.Theme); err != nil {
 			a.report(err)
 		}
 		return
@@ -88,6 +88,5 @@ func (a *app) chooseTheme(name string) {
 	if name == theme.Default {
 		name = ""
 	}
-	a.state.Theme = name
-	a.layoutChanged()
+	a.setPref([]string{"theme"}, name)
 }

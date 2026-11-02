@@ -19,6 +19,7 @@ func testNewApp(t *testing.T) *app {
 	t.Setenv("SHELL", shell)
 	t.Setenv("ENV", "")
 	a := newApp(t.TempDir())
+	a.settingsPath = filepath.Join(t.TempDir(), "settings.yaml")
 	t.Cleanup(func() {
 		if err := a.terminals.CloseAll(); err != nil {
 			t.Error(err)
@@ -202,7 +203,7 @@ func TestPerspectiveGlobalAndLanguage(t *testing.T) {
 	if !a.state.GlobalVisible || a.state.Global != global || !tt.HasText("Agents") {
 		t.Fatal("Global did not restore")
 	}
-	a.state.Chinese = true
+	a.prefs.Language = "zh"
 	tt.Frame()
 	if a.state.CurrentPerspective().Name != "Review" || !tt.HasText("不是 Git 仓库") {
 		t.Fatal("Chinese labels missing")

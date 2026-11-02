@@ -12,7 +12,7 @@ import (
 )
 
 func (a *app) text(en, zh string) string {
-	if a.state.Chinese {
+	if a.chinese() {
 		return zh
 	}
 	return en
@@ -23,7 +23,7 @@ func (a *app) kindName(kind layout.ViewKind) string {
 		layout.ViewTerminal: {"Terminal", "终端"}, layout.ViewTree: {"Files", "文件"},
 		layout.ViewDiff: {"Diff", "差异"}, layout.ViewFile: {"File", "文件"},
 		layout.ViewAgents: {"Agents", "Agents"}, layout.ViewSessions: {"Sessions", "会话"},
-		layout.ViewTranscript: {"Session", "会话"},
+		layout.ViewTranscript: {"Session", "会话"}, layout.ViewSettings: {"Settings", "设置"},
 	}
 	pair := names[kind]
 	return a.text(pair[0], pair[1])

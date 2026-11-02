@@ -71,7 +71,7 @@ Projects are ordered as in the project rail. Switching restores the project's se
 | Smaller text | ⌘− |
 | Default text size (13) | ⌘0 |
 
-Terminals and file tabs share one text size, from 8 to 40. Jun saves it.
+Terminals and file tabs share one text size, from 8 to 40. Jun saves it as `font.size` in the [settings file](settings.md).
 
 ## Command palette
 
@@ -100,6 +100,8 @@ In a full-screen program, such as vim, which has no scrollback, the scrolling ke
 
 | Action | Shortcut |
 |---|---|
+| Settings | ⌘, |
+| Save settings, in the settings tab | ⌘S |
 | Undo / redo | ⌘Z / ⌘⇧Z |
 | Cut / paste and match style | ⌘X / ⌘⌥⇧V |
 | Full screen | ⌃⌘F |

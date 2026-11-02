@@ -6,7 +6,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -111,14 +110,12 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	if err := tt.ChooseMenuItem("Language", "简体中文"); err != nil {
 		t.Fatal(err)
 	}
-	if !a.state.Chinese || a.state.CurrentPerspective().Name != "Work" || !tt.HasText("设置") {
+	if !a.chinese() || a.state.CurrentPerspective().Name != "Work" || !tt.HasText("设置") {
 		t.Fatal("language switch failed or translated user data")
 	}
-	if err := a.saveLayout(); err != nil {
-		t.Fatal(err)
-	}
-	if saved, err := config.Load(path); err != nil || !saved.Chinese {
-		t.Fatalf("language was not saved: %v", err)
+	a.prefs.Language = ""
+	if !a.readPrefs() || !a.chinese() {
+		t.Fatalf("language was not saved in the settings file: %v", a.prefsErr)
 	}
 	if !slices.ContainsFunc(mygo.App.Menu().Items(), func(item *mygo.MenuItem) bool { return item.Label == "语言" }) {
 		t.Fatal("settings did not refresh the native application menu")
@@ -140,7 +137,7 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	if err := tt.ChooseMenuItem("语言", "English"); err != nil {
 		t.Fatal(err)
 	}
-	if a.state.Chinese || a.state.CurrentPerspective().Name != longName {
+	if a.chinese() || a.state.CurrentPerspective().Name != longName {
 		t.Fatal("language switch changed a perspective name")
 	}
 	if err := a.state.AddProject("Brain", t.TempDir()); err != nil {

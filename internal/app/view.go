@@ -29,10 +29,10 @@ func (a *app) view(c *ui.Context) {
 		}
 	})
 	a.shortcuts(c)
+	a.settingsShortcut(c)
 	a.paletteDialog(c)
 	a.projectDialog(c)
 	a.perspectiveDialog(c)
-	a.fontDialog(c)
 	a.shortcutsDialog(c)
 	a.projectRenameDialog(c)
 	a.confirmDialog(c)

@@ -15,6 +15,7 @@ const (
 	ViewSessions   ViewKind = "sessions"   // agents' sessions, in the side region
 	ViewSkills     ViewKind = "skills"     // a placeholder an earlier side preset had, which loading drops
 	ViewTranscript ViewKind = "transcript" // an agent session, read-only
+	ViewSettings   ViewKind = "settings"   // the settings file, to edit
 )
 
 // AgentsLayout is how an Agents view shows the agents.
@@ -90,10 +91,12 @@ type State struct {
 	Global        *Region    `json:"global"`
 	GlobalVisible bool       `json:"globalVisible"`
 	RailExpanded  bool       `json:"railExpanded"`
-	Chinese       bool       `json:"chinese,omitempty"`
-	Theme         string     `json:"theme,omitempty"`    // a Ghostty theme's name; Jun's own when empty
-	TextSize      float32    `json:"textSize,omitempty"` // terminals' and file tabs' text size in DIPs; Jun's default when 0
-	CenterPercent float32    `json:"centerPercent"`
+	// Chinese, Theme and TextSize are where earlier versions kept settings
+	// the settings file now holds: read once to move them there.
+	Chinese       bool    `json:"chinese,omitempty"`
+	Theme         string  `json:"theme,omitempty"`
+	TextSize      float32 `json:"textSize,omitempty"`
+	CenterPercent float32 `json:"centerPercent"`
 	nextID        uint64
 }
 

@@ -90,6 +90,8 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"Larger text", "放大文字"}, keys("⌘+", "⌘="), bilingual{"Of terminals and file tabs, which share it; saved", "终端与文件标签共用字号，修改会保存"}},
 			{bilingual{"Smaller text", "缩小文字"}, keys("⌘−"), bilingual{"Of terminals and file tabs, which share it; saved", "终端与文件标签共用字号，修改会保存"}},
 			{bilingual{"Default text size", "恢复默认字号"}, keys("⌘0"), bilingual{"Back to 13", "恢复为 13"}},
+			{bilingual{"Settings", "设置"}, keys("⌘,"), bilingual{"Opens the settings file in a tab of the current perspective", "在当前视角的标签中打开设置文件"}},
+			{bilingual{"Save settings", "保存设置"}, keys("⌘S"), bilingual{"In the settings tab; they apply at once", "在设置标签中；保存后立即生效"}},
 			{bilingual{"Undo / redo", "撤销 / 重做"}, keys("⌘Z / ⌘⇧Z"), bilingual{"Edit menu, for the text being edited", "Edit 菜单，作用于正在编辑的文字"}},
 			{bilingual{"Cut / paste and match style", "剪切 / 粘贴并匹配样式"}, keys("⌘X / ⌘⌥⇧V"), bilingual{"Edit menu, for the text being edited", "Edit 菜单，作用于正在编辑的文字"}},
 			{bilingual{"Full screen", "全屏"}, keys("⌃⌘F"), bilingual{}},
