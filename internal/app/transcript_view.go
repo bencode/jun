@@ -131,7 +131,7 @@ func (a *app) transcriptHeader(c *ui.Context, project *layout.Project, s history
 		ui.Column(c).Grow(1).MinWidth(0).Gap(6).Children(func() {
 			ui.Text(c, transcriptTitle(a, s)).FontSize(17).Bold().MinWidth(0).SingleLine().Ellipsis("…")
 			ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
-				a.agentIcon(c, s.Agent, 9)
+				a.agentIcon(c, s.Agent, 12)
 				muted := func(text string) {
 					ui.Text(c, text).FontSize(theme.Caption).TextColor(a.theme.TextMuted).MinWidth(0).SingleLine().Ellipsis("…")
 				}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo/ui"
 )
@@ -132,5 +133,31 @@ func TestSessionsListsTheSettingsClaudeConfigFolders(t *testing.T) {
 	tt.Frame()
 	if !tt.HasText("From the default") || !tt.HasText("From another account") {
 		t.Fatalf("listed %v from %v", tt.Texts(), a.prefs.Claude.ConfigDirs)
+	}
+}
+
+func TestSessionDetailShowsWhatIsKnown(t *testing.T) {
+	updated := time.Date(2026, 11, 1, 15, 4, 0, 0, time.Local)
+	session := func(cwd, branch string, ran time.Duration) history.Session {
+		s := history.Session{CWD: cwd, Branch: branch, Updated: updated}
+		if ran > 0 {
+			s.Start = updated.Add(-ran)
+		}
+		return s
+	}
+	for _, c := range []struct {
+		s    history.Session
+		want string
+	}{
+		{session("/work/jun", "main", 25*time.Minute), "main · 15:04 · 25m"},
+		{session("/work/jun/priv/worktrees/x", "feat/x", 2*time.Hour), "priv/worktrees/x · feat/x · 15:04 · 2h"},
+		{session("/work/june", "", 0), "15:04"},
+		{session("/work/jun", "", 30*time.Second), "15:04 · <1m"},
+		{session("/work/jun", "", 70*time.Minute), "15:04 · 1h 10m"},
+		{history.Session{CWD: "/work/jun", Start: updated.Add(time.Hour), Updated: updated}, "15:04"},
+	} {
+		if got := sessionDetail(c.s, "/work/jun"); got != c.want {
+			t.Errorf("detail of %+v is %q, want %q", c.s, got, c.want)
+		}
 	}
 }
