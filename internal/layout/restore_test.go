@@ -162,11 +162,11 @@ func TestValidateDoesNotRewindLiveAllocator(t *testing.T) {
 func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	s := decodedLayout(t)
 	side := s.CurrentPerspective().Side
-	files := side.Views[0]
-	// Sessions before Files, and a placeholder an earlier preset had, selected.
-	sessions := &View{ID: 900, Kind: ViewSessions, ProjectName: "Jun"}
+	sessions := side.Views[0]
+	// Files before Sessions, and a placeholder an earlier preset had, selected.
+	files := &View{ID: 900, Kind: ViewTree, ProjectName: "Jun"}
 	skills := &View{ID: 901, Kind: ViewSkills, ProjectName: "Jun"}
-	side.Views, side.Active = []*View{sessions, files, skills}, skills.ID
+	side.Views, side.Active = []*View{files, sessions, skills}, skills.ID
 	s.Global.Views, s.Global.Active = nil, 0
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	for _, v := range side.Views {
 		kinds = append(kinds, v.Kind)
 	}
-	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != files || side.Views[1] != sessions || side.Active != files.ID {
+	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != sessions || side.Views[1] != files || side.Active != sessions.ID {
 		t.Fatalf("side region restored as %v, active %d", kinds, side.Active)
 	}
 	if len(s.Global.Views) != 1 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {

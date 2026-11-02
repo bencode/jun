@@ -33,6 +33,7 @@ func (a *app) view(c *ui.Context) {
 	a.paletteDialog(c)
 	a.projectDialog(c)
 	a.perspectiveDialog(c)
+	a.shortcutsDialog(c)
 	a.projectRenameDialog(c)
 	a.confirmDialog(c)
 	ui.Modal(c, &a.errorOpen, func() {

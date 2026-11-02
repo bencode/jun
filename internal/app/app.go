@@ -36,6 +36,10 @@ type app struct {
 		previewed string   // the theme shown while choosing
 		reveal    bool     // scrolls the highlight into view once, on opening
 	}
+	shortcutsPanel struct {
+		open  bool
+		query string
+	}
 	prefs           settings.Settings // the settings file's, as last read without error
 	prefsErr        error             // why the settings file last failed to read
 	settingsPath    string            // the settings file

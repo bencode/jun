@@ -21,7 +21,7 @@ func (a *app) viewBar(c *ui.Context) ui.Element {
 		if p.SideVisible {
 			side = a.text("Hide Side Bar", "收起侧边栏")
 		}
-		a.layoutToggle(c, sideIcon, side, side+" (⌘B)", p.SideVisible, a.toggleSide)
+		a.layoutToggle(c, sideIcon, side, side+" ("+toggleSideKeys.String()+")", p.SideVisible, a.toggleSide)
 		bottom := a.text("Show Bottom Region", "展开底部区域")
 		if p.BottomVisible {
 			bottom = a.text("Hide Bottom Region", "收起底部区域")

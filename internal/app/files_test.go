@@ -46,7 +46,7 @@ func TestFilesOpensPreviewAndPinnedTabs(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := a.state.CurrentPerspective()
-	p.SideVisible, p.Side.Active = true, p.Side.Views[0].ID
+	p.SideVisible, p.Side.Active = true, p.Side.Views[1].ID
 	column := p.Columns[0]
 	tt := ui.NewTester(a.view, 1200, 700)
 	tt.Frame()
@@ -120,7 +120,7 @@ func TestFilesSearchShowsMatchesAsATree(t *testing.T) {
 	tt.Frame()
 	tt.Key(ui.Super, ui.KeyP)
 	tt.Frame()
-	if !p.SideVisible || p.Side.Active != p.Side.Views[0].ID {
+	if !p.SideVisible || p.Side.Active != p.Side.Views[1].ID {
 		t.Fatal("⌘P did not show Files")
 	}
 	search := &a.trees[p.Side.Active].search
@@ -175,6 +175,7 @@ func TestFileViewRendersMarkdownAndImages(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := a.state.CurrentPerspective()
+	p.Side.Active = p.Side.Views[1].ID
 	tt := ui.NewTester(a.view, 1200, 700)
 	tt.Frame()
 	search := &a.trees[p.Side.Active].search

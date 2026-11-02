@@ -26,14 +26,14 @@ func (a *app) applicationMenu() *mygo.Menu {
 			mygo.Separator(), {Role: mygo.RoleQuit},
 		}},
 		{Label: a.text("File", "文件"), Submenu: []*mygo.MenuItem{
-			{Label: a.text("Command Palette…", "命令面板…"), Accelerator: "CmdOrCtrl+K", Click: action(func() { a.openPalette("") })},
-			{Label: a.text("Review Changes…", "查看改动…"), Accelerator: "CmdOrCtrl+Shift+D", Click: action(a.reviewChanges)},
-			{Label: a.text("Open Project…", "打开项目…"), Accelerator: "CmdOrCtrl+O", Click: action(func() { a.openPalette("~/") })},
+			{Label: a.text("Command Palette…", "命令面板…"), Accelerator: commandPaletteKeys.accelerator(), Click: action(func() { a.openPalette("") })},
+			{Label: a.text("Review Changes…", "查看改动…"), Accelerator: reviewChangesKeys.accelerator(), Click: action(a.reviewChanges)},
+			{Label: a.text("Open Project…", "打开项目…"), Accelerator: openProjectKeys.accelerator(), Click: action(func() { a.openPalette("~/") })},
 		}},
 		{Role: mygo.RoleEditMenu},
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
-			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Click: action(a.toggleSide)},
+			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -59,7 +59,7 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 			return
 		}
 		if p := a.state.CurrentPerspective(); p != nil && r == p.Side {
-			if m.Item(a.text("Hide Side Bar", "收起侧边栏")).Shortcut(ui.Super, ui.KeyB).Chosen() {
+			if m.Item(a.text("Hide Side Bar", "收起侧边栏")).Shortcut(toggleSideKeys.mods, toggleSideKeys.key).Chosen() {
 				a.toggleSide()
 			}
 			return
