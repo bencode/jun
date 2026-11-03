@@ -88,7 +88,6 @@ alias jun=/Applications/Jun.app/Contents/MacOS/Jun
 - Ad-hoc signed and not notarized, so the first open needs the steps above. No automatic updates.
 - Quitting Jun ends its shells. The next start opens fresh shells in the same tabs, without their earlier processes or output. The window's size and position are not saved.
 - Agent status is read from each terminal's title and screen. A new version of an agent may show something Jun misses.
-- Sessions lists Claude Code and Codex sessions only, not Pi's.
 - Files and Diff are read-only.
 
 ## Development
@@ -112,7 +111,7 @@ go tool mygo build -platform darwin/arm64   # build/darwin-arm64/Jun.app and the
 | `internal/settings` | the settings file |
 | `internal/terminal` | terminal sessions and their lifecycle |
 | `internal/agent` | recognizing agents and reading their status |
-| `internal/history` | reading Claude Code and Codex sessions |
+| `internal/history` | reading Claude Code, Codex and Pi sessions |
 | `internal/repo` | Git: branches, worktrees, files and diffs |
 | `internal/theme` | Jun's colors, and Ghostty's themes |
 

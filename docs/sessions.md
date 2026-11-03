@@ -1,6 +1,6 @@
 # Sessions
 
-**Sessions**, the side bar's first tab, lists the project's Claude Code and Codex sessions. Open one to read it, or resume it in a terminal.
+**Sessions**, the side bar's first tab, lists the project's Claude Code, Codex and Pi sessions. Open one to read it, or resume it in a terminal.
 
 ## Which sessions
 
@@ -9,6 +9,7 @@
   - With none set, Jun reads Claude Code's own folder: `CLAUDE_CONFIG_DIR` from Jun's environment, else `~/.claude`.
   - An app opened from the Dock does not see variables that a shell or a launcher sets. Set `claude.configDirs` when Claude Code keeps its sessions elsewhere.
 - **Codex**: read from `CODEX_HOME`, else `~/.codex`.
+- **Pi**: read from `PI_CODING_AGENT_SESSION_DIR`, else `sessions` in `PI_CODING_AGENT_DIR`, else `~/.pi/agent/sessions`.
 - **Left out**: subagents' sessions, and sessions in which nothing was asked.
 - **Reading**: Jun reads only the start and end of each session's file, and reads a file again only when it changes.
   - The list is read again when it is older than 30 seconds, or when the project's worktrees change.
@@ -21,7 +22,7 @@
 
 | Part | Shows |
 |---|---|
-| Icon | the agent's own mark: Claude Code or Codex |
+| Icon | the agent's own mark: Claude Code, Codex or Pi |
 | First line | the session's title: the agent's, else the first prompt's first line |
 | Second line | `subdirectory · branch · time · duration` |
 | Tooltip | the last prompt's first line, the session's ID, its directory |
@@ -40,13 +41,14 @@
   - the prompts and answers, the latest at the bottom;
   - between them, the number of tool steps the agent took;
   - in its header, the agent, the branch, the number of messages, and when the session started and was last active.
+- **A Pi session that went back** to an earlier point keeps each branch in its file. The tab shows the current one, the branch Pi continues.
 - The tab is read again as the session goes on.
 
 ## Resume and other actions
 
 - **Resume**, in the session tab's header or a session's context menu:
   - opens a terminal in the session's directory;
-  - runs `claude --resume <id>` or `codex resume <id>` there.
+  - runs `claude --resume <id>`, `codex resume <id>` or `pi --session <file>` there.
 - **Claude Code sessions from another folder** resume with `CLAUDE_CONFIG_DIR` set to that folder, such as `CLAUDE_CONFIG_DIR='…' claude --resume <id>`. The default folder needs no prefix.
 - **Copy Session ID**, in the header or the context menu, copies the session's ID.
 - **A directory that no longer exists** cannot be resumed, and Jun says why.

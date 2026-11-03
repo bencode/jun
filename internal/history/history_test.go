@@ -60,17 +60,35 @@ func codexMessage(role, text string) m {
 	return m{"type": "response_item", "payload": m{"type": "message", "role": role, "content": []m{{"type": kind, "text": text}}}}
 }
 
-// agentHomes points both agents at empty directories of the test's.
-func agentHomes(t *testing.T) (claude, codex string) {
+func piHeader(id, cwd string) m {
+	return m{"type": "session", "version": 3, "id": id, "timestamp": "2026-10-30T10:00:00Z", "cwd": cwd}
+}
+
+// piEntry is an entry of a Pi session's tree; a message's content is its
+// text, or its blocks.
+func piEntry(id, parent, role string, content any) m {
+	var parentID any
+	if parent != "" {
+		parentID = parent
+	}
+	if s, ok := content.(string); ok && role != "user" {
+		content = []m{{"type": "text", "text": s}}
+	}
+	return m{"type": "message", "id": id, "parentId": parentID, "message": m{"role": role, "content": content}}
+}
+
+// agentHomes points every agent at empty directories of the test's.
+func agentHomes(t *testing.T) (claude, codex, pi string) {
 	t.Helper()
-	claude, codex = t.TempDir(), t.TempDir()
+	claude, codex, pi = t.TempDir(), t.TempDir(), t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", claude)
 	t.Setenv("CODEX_HOME", codex)
-	return claude, codex
+	t.Setenv("PI_CODING_AGENT_SESSION_DIR", pi)
+	return claude, codex, pi
 }
 
 func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
-	claude, codex := agentHomes(t)
+	claude, codex, pi := agentHomes(t)
 	project := "/work/jun"
 	worktree := "/work/jun/priv/worktrees/x"
 	day := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
@@ -101,6 +119,19 @@ func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
 	writeLines(t, filepath.Join(codex, "session_index.jsonl"), day,
 		m{"id": "x1", "thread_name": "Old name"}, m{"id": "x1", "thread_name": "Diff review"})
 
+	writeLines(t, filepath.Join(pi, piEncode(worktree)+"--", "2026-10-30T10-00-00-000Z_p1.jsonl"), day.Add(30*time.Minute),
+		piHeader("p1", worktree),
+		m{"type": "model_change", "id": "a0", "parentId": nil, "provider": "x", "modelId": "y"},
+		piEntry("a1", "a0", "system", ""),
+		piEntry("a2", "a1", "user", "Check the tree"),
+		piEntry("a3", "a2", "assistant", "Checked."),
+		m{"type": "session_info", "id": "a4", "parentId": "a3", "name": "Tree check"},
+		piEntry("a5", "a4", "user", []m{{"type": "text", "text": "And the docs"}}))
+	// Not listed: a file that is no session, another project's.
+	writeLines(t, filepath.Join(pi, piEncode(project)+"--", "notes.jsonl"), day, piEntry("b1", "", "user", "Hi"))
+	writeLines(t, filepath.Join(pi, piEncode("/work/jun-x")+"--", "2026-10-30T10-00-00-000Z_p2.jsonl"), day,
+		piHeader("p2", "/work/jun-x"), piEntry("b1", "", "user", "Other"))
+
 	var s Scanner
 	got, err := s.List([]string{project, "/work/jun/"}, nil)
 	if err != nil {
@@ -110,15 +141,18 @@ func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
 	for i, session := range got {
 		ids[i] = session.ID
 	}
-	if !slices.Equal(ids, []string{"c1", "x1", "c2"}) {
+	if !slices.Equal(ids, []string{"c1", "x1", "c2", "p1"}) {
 		t.Fatalf("listed %v, want the latest first, others hidden", ids)
 	}
-	c1, x1, c2 := got[0], got[1], got[2]
+	c1, x1, c2, p1 := got[0], got[1], got[2], got[3]
 	if c1.Title != "Sessions plan" || c1.FirstPrompt != "Plan the sessions list" || c1.LastPrompt != "Ship it" || c1.Branch != "main" {
 		t.Fatalf("Claude session read as %+v", c1)
 	}
 	if x1.Agent != "codex" || x1.Title != "Diff review" || x1.FirstPrompt != "Review the diff" || x1.CWD != worktree || x1.Branch != "feat/x" {
 		t.Fatalf("Codex session read as %+v", x1)
+	}
+	if p1.Agent != "pi" || p1.Title != "Tree check" || p1.FirstPrompt != "Check the tree" || p1.LastPrompt != "And the docs" || p1.CWD != worktree || p1.Branch != "" {
+		t.Fatalf("Pi session read as %+v", p1)
 	}
 	if c2.Title != "Fix the zoom" {
 		t.Fatalf("an untitled session is titled %q, not by its prompt", c2.Title)
@@ -133,7 +167,7 @@ func TestListFindsTheDirectoriesSessionsAndHidesOthers(t *testing.T) {
 }
 
 func TestReadKeepsPromptsAndAnswersAndCountsSteps(t *testing.T) {
-	claude, codex := agentHomes(t)
+	claude, codex, pi := agentHomes(t)
 	day := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
 	path := filepath.Join(claude, "projects", "-work", "c1.jsonl")
 	writeLines(t, path, day,
@@ -161,10 +195,27 @@ func TestReadKeepsPromptsAndAnswersAndCountsSteps(t *testing.T) {
 	if got, err := Read(Session{Agent: "codex", Path: path}); err != nil || !slices.Equal(got, want) {
 		t.Fatalf("Codex session read as %+v, %v", got, err)
 	}
+
+	// The session went back after the first answer: only the current
+	// branch is read.
+	path = filepath.Join(pi, "--work--", "p1.jsonl")
+	writeLines(t, path, day,
+		piHeader("p1", "/work"),
+		piEntry("a1", "", "user", "Find the bug"),
+		piEntry("a2", "a1", "assistant", []m{{"type": "toolCall", "name": "bash"}, {"type": "text", "text": "Found it."}}),
+		m{"type": "message", "id": "a3", "parentId": "a2", "message": m{"role": "toolResult", "content": []m{{"type": "text", "text": "ok"}}}},
+		piEntry("a4", "a3", "user", "Fix it one way"),
+		piEntry("a5", "a4", "assistant", "Done one way."),
+		piEntry("a6", "a3", "user", "Fix it another way"),
+		piEntry("a7", "a6", "assistant", []m{{"type": "thinking", "thinking": "hmm"}, {"type": "toolCall"}, {"type": "toolCall"}, {"type": "text", "text": "Done."}}))
+	want = []Message{{User: true, Text: "Find the bug"}, {Text: "Found it.", Steps: 1}, {User: true, Text: "Fix it another way"}, {Text: "Done.", Steps: 2}}
+	if got, err := Read(Session{Agent: "pi", Path: path}); err != nil || !slices.Equal(got, want) {
+		t.Fatalf("Pi session read as %+v, %v", got, err)
+	}
 }
 
 func TestListReadsEveryClaudeHomeOnce(t *testing.T) {
-	claude, _ := agentHomes(t)
+	claude, _, _ := agentHomes(t)
 	other := t.TempDir()
 	project := "/work/jun"
 	day := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
@@ -185,7 +236,7 @@ func TestListReadsEveryClaudeHomeOnce(t *testing.T) {
 }
 
 func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHome(t *testing.T) {
-	claude, _ := agentHomes(t)
+	claude, _, _ := agentHomes(t)
 	at := func(home string) string { return filepath.Join(home, "projects", "-work", "16f0057a-2970.jsonl") }
 	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(claude)}); err != nil || got != "claude --resume 16f0057a-2970" {
 		t.Fatalf("Claude resumes from its default home with %q, %v", got, err)
@@ -197,6 +248,11 @@ func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHome(t *testing.T) {
 	}
 	if got, err := ResumeCommand(Session{Agent: "codex", ID: "01a19689-cb83"}); err != nil || got != "codex resume 01a19689-cb83" {
 		t.Fatalf("Codex resumes with %q, %v", got, err)
+	}
+	file := filepath.Join(other, "--work--", "2026-11-03T02-59-02-133Z_01a19f58-8974.jsonl")
+	want = "pi --session '" + strings.ReplaceAll(file, "'", `'\''`) + "'"
+	if got, err := ResumeCommand(Session{Agent: "pi", ID: "01a19f58-8974", Path: file}); err != nil || got != want {
+		t.Fatalf("Pi resumes with %q, %v", got, err)
 	}
 	for _, id := range []string{"", "x; rm -rf ~", "$(id)", "-h"} {
 		if _, err := ResumeCommand(Session{Agent: "claude", ID: id}); err == nil {
