@@ -3,9 +3,7 @@ package history
 import (
 	"cmp"
 	"encoding/json"
-	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 )
@@ -46,11 +44,6 @@ type claudeRecord struct {
 	Message          json.RawMessage `json:"message"`
 }
 
-type claudeBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
 // claudeEncode is the name Claude Code gives a directory's folder:
 // every character but ASCII letters and digits a dash.
 func claudeEncode(dir string) string {
@@ -63,49 +56,7 @@ func claudeEncode(dir string) string {
 }
 
 func claudeList(root string, dirs []string, c *cache) ([]Session, error) {
-	projects := filepath.Join(root, "projects")
-	folders, err := os.ReadDir(projects)
-	if notInstalled(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	// A folder's name tells only roughly whose it is: its sessions say.
-	mayHold := func(name string) bool {
-		return slices.ContainsFunc(dirs, func(d string) bool {
-			e := claudeEncode(d)
-			return name == e || strings.HasPrefix(name, e+"-")
-		})
-	}
-	var sessions []Session
-	for _, folder := range folders {
-		if !folder.IsDir() || !mayHold(folder.Name()) {
-			continue
-		}
-		files, err := os.ReadDir(filepath.Join(projects, folder.Name()))
-		if err != nil {
-			return sessions, err
-		}
-		for _, f := range files {
-			if f.IsDir() || filepath.Ext(f.Name()) != ".jsonl" {
-				continue
-			}
-			path := filepath.Join(projects, folder.Name(), f.Name())
-			info, err := f.Info()
-			if err != nil {
-				return sessions, err
-			}
-			s, ok, err := c.summary(path, info, func() (Session, bool, error) { return claudeSummary(path) })
-			if err != nil {
-				return sessions, err
-			}
-			if ok && within(s.CWD, dirs) {
-				sessions = append(sessions, s)
-			}
-		}
-	}
-	return sessions, nil
+	return folderSessions(filepath.Join(root, "projects"), dirs, c, claudeEncode, claudeSummary)
 }
 
 func claudeSummary(path string) (Session, bool, error) {
@@ -159,37 +110,11 @@ func claudePrompt(r claudeRecord) (string, bool) {
 	if r.Type != "user" || r.IsMeta || r.IsSidechain || r.IsCompactSummary {
 		return "", false
 	}
-	text := claudeText(r.Message)
+	text := contentText(r.Message)
 	if strings.TrimSpace(text) == "" || strings.HasPrefix(strings.TrimSpace(text), "<") {
 		return "", false
 	}
 	return text, true
-}
-
-// claudeText is a message's text: its content when that is a string,
-// else its text blocks'.
-func claudeText(raw json.RawMessage) string {
-	var m struct {
-		Content json.RawMessage `json:"content"`
-	}
-	if json.Unmarshal(raw, &m) != nil {
-		return ""
-	}
-	var text string
-	if json.Unmarshal(m.Content, &text) == nil {
-		return text
-	}
-	var blocks []claudeBlock
-	if json.Unmarshal(m.Content, &blocks) != nil {
-		return ""
-	}
-	var parts []string
-	for _, b := range blocks {
-		if b.Type == "text" && b.Text != "" {
-			parts = append(parts, b.Text)
-		}
-	}
-	return strings.Join(parts, "\n\n")
 }
 
 func claudeRead(path string) ([]Message, error) {
@@ -209,7 +134,7 @@ func claudeRead(path string) ([]Message, error) {
 			return
 		}
 		var m struct {
-			Content []claudeBlock `json:"content"`
+			Content []textBlock `json:"content"`
 		}
 		if json.Unmarshal(r.Message, &m) != nil {
 			return

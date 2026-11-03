@@ -1,10 +1,12 @@
-// Package history reads the sessions coding agents (Claude Code, Codex)
-// keep on disk: which there are for some directories, and what was said.
+// Package history reads the sessions coding agents (Claude Code, Codex,
+// Pi) keep on disk: which there are for some directories, and what was
+// said.
 package history
 
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,7 +22,7 @@ import (
 
 // Session is one agent session, as its file tells at its start and end.
 type Session struct {
-	Agent       string // a kind's name: "claude" or "codex"
+	Agent       string // a kind's name: "claude", "codex" or "pi"
 	ID          string
 	Path        string // the session's file
 	Title       string // the agent's, or the first prompt's first line
@@ -53,7 +55,7 @@ type kind struct {
 	resume func(s Session) string
 }
 
-var kinds = []kind{claudeKind, codexKind}
+var kinds = []kind{claudeKind, codexKind, piKind}
 
 func kindOf(agent string) (kind, bool) {
 	i := slices.IndexFunc(kinds, func(k kind) bool { return k.name == agent })
@@ -180,6 +182,87 @@ func (c *cache) summary(path string, info fs.FileInfo, summarize func() (Session
 	c.entries[path] = cached{mod: info.ModTime(), size: info.Size(), session: s, ok: ok}
 	c.mu.Unlock()
 	return s, ok, nil
+}
+
+// folderSessions lists the sessions of base's folders, one file each,
+// that are in or under dirs. A directory's sessions are in the folder
+// encode names it; a folder's name tells only roughly whose it is, so
+// its sessions say.
+func folderSessions(base string, dirs []string, c *cache, encode func(dir string) string, summarize func(path string) (Session, bool, error)) ([]Session, error) {
+	folders, err := os.ReadDir(base)
+	if notInstalled(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	mayHold := func(name string) bool {
+		return slices.ContainsFunc(dirs, func(d string) bool {
+			e := encode(d)
+			return name == e || strings.HasPrefix(name, e+"-")
+		})
+	}
+	var sessions []Session
+	for _, folder := range folders {
+		if !folder.IsDir() || !mayHold(folder.Name()) {
+			continue
+		}
+		files, err := os.ReadDir(filepath.Join(base, folder.Name()))
+		if err != nil {
+			return sessions, err
+		}
+		for _, f := range files {
+			if f.IsDir() || filepath.Ext(f.Name()) != ".jsonl" {
+				continue
+			}
+			path := filepath.Join(base, folder.Name(), f.Name())
+			info, err := f.Info()
+			if err != nil {
+				return sessions, err
+			}
+			s, ok, err := c.summary(path, info, func() (Session, bool, error) { return summarize(path) })
+			if err != nil {
+				return sessions, err
+			}
+			if ok && within(s.CWD, dirs) {
+				sessions = append(sessions, s)
+			}
+		}
+	}
+	return sessions, nil
+}
+
+// textBlock is a block of a message's content; Jun reads its type, and
+// its text when it is text.
+type textBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// contentText is a message's text: its content when that is a string,
+// else its text blocks'.
+func contentText(raw json.RawMessage) string {
+	var m struct {
+		Content json.RawMessage `json:"content"`
+	}
+	if json.Unmarshal(raw, &m) != nil {
+		return ""
+	}
+	var text string
+	if json.Unmarshal(m.Content, &text) == nil {
+		return text
+	}
+	var blocks []textBlock
+	if json.Unmarshal(m.Content, &blocks) != nil {
+		return ""
+	}
+	var parts []string
+	for _, b := range blocks {
+		if b.Type == "text" && b.Text != "" {
+			parts = append(parts, b.Text)
+		}
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 func cleanDirs(dirs []string) []string {
