@@ -8,7 +8,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
@@ -186,15 +185,9 @@ func (a *app) commands() []paletteItem {
 			a.state.RailExpanded = !a.state.RailExpanded
 			a.layoutChanged()
 		}},
-		{title: a.text("Go to Heading…", "跳转到标题…"), keys: goToHeadingKeys.String(), keywords: "outline heading 大纲 标题", run: a.goToHeading},
 	}
-	for _, w := range settings.MarkdownWidths {
-		item := paletteItem{title: a.text("Reading Width: ", "阅读宽度：") + a.widthLabel(w), keywords: "width reading markdown 宽度 阅读",
-			run: func() { a.setMarkdownWidth(w) }}
-		if w == a.markdownWidth() {
-			item.detail = "✓"
-		}
-		items = append(items, item)
+	if a.activeMarkdown() != nil {
+		items = append(items, a.readingCommands()...)
 	}
 	for i, p := range a.state.Projects {
 		item := paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }}

@@ -20,6 +20,11 @@ func (a *app) applicationMenu() *mygo.Menu {
 			}
 		}
 	}
+	a.readingOn = a.activeMarkdown() != nil
+	a.readingItems = []*mygo.MenuItem{
+		{Label: a.text("Go to Heading…", "跳转到标题…"), Accelerator: goToHeadingKeys.accelerator(), Click: action(a.goToHeading), Disabled: !a.readingOn},
+		{Label: a.text("Reading Width", "阅读宽度"), Submenu: a.widthMenu(action), Disabled: !a.readingOn},
+	}
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Label: "Jun", Submenu: []*mygo.MenuItem{
 			{Role: mygo.RoleAbout}, mygo.Separator(),
@@ -35,10 +40,7 @@ func (a *app) applicationMenu() *mygo.Menu {
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
 			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
-			mygo.Separator(),
-			{Label: a.text("Go to Heading…", "跳转到标题…"), Accelerator: goToHeadingKeys.accelerator(), Click: action(a.goToHeading)},
-			{Label: a.text("Reading Width", "阅读宽度"), Submenu: a.widthMenu(action)},
-			mygo.Separator(),
+			mygo.Separator(), a.readingItems[0], a.readingItems[1], mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -104,6 +106,19 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 	}
 	if m.Item(a.text("Remove This Column", "移除此列")).Disabled(len(p.Columns) == 1).Chosen() {
 		a.removeColumn(r.ID)
+	}
+}
+
+// syncReadingMenu enables the menu items for Markdown pages while the
+// active tab shows one, and disables them otherwise.
+func (a *app) syncReadingMenu() {
+	on := a.activeMarkdown() != nil
+	if on == a.readingOn {
+		return
+	}
+	a.readingOn = on
+	for _, item := range a.readingItems {
+		item.SetEnabled(on)
 	}
 }
 

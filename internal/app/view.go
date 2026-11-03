@@ -30,6 +30,7 @@ func (a *app) view(c *ui.Context) {
 	})
 	a.shortcuts(c)
 	a.settingsShortcut(c)
+	a.syncReadingMenu()
 	a.paletteDialog(c)
 	a.projectDialog(c)
 	a.perspectiveDialog(c)

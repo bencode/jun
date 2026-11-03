@@ -3,6 +3,8 @@ package app
 import (
 	"slices"
 	"strings"
+
+	"github.com/bencode/jun/internal/settings"
 )
 
 // headingPrefix opens the palette on the headings of the Markdown tab.
@@ -11,6 +13,22 @@ const headingPrefix = "@"
 func (a *app) goToHeading() {
 	a.openPalette(headingPrefix)
 	a.palette.caretEnd = true
+}
+
+// readingCommands are the palette's commands for Markdown pages: going to
+// a heading, and the widths, the current one checked.
+func (a *app) readingCommands() []paletteItem {
+	items := []paletteItem{{title: a.text("Go to Heading…", "跳转到标题…"), keys: goToHeadingKeys.String(),
+		keywords: "outline heading 大纲 标题", run: a.goToHeading}}
+	for _, w := range settings.MarkdownWidths {
+		item := paletteItem{title: a.text("Reading Width: ", "阅读宽度：") + a.widthLabel(w), keywords: "width reading markdown 宽度 阅读",
+			run: func() { a.setMarkdownWidth(w) }}
+		if w == a.markdownWidth() {
+			item.detail = "✓"
+		}
+		items = append(items, item)
+	}
+	return items
 }
 
 // activeMarkdown is the Markdown page the active region's tab shows, or

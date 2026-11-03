@@ -366,11 +366,20 @@ func TestMarkdownGoToHeading(t *testing.T) {
 	var ctx *ui.Context // the window's, for the places of the last frame
 	tt := ui.NewTester(func(c *ui.Context) { ctx = c; a.view(c) }, 1200, 700)
 	tt.Frame()
+	goToHeading := func() bool {
+		return slices.ContainsFunc(a.commands(), func(item paletteItem) bool { return item.title == "Go to Heading…" })
+	}
+	if goToHeading() {
+		t.Fatal("the palette offers Go to Heading without a Markdown tab")
+	}
 	a.trees[p.Side.Active].search.query = "long"
 	tt.Frame()
 	click(t, tt, "long.md")
 	tt.Frame()
 	a.focusRegion(p.Columns[0].ID)
+	if !goToHeading() {
+		t.Fatal("the palette does not offer Go to Heading on a Markdown tab")
+	}
 	a.openPalette("@")
 	items, _ := a.paletteItems()
 	indents := make([]int, len(items))

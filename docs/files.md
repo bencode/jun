@@ -45,6 +45,7 @@
   - Links to a heading within the page do nothing yet.
   - **Go to heading** (⌘⇧O, or View ▸ Go to Heading…): the command palette at `@` lists the headings of the active tab's page, indented by level. Typing filters them; Enter scrolls the heading to the top.
   - **Reading width**: View ▸ Reading Width, or Reading Width in the command palette: narrow (640 points), medium (760, the default), wide (960) or full, the tab's width. Saved as `markdown.width` in the [settings file](settings.md).
+  - Go to heading and Reading Width are on while the active tab shows a Markdown page: otherwise their menu items are dimmed and the palette leaves them out.
 - **Show as**: the header's switch shows a Markdown or SVG file's source instead, for that tab.
 - **Text size**: file tabs share it with terminals. ⌘+ and ⌘− change it, and ⌘0 goes back to 13.
 
