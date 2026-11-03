@@ -2,8 +2,10 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
@@ -15,8 +17,12 @@ import (
 // narrows the search better than reading on.
 const fileSearchLimit = 500
 
+// branchPrefix begins a search of the branches, by name, rather than of a
+// branch's files.
+const branchPrefix = "b:"
+
 // fileSearch is a Files view's search: its query, in one source, and the
-// files matching it as a tree.
+// files matching it as a tree; or, after branchPrefix, the branches found.
 type fileSearch struct {
 	query        string
 	source       string // the source chosen for it; "" follows the current file
@@ -24,9 +30,11 @@ type fileSearch struct {
 	selected     int
 	made         searchKey // what the results were made for
 	results      map[string][]fileNode
-	more         bool // more files match than the results show
-	focusResults bool // choose the first file, and focus the results
-	pinFirst     bool // and keep it in a tab of its own
+	more         bool                      // more files match than the results show
+	focusResults bool                      // choose the first file, and focus the results
+	pinFirst     bool                      // and keep it in a tab of its own
+	branches     ui.OutlineState[fileNode] // the branches found, by day
+	branch       int                       // the one chosen
 }
 
 type searchKey struct {
@@ -41,8 +49,7 @@ type searchKey struct {
 func matchFiles(files []string, query string, limit int) (matches []string, more bool) {
 	words := strings.Fields(strings.ToLower(query))
 	for _, f := range files {
-		name := strings.ToLower(f)
-		if slices.ContainsFunc(words, func(w string) bool { return !strings.Contains(name, w) }) {
+		if !holdsWords(f, words) {
 			continue
 		}
 		if len(matches) == limit {
@@ -51,6 +58,32 @@ func matchFiles(files []string, query string, limit int) (matches []string, more
 		matches = append(matches, f)
 	}
 	return matches, false
+}
+
+// holdsWords reports whether text holds every one of words, which are in
+// lower case, ignoring case.
+func holdsWords(text string, words []string) bool {
+	text = strings.ToLower(text)
+	return !slices.ContainsFunc(words, func(w string) bool { return !strings.Contains(text, w) })
+}
+
+// branchQuery is the query of a search of the branches: what follows
+// branchPrefix.
+func branchQuery(query string) (string, bool) {
+	return strings.CutPrefix(strings.TrimSpace(query), branchPrefix)
+}
+
+// matchSources keeps the sources whose branch or worktree's directory
+// name, together, hold every word of the query, ignoring case.
+func matchSources(sources []repo.Source, query string) []repo.Source {
+	words := strings.Fields(strings.ToLower(query))
+	return slices.DeleteFunc(slices.Clone(sources), func(s repo.Source) bool {
+		name := s.Branch
+		if s.Worktree != "" {
+			name += " " + filepath.Base(s.Worktree)
+		}
+		return !holdsWords(name, words)
+	})
 }
 
 // searchSource is the source a Files view searches: the one chosen, else
@@ -79,7 +112,7 @@ func (a *app) fileSearchBar(c *ui.Context, r *repoState, st *filesViewState, s r
 		}
 	}).Label(a.text("Search in", "搜索范围")).Height(26).FontSize(theme.Caption).MaxWidth(110).Shrink(1)
 	field := ui.SearchField(c, &f.query).Label(a.text("Search files", "搜索文件")).
-		Placeholder(a.text("Search files", "搜索文件")).Height(26).FontSize(theme.Caption).Grow(1).MinWidth(60)
+		Placeholder(a.text("Search files, b: for branches", "搜索文件，b: 搜分支")).Height(26).FontSize(theme.Caption).Grow(1).MinWidth(60)
 	if a.focusFileSearch {
 		field.Focus()
 		a.focusFileSearch = false
@@ -115,7 +148,7 @@ func (a *app) fileSearchResults(c *ui.Context, r *repoState, st *filesViewState,
 		f.results = index(s.Key(), matches)
 		f.outline.Open = ui.Selection[fileNode]{}
 		for dir := range f.results {
-			f.outline.Open.Add(fileNode{s.Key(), dir})
+			f.outline.Open.Add(fileNode{source: s.Key(), path: dir})
 		}
 		f.selected = -1
 		f.outline.List.Selected = &f.selected
@@ -139,6 +172,49 @@ func (a *app) fileSearchResults(c *ui.Context, r *repoState, st *filesViewState,
 	if f.more {
 		ui.Text(c, fmt.Sprintf(a.text("Showing the first %d matches; type more to narrow them", "只显示前 %d 个，继续输入可以缩小范围"), fileSearchLimit)).
 			FontSize(theme.Caption).TextColor(a.theme.TextMuted).Padding(6, 12)
+	}
+}
+
+// branchSearchResults shows the branches matching the query by day, as
+// the tree does: a click, a double click or Enter on one, or Enter in the
+// field for the first, leaves the search for it in the tree.
+func (a *app) branchSearchResults(c *ui.Context, r *repoState, st *filesViewState, query, project string) {
+	f := &st.search
+	focus, reveal := f.focusResults, f.pinFirst
+	f.focusResults, f.pinFirst = false, false
+	rows := sourceRows(r.top, matchSources(r.sources, query), time.Now(), a.text)
+	if len(rows) == 0 {
+		ui.Text(c, a.text("No branches match", "没有匹配的分支")).TextColor(a.theme.TextMuted).Padding(12)
+		return
+	}
+	first := slices.IndexFunc(rows, func(n fileNode) bool { return n.day == "" })
+	if reveal {
+		st.revealSource(rows[first].source)
+		c.Invalidate()
+		return
+	}
+	if f.branches.List.Selected == nil {
+		f.branch = -1
+		f.branches.List.Selected = &f.branch
+	}
+	f.branches.List.Header = func(i int) bool { return f.branches.Item(i).day != "" }
+	clicked := ""
+	list := ui.Outline(c, &f.branches, rows, func(fileNode) []fileNode { return nil }, func(n fileNode) {
+		if ui.Box(c).FillWidth().Children(func() { a.fileRow(c, r, n, false, project) }).Clicked() && n.day == "" {
+			clicked = n.source
+		}
+	}).Grow(1).FillWidth()
+	if list.Submitted() && f.branch >= 0 && f.branch < f.branches.Rows() {
+		clicked = f.branches.Item(f.branch).source
+	}
+	if clicked != "" {
+		st.revealSource(clicked)
+		c.Invalidate()
+		return
+	}
+	if focus {
+		f.branch = first
+		list.Focus()
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
@@ -22,12 +23,14 @@ type filesViewState struct {
 	selected int
 	opened   bool // the first source opened, once
 	current  fileNode
+	reveal   string // a source to open, choose and scroll to, once
 	search   fileSearch
 }
 
-// filesView lists the sources of the project's repository, each with its
-// files, or a search's results in one of them: a click shows a file in a
-// preview tab, a double click or Enter in a tab of its own.
+// filesView lists the sources of the project's repository by day, each
+// with its files, or a search's results: files in one source, or with
+// branchPrefix the sources found. A click shows a file in a preview tab, a
+// double click or Enter in a tab of its own.
 func (a *app) filesView(c *ui.Context, v *layout.View) {
 	project := a.project(v.ProjectName)
 	if project == nil {
@@ -59,6 +62,10 @@ func (a *app) filesView(c *ui.Context, v *layout.View) {
 			return
 		}
 		if len(r.sources) == 0 {
+			return
+		}
+		if query, ok := branchQuery(st.search.query); ok {
+			a.branchSearchResults(c, r, st, query, project.Name)
 			return
 		}
 		if strings.TrimSpace(st.search.query) != "" {
@@ -95,10 +102,8 @@ func (a *app) filesMessage(c *ui.Context, r *repoState, dir string) {
 }
 
 func (a *app) filesTree(c *ui.Context, r *repoState, st *filesViewState, project string) {
-	roots := make([]fileNode, len(r.sources))
-	for i, s := range r.sources {
-		roots[i] = fileNode{source: s.Key()}
-	}
+	roots := sourceRows(r.top, r.sources, time.Now(), a.text)
+	st.outline.List.Header = func(i int) bool { return st.outline.Item(i).day != "" }
 	children := func(n fileNode) []fileNode {
 		s, ok := r.source(n.source)
 		if !ok {
@@ -109,8 +114,47 @@ func (a *app) filesTree(c *ui.Context, r *repoState, st *filesViewState, project
 		}
 		return a.listingFor(r, s).children[n.path]
 	}
-	a.fileOutline(c, r, &st.outline, roots, children, project)
+	outline := a.fileOutline(c, r, &st.outline, roots, children, project)
+	if st.reveal != "" {
+		for i := range st.outline.Rows() {
+			if st.outline.Item(i) == (fileNode{source: st.reveal}) {
+				st.selected = i
+				st.outline.List.ScrollTo(i, ui.Start)
+			}
+		}
+		st.reveal = ""
+		outline.Focus()
+		return
+	}
 	a.followCurrentFile(st, project)
+}
+
+// sourceRows heads each day's sources, the latest first, with the day, as
+// Sessions does; the source checked out in the repository's top level
+// stays first, above them.
+func sourceRows(top string, sources []repo.Source, now time.Time, text func(en, zh string) string) []fileNode {
+	var rows []fileNode
+	last := ""
+	for i, s := range sources {
+		if i == 0 && s.Worktree == top {
+			rows = append(rows, fileNode{source: s.Key()})
+			continue
+		}
+		if day := dayName(s.Time.Local(), now.Local(), text); day != last {
+			rows = append(rows, fileNode{day: day})
+			last = day
+		}
+		rows = append(rows, fileNode{source: s.Key()})
+	}
+	return rows
+}
+
+// revealSource leaves the search for the tree, with the source open,
+// chosen and scrolled to the top.
+func (st *filesViewState) revealSource(key string) {
+	st.search.query = ""
+	st.outline.Open.Add(fileNode{source: key})
+	st.reveal = key
 }
 
 // fileOutline shows files and directories: a click shows a file in a
@@ -191,9 +235,15 @@ func activeView(r *layout.Region) *layout.View {
 	return nil
 }
 
-// fileRow is a row of Files: a source, named by its branch and where it is
-// read from, or a file or directory.
+// fileRow is a row of Files: a day's heading; a source, named by its
+// branch and where it is read from, with its latest commit's time; or a
+// file or directory.
 func (a *app) fileRow(c *ui.Context, r *repoState, n fileNode, dir bool, project string) {
+	if n.day != "" {
+		ui.Text(c, n.day).FontSize(theme.Caption).Bold().TextColor(a.theme.TextMuted).
+			FillWidth().Padding(8, 0, 4).Background(a.theme.Background)
+		return
+	}
 	s, _ := r.source(n.source)
 	ui.Row(c).FillWidth().Gap(6).AlignItems(ui.Center).ContextMenu(func(m *ui.Menu) { a.fileMenu(m, r, s, n, project) }).Children(func() {
 		if n.path != "" {
@@ -210,10 +260,11 @@ func (a *app) fileRow(c *ui.Context, r *repoState, n fileNode, dir bool, project
 			detail = s.Commit
 		}
 		// The branch keeps its room; where it is read from gives way first.
-		ui.Text(c, detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).MinWidth(0).Shrink(100).SingleLine().Ellipsis("…")
+		ui.Text(c, detail).FontSize(theme.Caption).TextColor(a.theme.TextMuted).MinWidth(0).Shrink(100).Grow(1).SingleLine().Ellipsis("…")
 		if l := r.listings[n.source]; l != nil && l.err != nil {
 			ui.Text(c, a.text("unreadable", "读取失败")).FontSize(theme.Caption).TextColor(a.theme.Danger).Tooltip(l.err.Error())
 		}
+		ui.Text(c, s.Time.Local().Format("15:04")).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Shrink(0)
 	})
 }
 
