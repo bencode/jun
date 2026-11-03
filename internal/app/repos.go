@@ -14,10 +14,11 @@ import (
 )
 
 // fileNode is a row of Files: a source's root, with no path, or a file or
-// directory in it.
+// directory in it; or, with day alone, the heading of a day's sources.
 type fileNode struct {
 	source string // repo.Source.Key
 	path   string
+	day    string
 }
 
 // listing is a source's files: their paths, and each directory's
@@ -144,7 +145,7 @@ func index(source string, files []string) map[string][]fileNode {
 		if parent == "." {
 			parent = ""
 		}
-		children[parent] = append(children[parent], fileNode{source, p})
+		children[parent] = append(children[parent], fileNode{source: source, path: p})
 	}
 	for dir := range dirs {
 		add(dir)

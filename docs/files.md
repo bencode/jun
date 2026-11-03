@@ -7,7 +7,8 @@
 - **Root**: the repository's top level. A project outside any repository shows that instead.
 - **Branches**: each local branch is an item.
   - The branch checked out in the project's directory comes first, and is open.
-  - The other branches follow, by their latest commit, newest first.
+  - The other branches follow, by their latest commit, newest first, grouped by its day: today, yesterday, or its date, as in [Sessions](sessions.md).
+  - Each row ends with its latest commit's time of day. Changes not yet committed do not count.
 - **Worktrees**
   - A branch checked out in a worktree is read from that directory, so its uncommitted changes and new files show too. Ignored files are left out.
   - The tree follows the worktree's changes as they happen.
@@ -57,3 +58,11 @@
   - Down moves into the matches.
   - Enter in the field keeps the first match in a tab.
   - Escape, or clearing the field, brings back the tree as it was.
+
+### Branches (`b:`)
+
+- A search starting with `b:` finds branches instead of files: every branch whose name, with its worktree's directory name, holds every word after `b:`, ignoring case.
+  - For example, `b:preview keep` finds `fix/session-preview-keep-frame`. `b:` alone lists every branch.
+- **Results**: grouped by day, as the tree is.
+- **Choosing one**: a click, a double click or Enter on a branch, or Enter in the field for the first, leaves the search. The tree then opens that branch, chooses it and scrolls it to the top.
+- Down moves into the results.

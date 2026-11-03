@@ -85,7 +85,7 @@ func (m *markdownRender) openLink(dest string) {
 	if l := m.f.a.listingFor(m.f.r, m.f.s); l.files != nil && !slices.Contains(l.files, name) {
 		return
 	}
-	m.f.a.openFile(m.f.project, fileNode{m.f.s.Key(), name}, false)
+	m.f.a.openFile(m.f.project, fileNode{source: m.f.s.Key(), path: name}, false)
 }
 
 // repoPath resolves a link's destination to a path in the repository: in

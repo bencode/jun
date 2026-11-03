@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/bencode/jun/internal/layout"
@@ -138,6 +139,78 @@ func TestFilesSearchShowsMatchesAsATree(t *testing.T) {
 	tt.Frame()
 	if !tt.HasText("No files match") {
 		t.Fatal("letters out of order matched")
+	}
+}
+
+// branchRepo makes gitRepo's repository with two more branches: one on
+// main's commit, made today, and one with a commit of March 4, 2025.
+func branchRepo(t *testing.T) string {
+	t.Helper()
+	dir := gitRepo(t)
+	run := func(env []string, args ...string) {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = append(os.Environ(), append([]string{"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t"}, env...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run(nil, "branch", "feat/agents")
+	run(nil, "checkout", "-q", "-b", "fix/preview-keep")
+	run([]string{"GIT_COMMITTER_DATE=2025-03-04T12:00:00+0000"}, "commit", "-q", "--allow-empty", "-m", "old")
+	run(nil, "checkout", "-q", "main")
+	return dir
+}
+
+func TestFilesGroupsBranchesByDay(t *testing.T) {
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", branchRepo(t)); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	p.SideVisible, p.Side.Active = true, p.Side.Views[1].ID
+	tt := ui.NewTester(a.view, 1200, 700)
+	tt.Frame()
+	texts := tt.Texts()
+	at := func(text string) int {
+		t.Helper()
+		i := slices.Index(texts, text)
+		if i < 0 {
+			t.Fatalf("no %q in %v", text, texts)
+		}
+		return i
+	}
+	if !(at("main") < at("Today") && at("Today") < at("feat/agents") && at("feat/agents") < at("Mar 4, 2025") && at("Mar 4, 2025") < at("fix/preview-keep")) {
+		t.Fatalf("the branches are not main, then by day, the latest first: %v", texts)
+	}
+}
+
+func TestFilesSearchFindsBranches(t *testing.T) {
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", branchRepo(t)); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	tt := ui.NewTester(a.view, 1200, 700)
+	tt.Frame()
+	tt.Key(ui.Super, ui.KeyP)
+	tt.Frame()
+	st := a.trees[p.Side.Active]
+	st.search.query = "b:PREVIEW keep"
+	tt.Frame()
+	if !tt.HasText("fix/preview-keep") || tt.HasText("feat/agents") || tt.HasText("main.go") {
+		t.Fatalf("the results are not the matching branches alone: %v", tt.Texts())
+	}
+	click(t, tt, "fix/preview-keep")
+	tt.Frame()
+	tt.Frame()
+	found := fileNode{source: "fix/preview-keep"}
+	if st.search.query != "" || !st.outline.Open.Has(found) || st.selected < 0 || st.outline.Item(st.selected) != found {
+		t.Fatal("a click on a branch did not open and choose it in the tree")
+	}
+	st.search.query = "b:nothing"
+	tt.Frame()
+	if !tt.HasText("No branches match") {
+		t.Fatal("a search matching no branch said nothing")
 	}
 }
 
