@@ -34,7 +34,7 @@
 
 | File | Shows as |
 |---|---|
-| Markdown | a page to read, at most 760 points wide |
+| Markdown | a page to read, as wide as View ▸ Reading Width says |
 | PNG, JPEG, GIF, WebP, BMP, SVG | the picture, as large as it is, at most as wide as the tab, with its size in the header |
 | Other text | the source, highlighted |
 | Other binary files, files over 10 MB | a note |
@@ -43,6 +43,8 @@
   - Its images load from the same branch: relative to the file, or with a leading slash, relative to the repository.
   - Web links open in the browser. Links to the repository's files open in Jun, as a click in Files does.
   - Links to a heading within the page do nothing yet.
+  - **Go to heading** (⌘⇧O, or View ▸ Go to Heading…): the command palette at `@` lists the headings of the active tab's page, indented by level. Typing filters them; Enter scrolls the heading to the top.
+  - **Reading width**: View ▸ Reading Width, or Reading Width in the command palette: narrow (640 points), medium (760, the default), wide (960) or full, the tab's width. Saved as `markdown.width` in the [settings file](settings.md).
 - **Show as**: the header's switch shows a Markdown or SVG file's source instead, for that tab.
 - **Text size**: file tabs share it with terminals. ⌘+ and ⌘− change it, and ⌘0 goes back to 13.
 

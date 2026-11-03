@@ -10,7 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/egoist/mygo/ui"
@@ -345,5 +347,50 @@ func TestTextSizeZoomsEveryFileTab(t *testing.T) {
 	a.prefs.Font.Size = 0
 	if !a.readPrefs() || a.textSize() != 39 {
 		t.Fatalf("the text size was not saved in the settings file: %v, %v", a.textSize(), a.prefsErr)
+	}
+}
+
+func TestMarkdownGoToHeading(t *testing.T) {
+	dir := gitRepo(t)
+	filler := strings.Repeat("A paragraph long enough to fill the page.\n\n", 40)
+	doc := "# First\n\n" + filler + "## Second\n\n" + filler + "### Third\n\n" + filler
+	if err := os.WriteFile(filepath.Join(dir, "long.md"), []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", dir); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	p.Side.Active = p.Side.Views[1].ID
+	var ctx *ui.Context // the window's, for the places of the last frame
+	tt := ui.NewTester(func(c *ui.Context) { ctx = c; a.view(c) }, 1200, 700)
+	tt.Frame()
+	a.trees[p.Side.Active].search.query = "long"
+	tt.Frame()
+	click(t, tt, "long.md")
+	tt.Frame()
+	a.focusRegion(p.Columns[0].ID)
+	a.openPalette("@")
+	items, _ := a.paletteItems()
+	indents := make([]int, len(items))
+	for i, item := range items {
+		indents[i] = item.indent
+	}
+	if !slices.Equal(indents, []int{0, 1, 2}) {
+		t.Fatalf("@ listed %+v", items)
+	}
+	a.openPalette("@third")
+	tt.Frame()
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	tt.Advance(2 * time.Second)
+	tt.Frame()
+	m := a.activeMarkdown()
+	if a.palette.open || m == nil || m.scroll.Y == 0 {
+		t.Fatal("Enter did not go to the heading")
+	}
+	if mark, top := m.marks[2].Bounds(ctx), m.scroller.Bounds(ctx); mark.Y-top.Y != headingGap {
+		t.Fatalf("the heading is %v below the page's top, not %v", mark.Y-top.Y, headingGap)
 	}
 }

@@ -26,7 +26,7 @@ func TestLoadDefaultsChecksAndExpands(t *testing.T) {
 		!slices.Equal(s.Claude.ConfigDirs, []string{filepath.Join(home, ".claude"), "/opt/claude"}) {
 		t.Fatalf("loaded %+v, %v", s, err)
 	}
-	for _, bad := range []string{"langauge: zh\n", "language: fr\n", "font:\n  size: 99\n", "claude:\n  configDirs: [rel]\n", "theme: [\n"} {
+	for _, bad := range []string{"langauge: zh\n", "language: fr\n", "font:\n  size: 99\n", "claude:\n  configDirs: [rel]\n", "markdown:\n  width: huge\n", "theme: [\n"} {
 		if _, err := Parse([]byte(bad)); err == nil {
 			t.Fatalf("%q was taken", bad)
 		}

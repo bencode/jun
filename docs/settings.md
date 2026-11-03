@@ -17,6 +17,8 @@ language: zh       # en | zh; en when unset
 theme: Dracula     # a Ghostty theme's name; Jun's own when unset
 font:
   size: 14         # terminals' and file tabs' text, 8 to 40; 13 when unset
+markdown:
+  width: wide      # narrow | medium | wide | full; medium when unset
 claude:
   configDirs:      # Claude Code configuration folders Sessions lists
     - ~/.claude
@@ -34,5 +36,6 @@ Some settings have their own controls, which write the file, changing only their
 | `language` | Settings ▸ Language, or the Language menu |
 | `theme` | Settings ▸ Theme… |
 | `font.size` | ⌘+ / ⌘− / ⌘0 |
+| `markdown.width` | View ▸ Reading Width, or Reading Width in the command palette |
 
 Earlier versions kept the language, theme and text size in the layout. The first start moves them into the settings file, unless it already has its own.

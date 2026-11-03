@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/settings"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -34,6 +35,10 @@ func (a *app) applicationMenu() *mygo.Menu {
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
 			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
+			mygo.Separator(),
+			{Label: a.text("Go to Heading…", "跳转到标题…"), Accelerator: goToHeadingKeys.accelerator(), Click: action(a.goToHeading)},
+			{Label: a.text("Reading Width", "阅读宽度"), Submenu: a.widthMenu(action)},
+			mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -100,4 +105,15 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 	if m.Item(a.text("Remove This Column", "移除此列")).Disabled(len(p.Columns) == 1).Chosen() {
 		a.removeColumn(r.ID)
 	}
+}
+
+// widthMenu offers the widths Markdown pages read at, the current one
+// checked.
+func (a *app) widthMenu(action func(func()) func(*mygo.MenuItem, *mygo.Window)) []*mygo.MenuItem {
+	items := make([]*mygo.MenuItem, len(settings.MarkdownWidths))
+	for i, w := range settings.MarkdownWidths {
+		items[i] = &mygo.MenuItem{Label: a.widthLabel(w), Type: mygo.MenuItemCheckbox, Checked: a.markdownWidth() == w,
+			Click: action(func() { a.setMarkdownWidth(w) })}
+	}
+	return items
 }

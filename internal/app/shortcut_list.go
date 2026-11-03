@@ -87,6 +87,7 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"Run the highlighted item", "执行高亮项"}, keys("Enter"), inPalette},
 			{bilingual{"Close a dialog", "关闭弹窗"}, keys("Esc"), bilingual{"The command palette and other dialogs", "命令面板和其他弹窗"}},
 			{bilingual{"Review changes", "查看分支改动"}, keys(reviewChangesKeys.String()), bilingual{"Lists the project’s branches in the command palette", "在命令面板中选择改动来源"}},
+			{bilingual{"Go to heading", "跳转到标题"}, keys(goToHeadingKeys.String()), bilingual{"Lists the Markdown tab’s headings in the command palette (@)", "在命令面板中列出 Markdown 标签页的标题（@）"}},
 			{bilingual{"Larger text", "放大文字"}, keys("⌘+", "⌘="), bilingual{"Of terminals and file tabs, which share it; saved", "终端与文件标签共用字号，修改会保存"}},
 			{bilingual{"Smaller text", "缩小文字"}, keys("⌘−"), bilingual{"Of terminals and file tabs, which share it; saved", "终端与文件标签共用字号，修改会保存"}},
 			{bilingual{"Default text size", "恢复默认字号"}, keys("⌘0"), bilingual{"Back to 13", "恢复为 13"}},

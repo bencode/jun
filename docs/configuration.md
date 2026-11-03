@@ -4,7 +4,7 @@ Jun keeps two files. **Preferences** live in the settings file, which you edit. 
 
 | File | Holds | Default location | Override |
 |---|---|---|---|
-| `settings.yaml` | language, theme, text size, Claude Code folders | `~/.config/jun/settings.yaml` | `JUN_SETTINGS_PATH` |
+| `settings.yaml` | language, theme, text size, Markdown reading width, Claude Code folders | `~/.config/jun/settings.yaml` | `JUN_SETTINGS_PATH` |
 | `config.json` | projects, perspectives, regions, tabs | `~/Library/Application Support/Jun/config.json` | `JUN_CONFIG_PATH` |
 
 - The settings file is described in [Settings](settings.md).

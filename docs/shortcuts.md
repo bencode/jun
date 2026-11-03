@@ -79,6 +79,7 @@ Terminals and file tabs share one text size, from 8 to 40. Jun saves it as `font
 |---|---|
 | Command palette | ⌘K |
 | Review a branch's changes, in the palette | ⌘⇧D |
+| Go to a heading of the Markdown tab, in the palette at `@` | ⌘⇧O |
 | Move among items | ↑ / ↓ |
 | Go into the highlighted directory | Tab |
 | Run the highlighted item | Enter |

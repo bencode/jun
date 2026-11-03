@@ -66,7 +66,7 @@ func (a *app) applyPrefs(old *settings.Settings) {
 	if old == nil || old.Font.Size != p.Font.Size {
 		a.terminals.SetTextSize(p.Font.Size)
 	}
-	if old != nil && old.Language != p.Language {
+	if old != nil && (old.Language != p.Language || old.Markdown.Width != p.Markdown.Width) {
 		mygo.App.SetMenu(a.applicationMenu())
 	}
 	if old != nil && !slices.Equal(old.Claude.ConfigDirs, p.Claude.ConfigDirs) {

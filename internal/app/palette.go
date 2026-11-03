@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
@@ -22,6 +23,7 @@ type paletteItem struct {
 	detail      string // shown muted at the row's end
 	keys        string // the shortcut doing the same, shown last
 	keywords    string // matched as the title is, not shown
+	indent      int    // levels in from the start, as a heading below the top
 	run         func()
 }
 
@@ -123,6 +125,9 @@ func (a *app) paletteItems() ([]paletteItem, error) {
 		}
 		return items, nil
 	}
+	if strings.HasPrefix(q, headingPrefix) {
+		return a.headingItems(q[len(headingPrefix):]), nil
+	}
 	if !isPath(q) {
 		q = strings.ToLower(q)
 		var items []paletteItem
@@ -181,6 +186,15 @@ func (a *app) commands() []paletteItem {
 			a.state.RailExpanded = !a.state.RailExpanded
 			a.layoutChanged()
 		}},
+		{title: a.text("Go to Heading…", "跳转到标题…"), keys: goToHeadingKeys.String(), keywords: "outline heading 大纲 标题", run: a.goToHeading},
+	}
+	for _, w := range settings.MarkdownWidths {
+		item := paletteItem{title: a.text("Reading Width: ", "阅读宽度：") + a.widthLabel(w), keywords: "width reading markdown 宽度 阅读",
+			run: func() { a.setMarkdownWidth(w) }}
+		if w == a.markdownWidth() {
+			item.detail = "✓"
+		}
+		items = append(items, item)
 	}
 	for i, p := range a.state.Projects {
 		item := paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }}
@@ -225,7 +239,7 @@ func (a *app) paletteDialog(c *ui.Context) {
 		moved := p.reveal
 		p.reveal = false
 		ui.Column(c).Width(560).Gap(8).Children(func() {
-			label, placeholder := a.text("Command or directory", "命令或目录"), a.text("Type a command, or a directory such as ~/", "输入命令，或者 ~/ 这样的目录")
+			label, placeholder := a.text("Command or directory", "命令或目录"), a.text("Type a command, a directory such as ~/, or @ for headings", "输入命令、~/ 这样的目录，或 @ 跳转标题")
 			if p.themes != nil {
 				label, placeholder = a.text("Theme", "主题"), a.text("Type a theme’s name", "输入主题名称")
 			}
@@ -268,7 +282,7 @@ func (a *app) paletteDialog(c *ui.Context) {
 			ui.Scroll(c).MaxHeight(360).FillWidth().Children(func() {
 				ui.Column(c).FillWidth().Gap(2).Children(func() {
 					for i, item := range items {
-						row := ui.ButtonBase(c.Key(i)).FillWidth().Height(32).Padding(0, 10).Gap(10).Radius(6).Justify(ui.Start).
+						row := ui.ButtonBase(c.Key(i)).FillWidth().Height(32).Padding(0, 10, 0, 10+float32(item.indent)*14).Gap(10).Radius(6).Justify(ui.Start).
 							Label(item.title).Children(func() {
 							ui.Text(c, item.title).MinWidth(0).SingleLine().Ellipsis("…")
 							if item.detail != "" || item.keys != "" {
