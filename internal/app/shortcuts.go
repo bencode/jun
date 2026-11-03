@@ -30,6 +30,7 @@ var (
 	closeTabKeys       = keyCombo{ui.Super, ui.KeyW}
 	toggleSideKeys     = keyCombo{ui.Super, ui.KeyB}
 	newPerspectiveKeys = keyCombo{ui.Super | ui.Shift, ui.KeyN}
+	goToHeadingKeys    = keyCombo{ui.Super | ui.Shift, ui.KeyO}
 )
 
 // perspectiveKeys and projectKeys select the perspective or project at

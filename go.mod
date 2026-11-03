@@ -3,7 +3,7 @@ module github.com/bencode/jun
 go 1.27.3
 
 require (
-	github.com/egoist/mygo v0.7.3
+	github.com/egoist/mygo v0.7.5-0.20261103113220-afff19d9eb32
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -16,5 +16,3 @@ require (
 )
 
 tool github.com/egoist/mygo/cmd/mygo
-
-replace github.com/egoist/mygo => github.com/bencode/mygo v0.7.4-0.20261030154123-e78dff14b2cb

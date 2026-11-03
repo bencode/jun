@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -23,12 +24,18 @@ type Settings struct {
 	Font     struct {
 		Size float32 `yaml:"size,omitempty"` // terminals' and file tabs' text size in DIPs
 	} `yaml:"font,omitempty"`
+	Markdown struct {
+		Width string `yaml:"width,omitempty"` // one of MarkdownWidths; medium when empty
+	} `yaml:"markdown,omitempty"`
 	Claude struct {
 		// ConfigDirs are the Claude Code configuration directories whose
 		// sessions Sessions lists; Claude Code's own when empty.
 		ConfigDirs []string `yaml:"configDirs,omitempty"`
 	} `yaml:"claude,omitempty"`
 }
+
+// MarkdownWidths are the widths Markdown pages read at, narrowest first.
+var MarkdownWidths = []string{"narrow", "medium", "wide", "full"}
 
 // Font sizes, in DIPs.
 const MinFontSize, MaxFontSize, DefaultFontSize float32 = 8, 40, 13
@@ -40,6 +47,8 @@ const Template = `# Jun settings. Saved changes apply at once.
 # theme: ""             # a Ghostty theme's name; Jun's own when empty
 # font:
 #   size: 13            # terminals' and file tabs' text, 8 to 40
+# markdown:
+#   width: medium       # narrow | medium | wide | full
 # claude:
 #   configDirs:         # Claude Code configuration folders whose sessions
 #     - ~/.claude       # Sessions lists; Claude Code's own when none
@@ -89,6 +98,9 @@ func Parse(data []byte) (Settings, error) {
 	}
 	if s.Font.Size != 0 && (s.Font.Size < MinFontSize || s.Font.Size > MaxFontSize) {
 		return Settings{}, fmt.Errorf("font.size: %g is not between %g and %g", s.Font.Size, MinFontSize, MaxFontSize)
+	}
+	if w := s.Markdown.Width; w != "" && !slices.Contains(MarkdownWidths, w) {
+		return Settings{}, fmt.Errorf("markdown.width: %q is not one of %s", w, strings.Join(MarkdownWidths, ", "))
 	}
 	for i, dir := range s.Claude.ConfigDirs {
 		expanded, err := expand(dir)
