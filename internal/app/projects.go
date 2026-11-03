@@ -39,12 +39,16 @@ func (a *app) projectRail(c *ui.Context) {
 				// Without a home, paths show in full.
 				home, _ := os.UserHomeDir()
 				waiting := a.waitingByProject()
+				panels := a.panelsByProject()
 				for i, p := range a.state.Projects {
 					tip := p.Name + " " + p.CWD
 					if keys, ok := projectKeys(i); ok {
 						tip += "\n" + keys.String()
 					}
-					a.projectButton(c, p, waiting[p.Name], home, tip)
+					if !panels[p.Name] {
+						tip += "\n" + a.text("No open panels", "没有打开的面板")
+					}
+					a.projectButton(c, p, panels[p.Name], waiting[p.Name], home, tip)
 				}
 				add := a.text("Add Project", "添加项目")
 				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
@@ -65,7 +69,7 @@ func (a *app) projectRail(c *ui.Context) {
 // projectButton shows a project as a colored tile of its abbreviation,
 // with its name and path beside it when the rail is expanded, and marks
 // the agents waiting in it; tip is its tooltip.
-func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home, tip string) {
+func (a *app) projectButton(c *ui.Context, p *layout.Project, hasPanels bool, waiting int, home, tip string) {
 	expanded := a.state.RailExpanded
 	height := float32(40)
 	if expanded {
@@ -99,7 +103,29 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, waiting int, home,
 	if active {
 		b.Background(a.theme.SurfaceHover)
 	}
+	if !hasPanels && !active && waiting == 0 && !b.Hovered() {
+		b.Opacity(0.55)
+	}
 	b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
+}
+
+// panelsByProject excludes the fixed side views and follows a panel's
+// source project even when it has moved into another project's layout.
+func (a *app) panelsByProject() map[string]bool {
+	panels := make(map[string]bool)
+	for _, p := range a.state.Projects {
+		for _, perspective := range p.Perspectives {
+			for _, r := range perspective.Columns {
+				for _, v := range r.Views {
+					panels[v.ProjectName] = true
+				}
+			}
+			for _, v := range perspective.Bottom.Views {
+				panels[v.ProjectName] = true
+			}
+		}
+	}
+	return panels
 }
 
 // railAction quiets a secondary rail button until it is hovered.
