@@ -20,6 +20,7 @@ A project is a local directory. The project rail, at the window's left edge, lis
   - The color follows the name.
 - **Expanded rail** (click the Jun logo at the rail's top, or **Toggle Project Names** in ⌘K): adds each project's name and directory. Home shows as `~`, and long paths are cut to their last two parts.
 - **Waiting agents**: a project whose agents wait for you shows an orange dot on its tile, and their number when the rail is expanded.
+- **No open panels**: a project with no tabs in any perspective appears dimmed until hovered or selected. Fixed side-bar views and terminals without an open tab do not count; projects with waiting agents stay bright.
 - **Right-click a project**
   - **Rename Project…**: keeps its perspectives, tabs and terminals. The same name rules apply as when opening.
   - **Remove Project…**: always asks first. It closes all of the project's terminals, the agents running in them, and its views in other places. The directory stays on disk.
