@@ -11,6 +11,7 @@ import (
 	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
+	"github.com/bencode/jun/internal/tool"
 	"github.com/egoist/mygo"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
@@ -79,6 +80,7 @@ type app struct {
 	lastTerminal    terminal.ID                       // the session of the terminal last focused
 	peek            agentPeek                         // the agent in the drawer beside Global
 	route           routeState                        // where the user was, to go back and forward
+	tools           *tool.Server                      // agent tools' socket; nil when unavailable
 	viewSizes       map[terminal.ID]ui.Rect           // each terminal's view as last laid out in its tab
 	repos           map[string]*repoState             // Files' repositories, by project directory
 	trees           map[layout.ViewID]*filesViewState // Files views' trees
@@ -154,12 +156,14 @@ func Run() error {
 		a.window.OnClose(a.beforeClose)
 		a.window.OnClosed(func() {
 			close(stopAgents)
+			a.stopTools()
 			a.closePreviews()
 			a.closeTerminals()
 		})
 		a.window.OnBlur(a.saveInBackground)
 		a.window.OnHide(a.saveInBackground)
 		a.watchPrefs()
+		a.startTools(path, stopAgents)
 		a.restoreTerminals()
 		a.startAgentPoller(stopAgents)
 		a.focusCurrentPerspective()

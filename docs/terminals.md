@@ -10,6 +10,7 @@ Jun's terminals run your login shell. Agents such as Claude Code, Codex and Pi r
 - **Text size**: shared with file tabs, 13 by default. ⌘+ and ⌘− change it, ⌘0 goes back to 13, and Jun saves it as `font.size` in the [settings file](settings.md).
 - **Theme**: Jun's own, or any Ghostty theme, including those in `~/.config/ghostty/themes`. See [Settings](settings.md).
 - **No AI of its own**: Jun makes no AI API calls. It runs the CLIs you have installed.
+- **Agent tools**: each terminal has `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` set, for programs in it to ask Jun about its terminals. See [Agent tools](agent-tools.md).
 
 ## Shells keep running
 
