@@ -174,13 +174,7 @@ func TestRegionShortcutsFollowLayout(t *testing.T) {
 	press(arrow, ui.KeyRight, c1)
 	press(arrow, ui.KeyDown, bottom)
 	press(arrow, ui.KeyRight, global)
-	for _, want := range []*layout.Region{side, c1, c2, bottom, global, side} {
-		press(ui.Super, ui.KeyBracketRight, want)
-	}
-	press(ui.Super, ui.KeyBracketLeft, global)
 	a.setBottomVisible(bottom.ID, false)
-	press(ui.Super, ui.KeyBracketLeft, c2)
-	press(ui.Super, ui.KeyBracketRight, global)
 	press(arrow, ui.KeyLeft, c2)
 	press(arrow, ui.KeyDown, c2)
 	// ⌘B, the View menu's, hides the focused side region, focusing the first column, and shows it again leaving focus.

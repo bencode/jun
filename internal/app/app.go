@@ -78,6 +78,7 @@ type app struct {
 	agentViews      map[layout.ViewID]*agentsViewState
 	lastTerminal    terminal.ID                       // the session of the terminal last focused
 	peek            agentPeek                         // the agent in the drawer beside Global
+	route           routeState                        // where the user was, to go back and forward
 	viewSizes       map[terminal.ID]ui.Rect           // each terminal's view as last laid out in its tab
 	repos           map[string]*repoState             // Files' repositories, by project directory
 	trees           map[layout.ViewID]*filesViewState // Files views' trees

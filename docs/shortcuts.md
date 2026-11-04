@@ -4,7 +4,7 @@
 
 Jun follows the conventions of Ghostty, iTerm2 and web browsers. Its shortcuts use ⌘, except ⌃Tab and ⌃⇧Tab, which cycle tabs. Every other ⌃ combination reaches programs running in the terminal, such as Claude Code, Codex and vim, unchanged.
 
-The modifiers form a ladder: ⌘ for tabs, ⌘⌥ for perspectives, ⌃⌘ for projects. `[` and `]` move to the previous and next item; digits select by position.
+The modifiers form a ladder: ⌘⇧ for tabs, ⌘⌥ for perspectives, ⌃⌘ for projects, with `[` and `]` for the previous and next one; digits select by position, with ⌘ for tabs. ⌘[ and ⌘] go back and forward, as in a browser.
 
 Symbols: ⌘ Command, ⌥ Option, ⌃ Control, ⇧ Shift.
 
@@ -28,10 +28,9 @@ Closing a region’s last tab leaves the region open. A tab’s context menu als
 |---|---|
 | Focus the region to the left / right | ⌘⌥← / ⌘⌥→ |
 | Focus the region above / below | ⌘⌥↑ / ⌘⌥↓ |
-| Previous / next region | ⌘[ / ⌘] |
 | Show / hide the side bar | ⌘B |
 
-Arrow keys move by position. The side bar sits to the left of the first column and the bottom region, Global to the right of the last column. The bottom region sits below the columns; ⌘⌥↑ from the bottom region focuses the first column, and so does ⌘⌥→ from the side bar. Arrows stop at the edge. ⌘[ and ⌘] cycle through the visible regions in the order side bar, columns, bottom, Global, and wrap around. Hiding the focused side bar focuses the first column. Each perspective keeps whether its side bar shows.
+Arrow keys move by position. The side bar sits to the left of the first column and the bottom region, Global to the right of the last column. The bottom region sits below the columns; ⌘⌥↑ from the bottom region focuses the first column, and so does ⌘⌥→ from the side bar. Arrows stop at the edge. Hiding the focused side bar focuses the first column. Each perspective keeps whether its side bar shows.
 
 ## Perspectives
 
@@ -52,6 +51,17 @@ Perspectives are ordered as in the Perspective menu. Switching focuses the first
 | Open Project… (the command palette at `~/`) | ⌘O |
 
 Projects are ordered as in the project rail. Switching restores the project's selected perspective and focuses its first column.
+
+## Back and forward
+
+| Action | Shortcut |
+|---|---|
+| Back | ⌘[ |
+| Forward | ⌘] |
+
+Jun remembers where you have been: the tab you work in, in the column or bottom region focused last, across perspectives and projects. Each move there, by a click, a shortcut or the command palette, is one step, however much it switched on the way: showing a terminal of another project counts once. Focusing the side bar or Global, or peeking an agent, leaves you where you are.
+
+Closing a tab is no step: back and forward skip closed tabs, and the steps ahead stay. Moving somewhere new after going back drops the steps ahead, as in a browser. At either end, back and forward do nothing. Jun keeps the last 100 steps back until it quits.
 
 ## Files
 

@@ -92,34 +92,6 @@ func (a *app) selectTab(r *layout.Region, view layout.ViewID) {
 	a.focusRegion(r.ID)
 }
 
-// visibleRegions orders regions as ⌘[ and ⌘] cycle them: side, columns,
-// bottom, Global.
-func (a *app) visibleRegions() []*layout.Region {
-	var regions []*layout.Region
-	if p := a.state.CurrentPerspective(); p != nil {
-		if p.SideVisible {
-			regions = append(regions, p.Side)
-		}
-		regions = append(regions, p.Columns...)
-		if p.BottomVisible {
-			regions = append(regions, p.Bottom)
-		}
-	}
-	if a.state.GlobalVisible {
-		regions = append(regions, a.state.Global)
-	}
-	return regions
-}
-
-func (a *app) cycleRegion(delta int) {
-	regions := a.visibleRegions()
-	if len(regions) == 0 {
-		return
-	}
-	index := slices.Index(regions, a.targetRegion())
-	a.focusRegion(regions[(index+delta+len(regions))%len(regions)].ID)
-}
-
 func (a *app) focusDirection(d direction) {
 	if target := a.neighbor(d); target != nil {
 		a.focusRegion(target.ID)
