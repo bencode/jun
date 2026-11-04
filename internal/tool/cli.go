@@ -15,7 +15,8 @@ import (
 )
 
 const usage = "usage: jun tool help | terminals | screen <id> [--lines N] |\n" +
-	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward"
+	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
+	"  send <id> <text> | send <id> -"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
 change what it shows.
@@ -63,9 +64,20 @@ Changing what Jun shows, for the user to see something:
   jun tool back | forward
       One step through where the user has been, as ⌘[ and ⌘] go.
 
+Sending:
+  jun tool send <id> <text>
+  jun tool send <id> -
+      Submits the text to the agent in the terminal, as pasted then
+      Enter: line breaks stay in one message. With -, the text is
+      standard input. Line breaks at its end go; at most 1 MiB. Any agent
+      takes it, whatever it is doing, the caller's own too; a terminal
+      running no agent does not. Prints nothing once the agent works,
+      else "sent, not started yet" after 5 seconds.
+
   Names match whatever their case. Jun changes what it shows only for the
   terminal the user is with: the one shown in the peek drawer, or else
-  the terminal last focused; and not while a dialog waits for the user.
+  the terminal last focused, whose last input came from the user rather
+  than from send; and not while a dialog waits for the user.
   A change done prints nothing, or what it leaves pending.
 
 Environment, set in each of Jun's terminals:
@@ -89,8 +101,8 @@ var errHelp = errors.New("help")
 
 // Main runs jun tool with args, the words after "tool", returning the
 // exit status.
-func Main(args []string, stdout, stderr io.Writer, getenv func(string) string) int {
-	req, err := parse(args)
+func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(string) string) int {
+	req, err := parse(args, stdin)
 	if errors.Is(err, errHelp) {
 		fmt.Fprint(stdout, help)
 		return 0
@@ -132,7 +144,7 @@ func Main(args []string, stdout, stderr io.Writer, getenv func(string) string) i
 	return 0
 }
 
-func parse(args []string) (Request, error) {
+func parse(args []string, stdin io.Reader) (Request, error) {
 	if len(args) == 0 {
 		return Request{}, errors.New("no command")
 	}
@@ -151,6 +163,9 @@ func parse(args []string) (Request, error) {
 	}
 	if command == "close" && len(rest) == 1 {
 		return parseClose(rest[0])
+	}
+	if command == "send" {
+		return parseSend(rest, stdin)
 	}
 	if command != "screen" {
 		return Request{}, fmt.Errorf("unknown command or arguments: %q", args)
@@ -194,6 +209,35 @@ func parseOpen(args []string) (Request, error) {
 		return Request{}, fmt.Errorf("%s takes no %q: --peek goes with terminal:, --in <perspective> with diff:, once each", args[0], flag)
 	}
 	return req, nil
+}
+
+func parseSend(args []string, stdin io.Reader) (Request, error) {
+	if len(args) != 2 {
+		return Request{}, errors.New("send takes a terminal id and a text, or - for standard input")
+	}
+	id, err := strconv.ParseUint(args[0], 10, 64)
+	if err != nil || id == 0 {
+		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[0])
+	}
+	text := args[1]
+	if text == "-" {
+		// A line break at the end may come beyond MaxText, as it goes; read
+		// one byte more than that allows, to tell a longer text.
+		const room = len("\r\n")
+		b, err := io.ReadAll(io.LimitReader(stdin, int64(MaxText+room+1)))
+		if err != nil {
+			return Request{}, fmt.Errorf("read standard input: %w", err)
+		}
+		if len(b) > MaxText+room {
+			return Request{}, fmt.Errorf("text must be at most %d bytes", MaxText)
+		}
+		text = string(b)
+	}
+	text = strings.TrimRight(text, "\r\n")
+	if strings.TrimSpace(text) == "" || len(text) > MaxText {
+		return Request{}, fmt.Errorf("text must be 1 to %d bytes, not blank", MaxText)
+	}
+	return Request{Op: OpSend, Terminal: id, Text: text}, nil
 }
 
 func parseClose(arg string) (Request, error) {

@@ -30,8 +30,12 @@ func socketPath(t *testing.T) string {
 }
 
 func run(path string, args ...string) (int, string, string) {
+	return runWith(path, "", args...)
+}
+
+func runWith(path, stdin string, args ...string) (int, string, string) {
 	var stdout, stderr bytes.Buffer
-	code := Main(args, &stdout, &stderr, func(name string) string {
+	code := Main(args, strings.NewReader(stdin), &stdout, &stderr, func(name string) string {
 		if name == EnvAPI {
 			return path
 		}
@@ -54,10 +58,16 @@ func TestMainUsage(t *testing.T) {
 		{"open", "peek"}, {"open", "peek:1"}, {"open", "diff:7", "--peek"}, {"open", "terminal:7", "--in", "Review"},
 		{"open", "diff:7", "--in"}, {"open", "diff:7", "--in", "A", "--in", "B"}, {"open", "terminal:7", "--peek", "--peek"},
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
+		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
+		{"send", "3", strings.Repeat("x", MaxText+1)},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
 		}
+	}
+	// Standard input beyond the limit is refused, not cut to it.
+	if code, _, stderr := runWith("/nowhere", strings.Repeat("x", MaxText)+"\n\n\n", "send", "3", "-"); code != 2 || !strings.Contains(stderr, "at most") {
+		t.Errorf("long standard input: exit %d, %q", code, stderr)
 	}
 	if code, _, stderr := run("", "terminals"); code != 1 || !strings.Contains(stderr, EnvAPI+" is not set") {
 		t.Fatalf("without JUN_API: %d %q", code, stderr)
@@ -125,9 +135,16 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "back"); code != 0 || out != "" {
 		t.Fatalf("back: %d %q", code, out)
 	}
+	if code, _, _ := run(path, "send", "3", "a\nb\n"); code != 0 {
+		t.Fatalf("send: %d", code)
+	}
+	if code, _, _ := runWith(path, "x\n", "send", "3", "-"); code != 0 {
+		t.Fatalf("send from standard input: %d", code)
+	}
 	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
-		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack}}
+		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
+		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
 	}

@@ -88,6 +88,9 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		}
 		return resp
 	}
+	if req.Op == tool.OpSend {
+		return a.handleSend(stop, onUI, req)
+	}
 	if req.Op != tool.OpScreen {
 		return tool.Response{Error: fmt.Sprintf("unknown op %q", req.Op)}
 	}
@@ -103,6 +106,33 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		return tool.Response{Error: err.Error()}
 	}
 	return tool.Response{Screen: tool.Tail(source.Text(), req.Lines)}
+}
+
+// handleSend sends, then waits up to a few seconds for the agent to work,
+// as its status, polled every second, tells.
+func (a *app) handleSend(stop <-chan struct{}, onUI func(func()) bool, req tool.Request) tool.Response {
+	var err error
+	if !onUI(func() { err = a.toolSend(req) }) {
+		return tool.Response{Error: "Jun is closing"}
+	}
+	if err != nil {
+		return tool.Response{Error: err.Error()}
+	}
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); {
+		working := false
+		if !onUI(func() { working = a.agentWorking(terminal.ID(req.Terminal)) }) {
+			return tool.Response{Error: "Jun is closing"}
+		}
+		if working {
+			return tool.Response{}
+		}
+		select {
+		case <-time.After(200 * time.Millisecond):
+		case <-stop:
+			return tool.Response{Error: "Jun is closing"}
+		}
+	}
+	return tool.Response{Message: "sent, not started yet"}
 }
 
 // awaitRepo waits, up to a few seconds, for the branches of a Diff
