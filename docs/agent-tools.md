@@ -1,6 +1,6 @@
 # Agent Tools
 
-Programs in Jun's terminals, agents above all, can ask the Jun that runs them about its terminals, and change what it shows, with `jun tool`. An agent you work with, in a project of its own, can then see what the other agents are doing, read their screens, and bring you a terminal or a branch's changes to look at. Jun gives the tools only; how an agent uses them, as a coordinator or otherwise, is up to the instructions or skill you give it.
+Programs in Jun's terminals, agents above all, can ask the Jun that runs them about its terminals, and change what it shows, with `jun tool`. An agent you work with, in a project of its own, can then see what the other agents are doing, read their screens, bring you a terminal or a branch's changes to look at, and pass a message on to another agent. Jun gives the tools only; how an agent uses them, as a coordinator or otherwise, is up to the instructions or skill you give it.
 
 `"$JUN_BIN" tool help` prints what this page says, for an agent to read.
 
@@ -14,6 +14,7 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
+| `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
 
 Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 
@@ -71,10 +72,18 @@ A review, for instance, takes two calls: `open diff:7 --in Review`, and once you
 `open`, `close`, `back` and `forward` change what you see, so Jun runs them only:
 
 - **For the terminal you are with**: the one shown in the peek drawer, or else the terminal you last focused. Otherwise: `the user is not with you`.
+- **When you spoke to it last**: an agent whose last input came from `send` rather than your keys or a paste changes nothing until you type in its terminal. Otherwise: `your last input came from another agent, not the user`.
 - **While no dialog waits for you**: the command palette, a form, a confirmation, an error or the shortcuts panel. Otherwise: `Jun is waiting for the user`.
 - **On another terminal**: a terminal cannot open or close itself (`that is your own terminal`).
 
 Opening another terminal gives it the focus, so you are then with that terminal: the caller's next change is refused until you come back to it.
+
+### send
+
+- The text goes in as a paste, then Enter, as when you paste a message and submit it: its line breaks stay in one message. Checked with Claude Code 2.1.318, Codex 0.166.0 and Pi 1.5.0.
+- With `-`, the text is standard input, for long or multi-line messages. Line breaks at its end go; at most 1 MiB.
+- Any agent takes it, whatever it is doing, the caller's own terminal too. A terminal running no agent does not: text there would run as a command.
+- Once sent, Jun waits up to 5 seconds for the agent to work. If it does not by then, `send` prints `sent, not started yet`, still with status 0.
 
 ## Environment
 

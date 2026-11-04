@@ -12,6 +12,7 @@ import (
 
 	"github.com/bencode/jun/internal/theme"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/transfer"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -24,6 +25,9 @@ type Session struct {
 	Terminal    *ghostty.Terminal
 	report      string
 	shellPID    int
+	// sent tells that the last input came from Send, not from the user's
+	// keys or pastes.
+	sent bool
 }
 
 type Store struct {
@@ -123,6 +127,7 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	if s.env != nil {
 		env = s.env(id)
 	}
+	session := &Session{ID: id, ProjectName: projectName, CWD: cwd, report: report}
 	term, err := ghostty.New(ghostty.Options{
 		Command: shellCommand(report), Dir: cwd, Env: env, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		// ⌘K is Jun's command palette; Control+L clears the screen. ⇧⌘D
@@ -138,9 +143,14 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 		},
 		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
 		OnKey: func(mods ui.Modifiers, key ui.Key) bool {
+			session.sent = false
 			if key == ui.KeyEscape && mods == 0 && s.escaped != nil {
 				s.escaped(id)
 			}
+			return false
+		},
+		OnPaste: func(transfer.Data) bool {
+			session.sent = false
 			return false
 		},
 	})
@@ -148,7 +158,7 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 		return nil, err
 	}
 	s.nextID = id
-	session := &Session{ID: id, ProjectName: projectName, CWD: cwd, Terminal: term, report: report}
+	session.Terminal = term
 	s.sessions = append(s.sessions, session)
 	return session, nil
 }
@@ -173,6 +183,18 @@ func (s *Store) ForProject(projectName string) []*Session {
 	}
 	return result
 }
+
+// Send submits text to the program as the user would paste it, then press
+// Enter: bracketed when the program asks, so that its line breaks stay in
+// one message.
+func (s *Session) Send(text string) {
+	s.Terminal.Paste(text)
+	s.Terminal.Send([]byte("\r"))
+	s.sent = true
+}
+
+// Sent tells that the last input came from Send, not from the user.
+func (s *Session) Sent() bool { return s.sent }
 
 // Exited reports whether the shell ran and has ended, whatever its exit code:
 // a shell's code is only the status of its last command. A shell that could

@@ -19,6 +19,7 @@ const (
 const (
 	DefaultLines = 40
 	MaxLines     = 500
+	MaxText      = 1 << 20 // the bytes send takes
 )
 
 type Op string
@@ -30,6 +31,7 @@ const (
 	OpClose     Op = "close"
 	OpBack      Op = "back"
 	OpForward   Op = "forward"
+	OpSend      Op = "send"
 )
 
 type TargetKind string
@@ -58,6 +60,7 @@ type Request struct {
 	// selected, or made when there is none.
 	In   string `json:"in,omitempty"`
 	Peek bool   `json:"peek,omitempty"` // open terminal: in the peek drawer
+	Text string `json:"text,omitempty"` // send: to submit, its line breaks kept
 }
 
 type Response struct {
