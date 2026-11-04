@@ -89,6 +89,12 @@ func shellCommand(report string) []string {
 	return []string{"/bin/zsh", "-fc", `print -r -- $$ > $1; exec -a "-${2:t}" $2`, "jun-shell", report, shell}
 }
 
+// programCommand runs argv after its process writes its ID to report, as
+// shellCommand does.
+func programCommand(report string, argv []string) []string {
+	return append([]string{"/bin/zsh", "-fc", `print -r -- $$ > $1; shift; exec "$@"`, "jun-program", report}, argv...)
+}
+
 // ShellPID returns the process ID of the session's shell once it reported it.
 func (s *Session) ShellPID() (int, bool) {
 	if s.shellPID == 0 {
@@ -106,6 +112,22 @@ func (s *Session) ShellPID() (int, bool) {
 }
 
 func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, error) {
+	return s.create(projectName, cwd, shellCommand, invalidate)
+}
+
+// CreateRunning is Create with the terminal running argv rather than the
+// login shell. argv's process reports its ID as a shell does, for it and
+// its children to be told as the terminal's.
+func (s *Store) CreateRunning(projectName, cwd string, argv []string, invalidate func()) (*Session, error) {
+	if len(argv) == 0 {
+		return nil, errors.New("no program to run")
+	}
+	return s.create(projectName, cwd, func(report string) []string { return programCommand(report, argv) }, invalidate)
+}
+
+// create starts the command that command(report) makes, its process
+// writing its ID to report.
+func (s *Store) create(projectName, cwd string, command func(report string) []string, invalidate func()) (*Session, error) {
 	if cwd == "" || !filepath.IsAbs(cwd) {
 		return nil, fmt.Errorf("terminal directory must be absolute: %q", cwd)
 	}
@@ -129,7 +151,7 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	}
 	session := &Session{ID: id, ProjectName: projectName, CWD: cwd, report: report}
 	term, err := ghostty.New(ghostty.Options{
-		Command: shellCommand(report), Dir: cwd, Env: env, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
+		Command: command(report), Dir: cwd, Env: env, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		// ⌘K is Jun's command palette; Control+L clears the screen. ⇧⌘D
 		// reviews changes, where Ghostty would split. ⌘+, ⌘− and ⌘0 change
 		// Jun's text size, of all terminals and file tabs.

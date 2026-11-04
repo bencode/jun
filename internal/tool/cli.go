@@ -8,15 +8,13 @@ import (
 	"io"
 	"net"
 	"os"
-	"slices"
-	"strconv"
-	"strings"
 	"time"
 )
 
 const usage = "usage: jun tool help | terminals | screen <id> [--lines N] |\n" +
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
-	"  send <id> <text> | send <id> -"
+	"  send <id> <text> | send <id> - |\n" +
+	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
 change what it shows.
@@ -64,6 +62,12 @@ Changing what Jun shows, for the user to see something:
   jun tool back | forward
       One step through where the user has been, as ⌘[ and ⌘] go.
 
+  Names match whatever their case. Jun changes what it shows only for the
+  terminal the user is with: the one shown in the peek drawer, or else
+  the terminal last focused, whose last input came from the user rather
+  than from send; and not while a dialog waits for the user.
+  A change done prints nothing, or what it leaves pending.
+
 Sending:
   jun tool send <id> <text>
   jun tool send <id> -
@@ -74,11 +78,25 @@ Sending:
       running no agent does not. Prints nothing once the agent works,
       else "sent, not started yet" after 5 seconds.
 
-  Names match whatever their case. Jun changes what it shows only for the
-  terminal the user is with: the one shown in the peek drawer, or else
-  the terminal last focused, whose last input came from the user rather
-  than from send; and not while a dialog waits for the user.
-  A change done prints nothing, or what it leaves pending.
+Running commands, each in a terminal of its own, in the caller's
+project, with no tab unless asked for:
+  jun tool run [--dir <path>] [--open] <command…>
+      Starts a terminal in the directory (default: the current one) and
+      types the command into its shell, which stays once the command
+      ends. Prints the terminal's id. --open shows it in a tab, focused,
+      as open does, for the terminal the user is with only.
+  jun tool loop <every> [--dir <path>] <command…>
+      Runs the command again and again in a terminal of its own, every
+      interval (90s, 5m, 1h: at least 1m) after a run ends, with
+      $SHELL -l -c, as a script runs: write absolute paths or $JUN_BIN.
+      Each run shows its time and exit status there. Prints the loop's
+      id, its terminal's.
+  jun tool loop
+      The loops, as a JSON array: id, every, command, project, dir.
+  jun tool loop cancel <id>
+      Ends the loop and its terminal; Control-C in it does too.
+  The words of a command are joined by spaces into one command line, as
+  ssh joins them: quote a command whose own quotes must stay.
 
 Environment, set in each of Jun's terminals:
   JUN_API       the socket of the Jun that runs the terminal; nothing else
@@ -125,155 +143,42 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 		fmt.Fprintf(stderr, "jun tool: %s\n", resp.Error)
 		return 1
 	}
-	if req.Op == OpScreen {
-		fmt.Fprint(stdout, resp.Screen)
-		return 0
-	}
-	if req.Op != OpTerminals {
-		if resp.Message != "" {
-			fmt.Fprintln(stdout, resp.Message)
-		}
-		return 0
-	}
-	out, err := json.MarshalIndent(append([]Terminal{}, resp.Terminals...), "", "  ")
-	if err != nil {
+	if err := output(stdout, req.Op, resp); err != nil {
 		fmt.Fprintf(stderr, "jun tool: %v\n", err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "%s\n", out)
 	return 0
 }
 
-func parse(args []string, stdin io.Reader) (Request, error) {
-	if len(args) == 0 {
-		return Request{}, errors.New("no command")
+// output writes what an op answers: text, an id, JSON, or what a change
+// leaves pending.
+func output(w io.Writer, op Op, resp Response) error {
+	var err error
+	if op == OpScreen {
+		_, err = fmt.Fprint(w, resp.Screen)
+		return err
 	}
-	command, rest := args[0], args[1:]
-	if command == "help" && len(rest) == 0 {
-		return Request{}, errHelp
+	if op == OpRun || op == OpLoop {
+		_, err = fmt.Fprintln(w, resp.Terminal)
+		return err
 	}
-	if command == "terminals" && len(rest) == 0 {
-		return Request{Op: OpTerminals}, nil
-	}
-	if (command == "back" || command == "forward") && len(rest) == 0 {
-		return Request{Op: Op(command)}, nil
-	}
-	if command == "open" && len(rest) > 0 {
-		return parseOpen(rest)
-	}
-	if command == "close" && len(rest) == 1 {
-		return parseClose(rest[0])
-	}
-	if command == "send" {
-		return parseSend(rest, stdin)
-	}
-	if command != "screen" {
-		return Request{}, fmt.Errorf("unknown command or arguments: %q", args)
-	}
-	if len(rest) != 1 && (len(rest) != 3 || rest[1] != "--lines") {
-		return Request{}, fmt.Errorf("screen takes a terminal id and optionally --lines N")
-	}
-	id, err := strconv.ParseUint(rest[0], 10, 64)
-	if err != nil || id == 0 {
-		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", rest[0])
-	}
-	lines := DefaultLines
-	if len(rest) == 3 {
-		lines, err = strconv.Atoi(rest[2])
-		if err != nil || lines < 1 || lines > MaxLines {
-			return Request{}, fmt.Errorf("--lines must be 1 to %d: %q", MaxLines, rest[2])
+	var list any
+	if op == OpTerminals {
+		list = append([]Terminal{}, resp.Terminals...)
+	} else if op == OpLoops {
+		list = append([]Loop{}, resp.Loops...)
+	} else {
+		if resp.Message != "" {
+			_, err = fmt.Fprintln(w, resp.Message)
 		}
+		return err
 	}
-	return Request{Op: OpScreen, Terminal: id, Lines: lines}, nil
-}
-
-func parseOpen(args []string) (Request, error) {
-	target, err := parseTarget(args[0])
+	out, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
-		return Request{}, err
+		return err
 	}
-	req := Request{Op: OpOpen, Target: &target}
-	if target.Kind == TargetPeek {
-		return Request{}, errors.New("open takes no peek: open terminal:<id> --peek peeks a terminal")
-	}
-	for rest := args[1:]; len(rest) > 0; {
-		flag := rest[0]
-		if flag == "--peek" && target.Kind == TargetTerminal && !req.Peek {
-			req.Peek, rest = true, rest[1:]
-			continue
-		}
-		if flag == "--in" && target.Kind == TargetDiff && req.In == "" && len(rest) > 1 && strings.TrimSpace(rest[1]) != "" {
-			req.In, rest = strings.TrimSpace(rest[1]), rest[2:]
-			continue
-		}
-		return Request{}, fmt.Errorf("%s takes no %q: --peek goes with terminal:, --in <perspective> with diff:, once each", args[0], flag)
-	}
-	return req, nil
-}
-
-func parseSend(args []string, stdin io.Reader) (Request, error) {
-	if len(args) != 2 {
-		return Request{}, errors.New("send takes a terminal id and a text, or - for standard input")
-	}
-	id, err := strconv.ParseUint(args[0], 10, 64)
-	if err != nil || id == 0 {
-		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[0])
-	}
-	text := args[1]
-	if text == "-" {
-		// A line break at the end may come beyond MaxText, as it goes; read
-		// one byte more than that allows, to tell a longer text.
-		const room = len("\r\n")
-		b, err := io.ReadAll(io.LimitReader(stdin, int64(MaxText+room+1)))
-		if err != nil {
-			return Request{}, fmt.Errorf("read standard input: %w", err)
-		}
-		if len(b) > MaxText+room {
-			return Request{}, fmt.Errorf("text must be at most %d bytes", MaxText)
-		}
-		text = string(b)
-	}
-	text = strings.TrimRight(text, "\r\n")
-	if strings.TrimSpace(text) == "" || len(text) > MaxText {
-		return Request{}, fmt.Errorf("text must be 1 to %d bytes, not blank", MaxText)
-	}
-	return Request{Op: OpSend, Terminal: id, Text: text}, nil
-}
-
-func parseClose(arg string) (Request, error) {
-	target, err := parseTarget(arg)
-	if err != nil {
-		return Request{}, err
-	}
-	if target.Kind == TargetProject {
-		return Request{}, errors.New("close takes no project")
-	}
-	return Request{Op: OpClose, Target: &target}, nil
-}
-
-// parseTarget reads kind:value, or peek.
-func parseTarget(arg string) (Target, error) {
-	if arg == string(TargetPeek) {
-		return Target{Kind: TargetPeek}, nil
-	}
-	kind, value, ok := strings.Cut(arg, ":")
-	target := Target{Kind: TargetKind(kind)}
-	if !ok || !slices.Contains([]TargetKind{TargetTerminal, TargetDiff, TargetProject, TargetPerspective}, target.Kind) {
-		return Target{}, fmt.Errorf("target must be terminal:<id>, diff:<id>, project:<name>, perspective:<name> or peek: %q", arg)
-	}
-	if target.Kind == TargetProject || target.Kind == TargetPerspective {
-		target.Name = strings.TrimSpace(value)
-		if target.Name == "" {
-			return Target{}, fmt.Errorf("%s needs a name", kind)
-		}
-		return target, nil
-	}
-	id, err := strconv.ParseUint(value, 10, 64)
-	if err != nil || id == 0 {
-		return Target{}, fmt.Errorf("terminal id must be a positive integer: %q", value)
-	}
-	target.ID = id
-	return target, nil
+	_, err = fmt.Fprintf(w, "%s\n", out)
+	return err
 }
 
 func call(path string, req Request) (resp Response, err error) {

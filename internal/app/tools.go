@@ -71,19 +71,13 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		}
 	}
 	closing := tool.Response{Error: "Jun is closing"}
-	if req.Op == tool.OpTerminals {
-		var terminals []tool.Terminal
-		if !onUI(func() { terminals = a.toolTerminals(callers) }) {
-			return closing
-		}
-		return tool.Response{Terminals: terminals}
+	layout := slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op)
+	if layout && !a.awaitRepo(stop, onUI, req.Target, callers) {
+		return closing
 	}
-	if slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op) {
-		if !a.awaitRepo(stop, onUI, req.Target, callers) {
-			return closing
-		}
+	if answer, ok := a.uiAnswers(req, callers)[req.Op]; ok {
 		var resp tool.Response
-		if !onUI(func() { resp = a.toolLayout(req, callers) }) {
+		if !onUI(func() { resp = answer() }) {
 			return closing
 		}
 		return resp
@@ -106,6 +100,34 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		return tool.Response{Error: err.Error()}
 	}
 	return tool.Response{Screen: tool.Tail(source.Text(), req.Lines)}
+}
+
+// uiAnswers answer the ops that one call on the UI thread does.
+func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool.Response {
+	outcome := func(err error) tool.Response {
+		if err != nil {
+			return tool.Response{Error: err.Error()}
+		}
+		return tool.Response{}
+	}
+	started := func(id terminal.ID, err error) tool.Response {
+		if err != nil {
+			return outcome(err)
+		}
+		return tool.Response{Terminal: uint64(id)}
+	}
+	layout := func() tool.Response { return a.toolLayout(req, callers) }
+	return map[tool.Op]func() tool.Response{
+		tool.OpTerminals:  func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers)} },
+		tool.OpOpen:       layout,
+		tool.OpClose:      layout,
+		tool.OpBack:       layout,
+		tool.OpForward:    layout,
+		tool.OpRun:        func() tool.Response { return started(a.toolRun(req, callers)) },
+		tool.OpLoop:       func() tool.Response { return started(a.toolLoop(req, callers)) },
+		tool.OpLoops:      func() tool.Response { return tool.Response{Loops: a.toolLoops()} },
+		tool.OpCancelLoop: func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
+	}
 }
 
 // handleSend sends, then waits up to a few seconds for the agent to work,
