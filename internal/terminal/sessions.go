@@ -33,6 +33,7 @@ type Store struct {
 	theme      *ghostty.Theme
 	textSize   float32 // 0 for Ghostty's own
 	escaped    func(ID)
+	env        func(ID) []string
 }
 
 // NewStore keeps sessions whose shells report their process IDs in
@@ -61,6 +62,9 @@ func (s *Store) SetTextSize(size float32) {
 		session.Terminal.SetFont(ghostty.Font{Size: size})
 	}
 }
+
+// SetEnv adds env(id) to the environment of each session created later.
+func (s *Store) SetEnv(env func(ID) []string) { s.env = env }
 
 // Theme returns the sessions' theme.
 func (s *Store) Theme() *ghostty.Theme { return s.theme }
@@ -115,8 +119,12 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 	}
 	id := s.nextID + 1
 	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(id), 10))
+	var env []string
+	if s.env != nil {
+		env = s.env(id)
+	}
 	term, err := ghostty.New(ghostty.Options{
-		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
+		Command: shellCommand(report), Dir: cwd, Env: env, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		// ⌘K is Jun's command palette; Control+L clears the screen. ⇧⌘D
 		// reviews changes, where Ghostty would split. ⌘+, ⌘− and ⌘0 change
 		// Jun's text size, of all terminals and file tabs.
