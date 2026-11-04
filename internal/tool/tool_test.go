@@ -94,8 +94,10 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &terminals); code != 0 || err != nil || len(terminals) != 1 || !terminals[0].Self {
 		t.Fatalf("terminals: %d %q %v", code, out, err)
 	}
-	// The caller is this process, by the system's word, with its ancestors.
-	if len(callers) < 2 || callers[0] != os.Getpid() || !slices.Contains(callers, os.Getppid()) {
+	// The caller is this process, by the system's word, with its ancestors
+	// before launchd.
+	ppid := os.Getppid()
+	if len(callers) == 0 || callers[0] != os.Getpid() || ppid > 1 && !slices.Contains(callers, ppid) {
 		t.Fatalf("callers %v, want %d then its ancestors", callers, os.Getpid())
 	}
 	if code, out, _ := run(path, "screen", "3", "--lines", "2"); code != 0 || out != "a\nb\n" {
