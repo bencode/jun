@@ -4,6 +4,16 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 
 `"$JUN_BIN" tool help` prints what this page says, for an agent to read.
 
+## As a skill
+
+The [`jun-coordinator`](../skills/jun-coordinator/SKILL.md) skill teaches an agent these tools: when to use them, the common work, and the pitfalls. It follows the [Agent Skills](https://agentskills.io) format, which Claude Code, Codex and Pi read. Install it for your user with the [skills](https://github.com/vercel-labs/skills) CLI:
+
+```sh
+npx skills add bencode/jun -g
+```
+
+Or copy `skills/jun-coordinator` to `~/.claude/skills/` for Claude Code (`$CLAUDE_CONFIG_DIR/skills/` when that is set), or to `~/.agents/skills/` for Codex and Pi.
+
 ## Commands
 
 | Command | Output |
