@@ -89,12 +89,20 @@ func (a *app) shortcuts(c *ui.Context) {
 		}
 	})
 	c.OnShortcut(closeTabKeys.mods, closeTabKeys.key, func() {
+		if a.peek.id != 0 {
+			a.closePeek()
+			return
+		}
 		if r := a.targetRegion(); r != nil && r.Active != 0 && !a.state.Fixed(r.ID) {
 			a.closeView(r.ID, r.Active)
 		}
 	})
 	// ⌘B, ⌘K, ⌘O and ⌘⇧D belong to the menu bar (applicationMenu), which
 	// takes them before the view, dialogs open or not.
+	c.OnShortcut(peekKeys.mods, peekKeys.key, a.peekNext)
+	if a.peek.id != 0 {
+		c.OnShortcut(ui.Super, ui.KeyEnter, a.openPeekedTab)
+	}
 	c.OnShortcut(ui.Super, ui.KeyP, a.searchFiles)
 	c.OnShortcut(ui.Super, ui.KeyEqual, func() { a.setTextSize(a.textSize() + 1) })
 	c.OnShortcut(ui.Super|ui.Shift, ui.KeyEqual, func() { a.setTextSize(a.textSize() + 1) })

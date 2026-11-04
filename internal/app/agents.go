@@ -12,6 +12,7 @@ import (
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/ui"
 )
 
 type agentInfo struct {
@@ -68,6 +69,7 @@ func (a *app) agentJob() agentJob {
 		}
 	}
 	a.closeStalePreviews()
+	maps.DeleteFunc(a.viewSizes, func(id terminal.ID, _ ui.Rect) bool { return a.terminals.Get(id) == nil })
 	for id, p := range a.previews {
 		if job.sources[id] != nil && time.Since(p.seen) < 2*agentPollInterval {
 			job.previews[id] = p

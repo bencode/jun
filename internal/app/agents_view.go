@@ -190,7 +190,10 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Elem
 	if info.Status == agent.Waiting {
 		row.Background(a.statusColor(agent.Waiting).Alpha(0.14))
 	}
-	row.OnClick(func() { a.revealSession(s.ID) }).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
+	if s.ID == a.peek.id {
+		row.Border(2, a.theme.Accent)
+	}
+	row.OnClick(a.agentClick(row, s.ID)).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
 	return row
 }
 
@@ -209,8 +212,12 @@ func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
 	if info.Status == agent.Waiting {
 		border = a.statusColor(agent.Waiting)
 	}
+	width := float32(1)
+	if s.ID == a.peek.id {
+		width, border = 2, a.theme.Accent
+	}
 	card := ui.ButtonBase(c.Key(s.ID)).Fill().Column().AlignItems(ui.Stretch).Gap(6).Padding(8).Radius(8).
-		Border(1, border).Background(a.theme.Surface).Label(a.agentLabel(s))
+		Border(width, border).Background(a.theme.Surface).Label(a.agentLabel(s))
 	current := s.ID == a.lastTerminal
 	card.Children(func() {
 		heading := ui.Row(c).FillWidth().Height(32).Gap(10).Padding(0, 4).Radius(4).AlignItems(ui.Center).
@@ -224,7 +231,21 @@ func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
 			ui.Box(c).Absolute().Top(0).Left(8).Right(8).Height(2).Background(a.theme.Accent)
 		}
 	})
-	card.OnClick(func() { a.revealSession(s.ID) }).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
+	card.OnClick(a.agentClick(card, s.ID)).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
+}
+
+// agentClick peeks the agent, or closes the drawer peeking it; with ⌘
+// held, it shows its tab.
+func (a *app) agentClick(e ui.Element, id terminal.ID) func() {
+	return func() {
+		if e.ClickModifiers()&ui.Super != 0 {
+			a.revealSession(id)
+		} else if id == a.peek.id {
+			a.closePeek()
+		} else {
+			a.peekAgent(id)
+		}
+	}
 }
 
 // cardScreen shows a live copy of the agent's screen.
@@ -251,6 +272,9 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, c
 		ui.Text(c, a.agentTitle(s)).SingleLine().Ellipsis("…")
 		ui.Text(c, s.ProjectName+" · "+agentName(info.Kind)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
 	})
+	if s.ID == a.peek.id {
+		ui.Text(c, a.text("Peeking", "查看中")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
+	}
 	if current {
 		ui.Text(c, a.text("Current", "当前")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}

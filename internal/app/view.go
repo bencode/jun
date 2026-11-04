@@ -7,6 +7,7 @@ import (
 
 func (a *app) view(c *ui.Context) {
 	a.focusedTerminal = 0
+	a.dropStalePeek()
 	c.SetTheme(a.theme)
 	ui.Row(c).Fill().Gap(0).AlignItems(ui.Stretch).Children(func() {
 		a.projectRail(c)
@@ -29,6 +30,7 @@ func (a *app) view(c *ui.Context) {
 		}
 	})
 	a.shortcuts(c)
+	a.peekOverlay(c, a.workArea(c))
 	a.settingsShortcut(c)
 	a.syncReadingMenu()
 	a.paletteDialog(c)
@@ -47,6 +49,18 @@ func (a *app) view(c *ui.Context) {
 		c.Invalidate()
 	}
 	a.autosave(c)
+}
+
+// workArea is the window right of the project rail, left of Global when
+// it shows, as the split laid it out.
+func (a *app) workArea(c *ui.Context) ui.Rect {
+	width, height := c.Size()
+	x := a.projectRailWidth()
+	width -= x
+	if a.state.GlobalVisible {
+		width = (width - 1) * a.state.CenterPercent / 100
+	}
+	return ui.Rect{X: x, W: width, H: height}
 }
 
 func (a *app) center(c *ui.Context, width float32) {

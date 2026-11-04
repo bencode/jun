@@ -32,6 +32,7 @@ type Store struct {
 	runtimeDir string
 	theme      *ghostty.Theme
 	textSize   float32 // 0 for Ghostty's own
+	escaped    func(ID)
 }
 
 // NewStore keeps sessions whose shells report their process IDs in
@@ -39,6 +40,10 @@ type Store struct {
 func NewStore(runtimeDir string) *Store {
 	return &Store{runtimeDir: runtimeDir, theme: theme.JunTerminal()}
 }
+
+// OnEscape sees Escape typed into a session's terminal; the program still
+// gets it.
+func (s *Store) OnEscape(fn func(ID)) { s.escaped = fn }
 
 // SetTheme gives the sessions, and those created later, the theme.
 func (s *Store) SetTheme(t *ghostty.Theme) {
@@ -108,7 +113,8 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 			invalidate()
 		}
 	}
-	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(s.nextID+1), 10))
+	id := s.nextID + 1
+	report := filepath.Join(s.runtimeDir, strconv.FormatUint(uint64(id), 10))
 	term, err := ghostty.New(ghostty.Options{
 		Command: shellCommand(report), Dir: cwd, Theme: s.theme, Font: ghostty.Font{Size: s.textSize}, Padding: ghostty.Padding{X: 12, Y: 8}, Scrollback: 10 << 20,
 		// ⌘K is Jun's command palette; Control+L clears the screen. ⇧⌘D
@@ -123,12 +129,18 @@ func (s *Store) Create(projectName, cwd string, invalidate func()) (*Session, er
 			{Mods: ui.Super, Key: ui.Key0, Action: ghostty.ActionNone},
 		},
 		OnTitle: func(string) { notify() }, OnExit: func(int) { notify() },
+		OnKey: func(mods ui.Modifiers, key ui.Key) bool {
+			if key == ui.KeyEscape && mods == 0 && s.escaped != nil {
+				s.escaped(id)
+			}
+			return false
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	s.nextID++
-	session := &Session{ID: s.nextID, ProjectName: projectName, CWD: cwd, Terminal: term, report: report}
+	s.nextID = id
+	session := &Session{ID: id, ProjectName: projectName, CWD: cwd, Terminal: term, report: report}
 	s.sessions = append(s.sessions, session)
 	return session, nil
 }

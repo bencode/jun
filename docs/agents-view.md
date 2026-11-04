@@ -34,6 +34,19 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 ## Actions
 
-- **Click an agent** to show its terminal tab, switching project and perspective as needed.
+- **Click an agent** to [peek](#peek) at it.
+- **⌘-click an agent** to show its terminal tab, switching project and perspective as needed.
   - When its tab was closed, the terminal reopens in its project, in the column or bottom region you focused last.
 - **Right-click an agent** → **Review Changes** opens a [Diff](diff.md) of the branch the agent works on. This is offered for agents of the current project.
+
+## Peek
+
+Peek opens an agent's terminal in a drawer that slides out of Global's edge, so you can answer it without leaving the project and perspective you are in. The rest of the work area dims; Global stays bright, and its card for the agent says **Peeking**.
+
+- **⌘J** peeks the first waiting agent. Pressed again, it moves to the next waiting one. On the last, the drawer's button reads **Close ⌘J**, and ⌘J closes it. With none waiting, ⌘J peeks the current agent.
+- **Keys**: ⌘ shortcuts stay Jun's. Every other key goes to the agent, as in any terminal, **Esc** too: the drawer's header says **Esc → agent**, and after Esc it shows for a moment how to close the drawer.
+- **Closing**: ✕, ⌘W, a click on the dimmed work area, or a click on the agent's card again. The focus goes back to where it was.
+- **Open Tab ⌘↩** shows the agent's tab, as ⌘-click does. **Next ⌘J** goes to the next waiting agent.
+- **Size**: the drawer is as tall as the work area, and as wide as the agent's tab, up to 62% of the work area (or 560 points where that is more). An agent from a wider tab redraws at the drawer's width, and again back in its tab.
+- When the agent's tab is already on screen, a peek focuses the tab instead.
+- The drawer closes when Jun moves the focus elsewhere, such as on switching project or perspective, and when the agent quits.
