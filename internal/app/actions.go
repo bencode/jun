@@ -56,20 +56,23 @@ func (a *app) closeView(region layout.RegionID, view layout.ViewID) {
 	a.closeKnownView(region, view)
 }
 
-// closeKnownView closes a view that is in the region.
+// closeKnownView closes a view that is in the region. Focusing the region
+// is no move, so what lies ahead in the route history stays.
 func (a *app) closeKnownView(region layout.RegionID, view layout.ViewID) {
-	err := a.state.CloseView(view)
-	a.report(err)
-	if err == nil {
-		a.layoutChanged()
-		delete(a.scroll, view)
-		delete(a.bindings, view)
-		delete(a.terminalErrors, view)
-		if a.countSettingsViews(0) == 0 {
-			a.settingsTab = nil // the next settings tab reads the file anew
+	a.quietly(func() {
+		err := a.state.CloseView(view)
+		a.report(err)
+		if err == nil {
+			a.layoutChanged()
+			delete(a.scroll, view)
+			delete(a.bindings, view)
+			delete(a.terminalErrors, view)
+			if a.countSettingsViews(0) == 0 {
+				a.settingsTab = nil // the next settings tab reads the file anew
+			}
+			a.focusRegion(region)
 		}
-		a.focusRegion(region)
-	}
+	})
 }
 
 func (a *app) report(err error) {

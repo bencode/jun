@@ -48,6 +48,7 @@ func (a *app) view(c *ui.Context) {
 	if a.reapExitedTerminals(a.focusedTerminal) {
 		c.Invalidate()
 	}
+	a.sampleRoute()
 	a.autosave(c)
 }
 

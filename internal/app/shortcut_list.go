@@ -51,12 +51,14 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"Focus the region left / right / above / below", "聚焦左 / 右 / 上 / 下方的区域"}, keys("⌘⌥← / ⌘⌥→ / ⌘⌥↑ / ⌘⌥↓"), bilingual{
 				"By position, stopping at the edge; up from the bottom region and right from the side bar focus the first column",
 				"按布局移动，到边界停止；从底部区域向上、从侧边栏向右都到第一列"}},
-			{bilingual{"Next region", "下一个区域"}, keys("⌘]"), bilingual{
-				"Side bar, columns, bottom, Global, wrapping around and skipping hidden ones", "按侧边栏、各列、底部、Global 循环，跳过隐藏区域"}},
-			{bilingual{"Previous region", "上一个区域"}, keys("⌘["), bilingual{
-				"Side bar, columns, bottom, Global, wrapping around and skipping hidden ones", "按侧边栏、各列、底部、Global 循环，跳过隐藏区域"}},
 			{bilingual{"Show or hide the side bar", "展开或收起侧边栏"}, keys(toggleSideKeys.String()), bilingual{
 				"Of the current perspective; a menu bar shortcut, so it works while a dialog is open", "当前视角；属于菜单栏快捷键，弹窗打开时也生效"}},
+		}},
+		{bilingual{"Navigation", "导航"}, []shortcutRow{
+			{bilingual{"Back", "后退"}, keys("⌘["), bilingual{
+				"To where you were before, across tabs, perspectives and projects; skips closed tabs",
+				"回到之前所在的位置，可跨标签、视角和项目；跳过已关闭的标签"}},
+			{bilingual{"Forward", "前进"}, keys("⌘]"), bilingual{"After going back", "后退之后再前进"}},
 		}},
 		{bilingual{"Perspectives", "视角"}, []shortcutRow{
 			{bilingual{"Next perspective", "下一个视角"}, keys("⌘⌥]"), bilingual{"In the current project, wrapping around; focuses the first column", "当前项目内循环，切换后聚焦第一列"}},
