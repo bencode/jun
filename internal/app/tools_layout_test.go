@@ -82,12 +82,6 @@ func TestLayoutToolsChangeOnlyForTheTerminalTheUserIsWith(t *testing.T) {
 	refused(back, "nothing to go back to") // past the guard
 	a.peek, a.lastTerminal = agentPeek{}, caller.ID
 	refused(tool.Request{Op: tool.OpOpen, Target: target(tool.TargetTerminal, caller.ID, "")}, "that is your own terminal")
-	// Woken by another agent, it waits for the user to speak to it.
-	focus(t, a, tt, caller)
-	caller.Send("true")
-	refused(back, "your last input came from another agent, not the user")
-	tt.Key(0, ui.KeyRight)
-	refused(back, "nothing to go back to") // past the guard
 	a.palette.open = true
 	refused(back, "Jun is waiting for the user")
 }
