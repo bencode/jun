@@ -63,6 +63,16 @@ Projects are ordered as in the project rail. Switching restores the project's se
 
 ⌘P shows the side bar, chooses Files and focuses its search field. It does nothing until a project is open.
 
+## Agents
+
+| Action | Shortcut |
+|---|---|
+| Peek the next waiting agent; with none waiting, the current agent | ⌘J |
+| Show the peeked agent's tab | ⌘↩ |
+| Close the peek | ⌘W |
+
+While an agent is peeked, Esc and every other key without ⌘ go to the agent. See [Agents](agents-view.md#peek).
+
 ## Text size
 
 | Action | Shortcut |

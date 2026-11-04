@@ -77,6 +77,8 @@ type app struct {
 	agentPolling    bool
 	agentViews      map[layout.ViewID]*agentsViewState
 	lastTerminal    terminal.ID                       // the session of the terminal last focused
+	peek            agentPeek                         // the agent in the drawer beside Global
+	viewSizes       map[terminal.ID]ui.Rect           // each terminal's view as last laid out in its tab
 	repos           map[string]*repoState             // Files' repositories, by project directory
 	trees           map[layout.ViewID]*filesViewState // Files views' trees
 	fileViews       map[layout.ViewID]*fileViewState  // what file views read
@@ -90,13 +92,15 @@ type app struct {
 }
 
 func newApp(runtimeDir string) *app {
-	return &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
+	a := &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
-		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{},
+		agents: map[terminal.ID]agentInfo{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{}, viewSizes: map[terminal.ID]ui.Rect{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
 		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},
 		diffs: map[layout.ViewID]*diffViewState{}}
+	a.terminals.OnEscape(a.peekEscaped)
+	return a
 }
 
 func Run() error {

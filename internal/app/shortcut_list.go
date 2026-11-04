@@ -32,6 +32,7 @@ func shortcutGroups() []shortcutGroup {
 	inRegion := bilingual{"In the active region, wrapping around", "当前区域内循环"}
 	inPalette := bilingual{"In the command palette", "在命令面板中"}
 	inSearch := bilingual{"In Files’ search field", "在 Files 搜索框中"}
+	inPeek := bilingual{"While an agent is peeked; switches project and perspective as needed", "Peek 打开时；按需切换项目和视角"}
 	scrollback := bilingual{"The scrollback; a full-screen program, such as vim, gets the keys", "滚动回看内容；vim 等全屏程序中按键交给程序"}
 	return []shortcutGroup{
 		{bilingual{"Tabs", "标签"}, []shortcutRow{
@@ -73,6 +74,14 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"Search files", "搜索文件"}, keys("⌘P"), bilingual{"Shows the side bar’s Files and focuses its search field", "展开侧边栏的 Files 并聚焦搜索框"}},
 			{bilingual{"Preview the first match", "预览首个匹配文件"}, keys("↓"), inSearch},
 			{bilingual{"Open the first match in a tab", "在标签中打开首个匹配文件"}, keys("Enter"), inSearch},
+		}},
+		{bilingual{"Agents", "Agents"}, []shortcutRow{
+			{bilingual{"Peek the next waiting agent", "Peek 下一个等待的 agent"}, keys(peekKeys.String()), bilingual{
+				"In a drawer beside Global; with none waiting, the current agent. Again goes on, and closes once no other waits",
+				"在 Global 旁的抽屉中显示；没有等待的 agent 时显示当前 agent。再按切到下一个，没有其他等待时关闭"}},
+			{bilingual{"Show the peeked agent’s tab", "显示 Peek 中 agent 的标签"}, keys("⌘↩"), inPeek},
+			{bilingual{"Close the peek", "关闭 Peek"}, keys(closeTabKeys.String()), bilingual{
+				"Esc goes to the agent; ✕, a click beside the drawer or on the agent's card close it too", "Esc 发给 agent；点 ✕、抽屉外的区域或 agent 的卡片也会关闭"}},
 		}},
 		{bilingual{"Terminal", "终端"}, []shortcutRow{
 			{bilingual{"Copy / paste / select all", "复制 / 粘贴 / 全选"}, keys("⌘C / ⌘V / ⌘A"), bilingual{}},

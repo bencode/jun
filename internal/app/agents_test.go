@@ -96,7 +96,7 @@ func TestAgentsLayoutChoice(t *testing.T) {
 	}
 }
 
-func TestAgentClickRevealsTabAcrossProjects(t *testing.T) {
+func TestAgentCommandClickRevealsTabAcrossProjects(t *testing.T) {
 	a, tt, _ := agentsApp(t)
 	jun := a.state.CurrentProject()
 	review := jun.Perspectives[1]
@@ -106,14 +106,16 @@ func TestAgentClickRevealsTabAcrossProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	click(t, tt, a.agentLabel(a.sessionFor(view.ID)))
+	if err := tt.ClickWith(ui.Super, a.agentLabel(a.sessionFor(view.ID))); err != nil {
+		t.Fatal(err)
+	}
 	if a.state.CurrentProject() != jun || a.state.CurrentPerspective() != review || !review.BottomVisible ||
 		review.Bottom.Active != view.ID || !tt.Focused(contentLabel(a, view)) {
 		t.Fatal("click did not reveal and focus the agent's tab")
 	}
 }
 
-func TestAgentClickReopensClosedTabInItsProject(t *testing.T) {
+func TestAgentCommandClickReopensClosedTabInItsProject(t *testing.T) {
 	a, tt, _ := agentsApp(t)
 	jun := a.state.CurrentProject()
 	hidden, err := a.terminals.Create("Jun", jun.CWD, nil)
@@ -125,7 +127,9 @@ func TestAgentClickReopensClosedTabInItsProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	click(t, tt, a.agentLabel(hidden))
+	if err := tt.ClickWith(ui.Super, a.agentLabel(hidden)); err != nil {
+		t.Fatal(err)
+	}
 	column := a.state.CurrentPerspective().Columns[0]
 	view := column.Views[len(column.Views)-1]
 	if a.state.CurrentProject() != jun || column.Active != view.ID || a.bindings[view.ID] != hidden.ID ||

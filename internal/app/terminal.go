@@ -55,6 +55,10 @@ func (a *app) terminalView(c *ui.Context, v *layout.View) {
 	if session := a.sessionFor(v.ID); session != nil {
 		element := ghostty.View(c.Key(v.ID), session.Terminal).Fill().
 			Label(fmt.Sprintf("%s %d", a.text("Terminal content", "终端内容"), session.ID))
+		// Peek shows the terminal at this size, for its grid to stay.
+		if size := element.LayoutBounds(); size.W > 0 && size.H > 0 {
+			a.viewSizes[session.ID] = size
+		}
 		if requested {
 			element.Focus()
 			a.pendingFocus = 0
