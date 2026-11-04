@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // socketPath is short: a socket's path has a limit that t.TempDir's
@@ -60,6 +61,9 @@ func TestMainUsage(t *testing.T) {
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
 		{"send", "3", strings.Repeat("x", MaxText+1)},
+		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
+		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
+		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
@@ -92,6 +96,12 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		if req.Op == OpClose {
 			return Response{Message: "waiting for the user to confirm"}
 		}
+		if req.Op == OpRun || req.Op == OpLoop {
+			return Response{Terminal: 12}
+		}
+		if req.Op == OpLoops {
+			return Response{Loops: []Loop{{ID: 12, Every: "5m", Command: "echo hi"}}}
+		}
 		if req.Op != OpTerminals {
 			return Response{}
 		}
@@ -109,6 +119,10 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		t.Fatalf("socket mode: %v %v", info, err)
 	}
 
+	here, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
 	code, out, _ := run(path, "terminals")
 	var terminals []Terminal
 	if err := json.Unmarshal([]byte(out), &terminals); code != 0 || err != nil || len(terminals) != 1 || !terminals[0].Self {
@@ -141,10 +155,26 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, _, _ := runWith(path, "x\n", "send", "3", "-"); code != 0 {
 		t.Fatalf("send from standard input: %d", code)
 	}
+	if code, out, _ := run(path, "run", "--open", "codex", "--full-auto"); code != 0 || out != "12\n" {
+		t.Fatalf("run: %d %q", code, out)
+	}
+	if code, out, _ := run(path, "loop", "5m", "--dir", "sub", "echo", "hi"); code != 0 || out != "12\n" {
+		t.Fatalf("loop: %d %q", code, out)
+	}
+	var loops []Loop
+	if code, out, _ := run(path, "loop"); code != 0 || json.Unmarshal([]byte(out), &loops) != nil || len(loops) != 1 {
+		t.Fatalf("loops: %d %q", code, out)
+	}
+	if code, out, _ := run(path, "loop", "cancel", "12"); code != 0 || out != "" {
+		t.Fatalf("loop cancel: %d %q", code, out)
+	}
 	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
 		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
-		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"}}
+		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"},
+		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
+		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
+		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
 	}

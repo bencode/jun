@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 )
 
 const (
@@ -25,14 +26,21 @@ const (
 type Op string
 
 const (
-	OpTerminals Op = "terminals"
-	OpScreen    Op = "screen"
-	OpOpen      Op = "open"
-	OpClose     Op = "close"
-	OpBack      Op = "back"
-	OpForward   Op = "forward"
-	OpSend      Op = "send"
+	OpTerminals  Op = "terminals"
+	OpScreen     Op = "screen"
+	OpOpen       Op = "open"
+	OpClose      Op = "close"
+	OpBack       Op = "back"
+	OpForward    Op = "forward"
+	OpSend       Op = "send"
+	OpRun        Op = "run"
+	OpLoop       Op = "loop"        // registers one
+	OpLoops      Op = "loops"       // lists them
+	OpCancelLoop Op = "cancel-loop" // the one of Request.Terminal
 )
+
+// MinEvery is the shortest interval a loop takes.
+const MinEvery = time.Minute
 
 type TargetKind string
 
@@ -61,13 +69,30 @@ type Request struct {
 	In   string `json:"in,omitempty"`
 	Peek bool   `json:"peek,omitempty"` // open terminal: in the peek drawer
 	Text string `json:"text,omitempty"` // send: to submit, its line breaks kept
+	// Command is the shell command line run and loop run, in Dir, an
+	// absolute path.
+	Command string        `json:"command,omitempty"`
+	Dir     string        `json:"dir,omitempty"`
+	Open    bool          `json:"open,omitempty"`  // run: in a tab, focused
+	Every   time.Duration `json:"every,omitempty"` // loop: at least MinEvery, in whole seconds
 }
 
 type Response struct {
 	Error     string     `json:"error,omitempty"`
 	Terminals []Terminal `json:"terminals,omitempty"`
 	Screen    string     `json:"screen,omitempty"`
-	Message   string     `json:"message,omitempty"` // what a change done leaves pending, such as the user's confirmation
+	Message   string     `json:"message,omitempty"`  // what a change done leaves pending, such as the user's confirmation
+	Terminal  uint64     `json:"terminal,omitempty"` // run, loop: the new terminal, which is the loop's id
+	Loops     []Loop     `json:"loops,omitempty"`
+}
+
+// Loop is a command Jun runs again and again in a terminal of its own.
+type Loop struct {
+	ID      uint64 `json:"id"` // its terminal's
+	Every   string `json:"every"`
+	Command string `json:"command"`
+	Project string `json:"project"`
+	Dir     string `json:"dir"`
 }
 
 type Terminal struct {

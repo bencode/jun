@@ -1,6 +1,6 @@
 # Agent Tools
 
-Programs in Jun's terminals, agents above all, can ask the Jun that runs them about its terminals, and change what it shows, with `jun tool`. An agent you work with, in a project of its own, can then see what the other agents are doing, read their screens, bring you a terminal or a branch's changes to look at, and pass a message on to another agent. Jun gives the tools only; how an agent uses them, as a coordinator or otherwise, is up to the instructions or skill you give it.
+Programs in Jun's terminals, agents above all, can ask the Jun that runs them about its terminals, and change what it shows, with `jun tool`. An agent you work with, in a project of its own, can then see what the other agents are doing, read their screens, bring you a terminal or a branch's changes to look at, pass a message on to another agent, and run commands in terminals of their own, once or again and again. Jun gives the tools only; how an agent uses them, as a coordinator or otherwise, is up to the instructions or skill you give it.
 
 `"$JUN_BIN" tool help` prints what this page says, for an agent to read.
 
@@ -15,6 +15,10 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
+| `jun tool run [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
+| `jun tool loop <every> [--dir <path>] <command…>` | Runs the command every interval in a terminal of its own. Prints the loop's id. |
+| `jun tool loop` | The loops, as a JSON array |
+| `jun tool loop cancel <id>` | Ends the loop and its terminal. Prints nothing. |
 
 Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 
@@ -84,6 +88,38 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - With `-`, the text is standard input, for long or multi-line messages. Line breaks at its end go; at most 1 MiB.
 - Any agent takes it, whatever it is doing, the caller's own terminal too. A terminal running no agent does not: text there would run as a command.
 - Once sent, Jun waits up to 5 seconds for the agent to work. If it does not by then, `send` prints `sent, not started yet`, still with status 0.
+
+### run and loop
+
+Both run a command in a terminal of the caller's project, in `--dir`, by default the caller's current directory. The terminal has no tab: `open terminal:<id>` shows it, and `terminals` lists it.
+
+- **The command**: the words after the options, joined by spaces into one command line, as `ssh` joins them. Quote a command whose own quotes must stay: `run 'git commit -m "a b"'`.
+- **run** types the command into a new shell, as if you had, so your shell's configuration applies; the shell stays once the command ends. `run codex` starts Codex there. With `--open`, the terminal shows in a tab, focused, under the same rules as `open`.
+- **loop** runs the command again and again, each run the interval after the one before ends, so that runs never overlap. The interval is written as `90s`, `5m` or `1h`, at least `1m`.
+  - It runs with `$SHELL -l -c`, as a script runs: your login files apply, not `.zshrc`. Write absolute paths, or `"$JUN_BIN"`.
+  - Each run shows in the loop's terminal with its time and exit status.
+  - A loop's id is its terminal's, for `screen` and `open` too.
+- **Ending a loop**: `loop cancel <id>`, Control-C in its terminal, or quitting Jun. Loops are not saved.
+
+Jun runs what it is asked: a loop may run `run`, or start another loop. A loop that sends to an agent wakes it as `send` does:
+
+```sh
+"$JUN_BIN" tool loop 10m "$JUN_BIN" tool send 7 "'How is it going? Report anything blocking you.'"
+```
+
+### loop
+
+```json
+[
+  {
+    "id": 12,
+    "every": "10m",
+    "command": "/path/to/jun tool send 7 'How is it going?'",
+    "project": "web",
+    "dir": "/path/to/web"
+  }
+]
+```
 
 ## Environment
 
