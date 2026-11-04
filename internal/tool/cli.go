@@ -64,8 +64,7 @@ Changing what Jun shows, for the user to see something:
 
   Names match whatever their case. Jun changes what it shows only for the
   terminal the user is with: the one shown in the peek drawer, or else
-  the terminal last focused, whose last input came from the user rather
-  than from send; and not while a dialog waits for the user.
+  the terminal last focused; and not while a dialog waits for the user.
   A change done prints nothing, or what it leaves pending.
 
 Sending:

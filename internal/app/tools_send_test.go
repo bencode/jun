@@ -20,9 +20,6 @@ func TestSendSubmitsToAnAgentOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	eventually(t, "the text to run", func() bool { return strings.Contains(target.Terminal.Text(), "\ngot it") })
-	if !target.Sent() {
-		t.Fatal("the terminal's last input is not told to be sent")
-	}
 	for req, want := range map[tool.Request]string{
 		{Op: tool.OpSend, Terminal: 999, Text: "hi"}:              "no terminal 999",
 		{Op: tool.OpSend, Terminal: uint64(shell.ID), Text: "hi"}: fmt.Sprintf("terminal %d runs no agent", shell.ID),

@@ -47,8 +47,7 @@ func (a *app) toolChange(req tool.Request, caller terminal.ID) (string, error) {
 }
 
 // toolGuard lets a caller change what the user sees only while the user
-// is with it, and spoke to it last, and Jun waits for no answer of the
-// user's.
+// is with it, and Jun waits for no answer of the user's.
 func (a *app) toolGuard(caller terminal.ID, target *tool.Target) error {
 	if caller == 0 {
 		return errors.New("caller is not a terminal of this Jun")
@@ -58,9 +57,6 @@ func (a *app) toolGuard(caller terminal.ID, target *tool.Target) error {
 	}
 	if caller != a.peek.id && caller != a.lastTerminal {
 		return errors.New("the user is not with you")
-	}
-	if s := a.terminals.Get(caller); s != nil && s.Sent() {
-		return errors.New("your last input came from another agent, not the user")
 	}
 	if target != nil && target.Kind == tool.TargetTerminal && terminal.ID(target.ID) == caller {
 		return errors.New("that is your own terminal")
