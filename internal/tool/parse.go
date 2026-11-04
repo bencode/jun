@@ -195,7 +195,7 @@ func parseCommand(args []string, req *Request, open bool) error {
 			req.Open, args = true, args[1:]
 			continue
 		}
-		if flag == "--dir" && !dirSet && len(args) > 1 {
+		if flag == "--dir" && !dirSet && len(args) > 1 && args[1] != "" {
 			dir, dirSet, args = args[1], true, args[2:]
 			continue
 		}

@@ -104,7 +104,7 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 
 // uiAnswers answer the ops that one call on the UI thread does.
 func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool.Response {
-	failed := func(err error) tool.Response {
+	outcome := func(err error) tool.Response {
 		if err != nil {
 			return tool.Response{Error: err.Error()}
 		}
@@ -112,7 +112,7 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 	}
 	started := func(id terminal.ID, err error) tool.Response {
 		if err != nil {
-			return failed(err)
+			return outcome(err)
 		}
 		return tool.Response{Terminal: uint64(id)}
 	}
@@ -126,7 +126,7 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpRun:        func() tool.Response { return started(a.toolRun(req, callers)) },
 		tool.OpLoop:       func() tool.Response { return started(a.toolLoop(req, callers)) },
 		tool.OpLoops:      func() tool.Response { return tool.Response{Loops: a.toolLoops()} },
-		tool.OpCancelLoop: func() tool.Response { return failed(a.toolCancelLoop(terminal.ID(req.Terminal))) },
+		tool.OpCancelLoop: func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
 	}
 }
 

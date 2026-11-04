@@ -61,7 +61,7 @@ func TestMainUsage(t *testing.T) {
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
 		{"send", "3", strings.Repeat("x", MaxText+1)},
-		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
+		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--dir", "", "x"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
 		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
 	} {
