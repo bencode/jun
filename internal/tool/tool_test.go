@@ -50,6 +50,10 @@ func TestMainUsage(t *testing.T) {
 	for _, args := range [][]string{
 		{"help", "me"}, {"terminal"}, {"terminals", "1"}, {"screen"}, {"screen", "0"}, {"screen", "x"},
 		{"screen", "1", "--lines"}, {"screen", "1", "--lines", "0"}, {"screen", "1", "--lines", "501"}, {"screen", "1", "-n", "5"},
+		{"open"}, {"open", "7"}, {"open", "terminal:0"}, {"open", "terminal:x"}, {"open", "project: "}, {"open", "file:a"},
+		{"open", "peek"}, {"open", "peek:1"}, {"open", "diff:7", "--peek"}, {"open", "terminal:7", "--in", "Review"},
+		{"open", "diff:7", "--in"}, {"open", "diff:7", "--in", "A", "--in", "B"}, {"open", "terminal:7", "--peek", "--peek"},
+		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
@@ -74,6 +78,12 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		}
 		if req.Op == OpScreen {
 			return Response{Screen: "a\nb\n"}
+		}
+		if req.Op == OpClose {
+			return Response{Message: "waiting for the user to confirm"}
+		}
+		if req.Op != OpTerminals {
+			return Response{}
 		}
 		return Response{Terminals: []Terminal{{ID: 3, Project: "Jun", Agent: "claude", Status: "idle", Self: true}}}
 	})
@@ -106,7 +116,18 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, _, stderr := run(path, "screen", "9"); code != 1 || stderr != "jun tool: no terminal 9\n" {
 		t.Fatalf("refused: %d %q", code, stderr)
 	}
-	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines}}
+	if code, out, _ := run(path, "open", "diff:7", "--in", " Review "); code != 0 || out != "" {
+		t.Fatalf("open: %d %q", code, out)
+	}
+	if code, out, _ := run(path, "close", "perspective:Review"); code != 0 || out != "waiting for the user to confirm\n" {
+		t.Fatalf("close: %d %q", code, out)
+	}
+	if code, out, _ := run(path, "back"); code != 0 || out != "" {
+		t.Fatalf("back: %d %q", code, out)
+	}
+	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
+		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
+		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
 	}

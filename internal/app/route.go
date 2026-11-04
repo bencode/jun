@@ -45,13 +45,18 @@ func (a *app) routeBack() { a.step(layout.History.GoBack) }
 
 func (a *app) routeForward() { a.step(layout.History.GoForward) }
 
-func (a *app) step(move func(layout.History, layout.Location) (layout.History, layout.Location, bool)) {
+// step moves through the route history, telling whether there was
+// somewhere to go.
+func (a *app) step(move func(layout.History, layout.Location) (layout.History, layout.Location, bool)) bool {
+	moved := false
 	a.quietly(func() {
-		if history, to, ok := move(a.route.history, a.location()); ok {
-			a.route.history = history
+		history, to, ok := move(a.route.history, a.location())
+		if ok {
+			a.route.history, moved = history, true
 			a.goTo(to)
 		}
 	})
+	return moved
 }
 
 // goTo makes the location current and focuses it, as revealSession does.

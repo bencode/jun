@@ -2,11 +2,13 @@ package app
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
@@ -76,6 +78,16 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		}
 		return tool.Response{Terminals: terminals}
 	}
+	if slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op) {
+		if !a.awaitRepo(stop, onUI, req.Target, callers) {
+			return closing
+		}
+		var resp tool.Response
+		if !onUI(func() { resp = a.toolLayout(req, callers) }) {
+			return closing
+		}
+		return resp
+	}
 	if req.Op != tool.OpScreen {
 		return tool.Response{Error: fmt.Sprintf("unknown op %q", req.Op)}
 	}
@@ -91,6 +103,51 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		return tool.Response{Error: err.Error()}
 	}
 	return tool.Response{Screen: tool.Tail(source.Text(), req.Lines)}
+}
+
+// awaitRepo waits, up to a few seconds, for the branches of a Diff
+// target's repository to be read, as Jun reads them in the background
+// once a project's repository is first asked for. Jun reads them again
+// once when the terminal is in none of the worktrees read: agents make
+// worktrees as they go. Only for a caller the guard lets through.
+// False: Jun closed.
+func (a *app) awaitRepo(stop <-chan struct{}, onUI func(func()) bool, target *tool.Target, callers []int) bool {
+	if target == nil || target.Kind != tool.TargetDiff {
+		return true
+	}
+	reread := false
+	loading := func() bool {
+		if a.toolGuard(a.toolCaller(callers), target) != nil {
+			return false // refused as it is, at once
+		}
+		s, err := a.toolTerminal(target.ID)
+		if err != nil {
+			return false
+		}
+		_, err = a.toolDiffSource(s)
+		if errors.Is(err, errNoWorktree) && !reread {
+			reread = true
+			dir := a.project(s.ProjectName).CWD
+			a.refreshRepo(a.repoFor(dir), dir)
+			return true
+		}
+		return errors.Is(err, errRepoLoading)
+	}
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); {
+		still := false
+		if !onUI(func() { still = loading() }) {
+			return false
+		}
+		if !still {
+			return true
+		}
+		select {
+		case <-time.After(100 * time.Millisecond):
+		case <-stop:
+			return false
+		}
+	}
+	return true // the change itself then says the repository is still loading
 }
 
 // toolTerminals lists the running terminals by id.
