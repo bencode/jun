@@ -76,7 +76,6 @@ A review, for instance, takes two calls: `open diff:7 --in Review`, and once you
 `open`, `close`, `back` and `forward` change what you see, so Jun runs them only:
 
 - **For the terminal you are with**: the one shown in the peek drawer, or else the terminal you last focused. Otherwise: `the user is not with you`.
-- **When you spoke to it last**: an agent whose last input came from `send` rather than your keys or a paste changes nothing until you type in its terminal. Otherwise: `your last input came from another agent, not the user`.
 - **While no dialog waits for you**: the command palette, a form, a confirmation, an error or the shortcuts panel. Otherwise: `Jun is waiting for the user`.
 - **On another terminal**: a terminal cannot open or close itself (`that is your own terminal`).
 
