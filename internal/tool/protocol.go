@@ -1,6 +1,7 @@
 // Package tool lets programs in Jun's terminals, agents above all, ask the
-// Jun that runs them about its terminals: `jun tool …` talks to Jun over a
-// Unix socket, one JSON request and one JSON response a connection.
+// Jun that runs them about its terminals and change what it shows:
+// `jun tool …` talks to Jun over a Unix socket, one JSON request and one
+// JSON response a connection.
 package tool
 
 import (
@@ -25,18 +26,45 @@ type Op string
 const (
 	OpTerminals Op = "terminals"
 	OpScreen    Op = "screen"
+	OpOpen      Op = "open"
+	OpClose     Op = "close"
+	OpBack      Op = "back"
+	OpForward   Op = "forward"
 )
 
+type TargetKind string
+
+const (
+	TargetTerminal    TargetKind = "terminal"    // by ID
+	TargetDiff        TargetKind = "diff"        // the changes of the branch a terminal, by ID, is on
+	TargetProject     TargetKind = "project"     // by Name
+	TargetPerspective TargetKind = "perspective" // by Name, in the current project
+	TargetPeek        TargetKind = "peek"        // closing only
+)
+
+// Target is what open and close act on.
+type Target struct {
+	Kind TargetKind `json:"kind"`
+	ID   uint64     `json:"id,omitempty"`
+	Name string     `json:"name,omitempty"`
+}
+
 type Request struct {
-	Op       Op     `json:"op"`
-	Terminal uint64 `json:"terminal,omitempty"` // screen
-	Lines    int    `json:"lines,omitempty"`    // screen, 1 to MaxLines
+	Op       Op      `json:"op"`
+	Terminal uint64  `json:"terminal,omitempty"` // screen
+	Lines    int     `json:"lines,omitempty"`    // screen, 1 to MaxLines
+	Target   *Target `json:"target,omitempty"`   // open, close
+	// In is the perspective a Diff opens in, of the terminal's project:
+	// selected, or made when there is none.
+	In   string `json:"in,omitempty"`
+	Peek bool   `json:"peek,omitempty"` // open terminal: in the peek drawer
 }
 
 type Response struct {
 	Error     string     `json:"error,omitempty"`
 	Terminals []Terminal `json:"terminals,omitempty"`
 	Screen    string     `json:"screen,omitempty"`
+	Message   string     `json:"message,omitempty"` // what a change done leaves pending, such as the user's confirmation
 }
 
 type Terminal struct {

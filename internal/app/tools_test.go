@@ -69,7 +69,7 @@ func TestToolTerminalsTellTheCallerAndSkipExited(t *testing.T) {
 func TestTerminalsInheritNoOtherJunsTools(t *testing.T) {
 	a, _ := testApp(t)
 	t.Setenv(tool.EnvAPI, "/other/jun.sock") // as in another Jun's terminal
-	a.startTools("", nil)                     // no tools served
+	a.startTools("", nil)                    // no tools served
 	s, err := a.terminals.Create("Jun", a.state.CurrentProject().CWD, nil)
 	if err != nil {
 		t.Fatal(err)
