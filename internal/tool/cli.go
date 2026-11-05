@@ -57,6 +57,8 @@ Changing what Jun shows, for the user to see something:
       diff:<id> --in <perspective>
                            first switches to that perspective of the
                            terminal's project, made when there is none
+      file:<path>          opens the file in a tab of its own, read-only,
+                           wherever it is; opened again, reads it again
       project:<name>       switches to the project
       perspective:<name>   switches to the perspective of the current
                            project, made when there is none
@@ -64,6 +66,7 @@ Changing what Jun shows, for the user to see something:
       terminal:<id>        closes its tab in the current perspective; the
                            shell keeps running
       diff:<id>            closes the Diff of its branch there
+      file:<path>          closes its tab there
       peek                 closes the peek drawer
       perspective:<name>   deletes the perspective; with terminals in it,
                            Jun asks the user to confirm, and says so

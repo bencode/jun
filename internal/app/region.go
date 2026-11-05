@@ -46,6 +46,10 @@ func (a *app) region(c *ui.Context, r *layout.Region) {
 		body := ui.Column(c).Key("body").Grow(1).FillWidth().MinHeight(0)
 		if !fixed {
 			a.drop(body, r.ID, 0)
+			if paths := body.DroppedFiles(); paths != nil {
+				a.openDroppedFiles(r.ID, paths)
+				c.Invalidate()
+			}
 		}
 		body.Children(func() {
 			if len(views) == 0 && !fixed {

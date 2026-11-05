@@ -17,6 +17,15 @@
 - **⟳** reads the branches and worktrees again.
 - Files highlights the row of the file in the current tab.
 
+## Files outside the project
+
+Any file can open in a tab, wherever it is, in two ways:
+
+- **Drag it from Finder** onto a region's tab content: a file, a Diff, or an empty region. Each file opens in a tab of its own. Dropped on a terminal, a file goes to the terminal as its path; dropped on the rail, only a directory opens.
+- **An agent** runs [`jun tool open file:<path>`](agent-tools.md#open-and-close).
+
+A file in one of the project's worktrees shows as if opened in Files. Any other is read from its directory: it is read again when it is opened again, not as it changes, and its images and links reach only that directory and those below it.
+
 ## Opening files
 
 - **Click** a file to show it in a preview tab, in the column or bottom region you focused last. The next click replaces the preview.

@@ -55,8 +55,8 @@ func TestMainUsage(t *testing.T) {
 	for _, args := range [][]string{
 		{"help", "me"}, {"terminal"}, {"terminals", "1"}, {"watch", "1"}, {"screen"}, {"screen", "0"}, {"screen", "x"},
 		{"screen", "1", "--lines"}, {"screen", "1", "--lines", "0"}, {"screen", "1", "--lines", "501"}, {"screen", "1", "-n", "5"},
-		{"open"}, {"open", "7"}, {"open", "terminal:0"}, {"open", "terminal:x"}, {"open", "project: "}, {"open", "file:a"},
-		{"open", "peek"}, {"open", "peek:1"}, {"open", "diff:7", "--peek"}, {"open", "terminal:7", "--in", "Review"},
+		{"open"}, {"open", "7"}, {"open", "terminal:0"}, {"open", "terminal:x"}, {"open", "project: "}, {"open", "note:a"},
+		{"open", "peek"}, {"open", "peek:1"}, {"open", "diff:7", "--peek"}, {"open", "file:"}, {"open", "file:a", "--peek"}, {"open", "file:a", "--in", "Review"}, {"close", "file:"}, {"open", "terminal:7", "--in", "Review"},
 		{"open", "diff:7", "--in"}, {"open", "diff:7", "--in", "A", "--in", "B"}, {"open", "terminal:7", "--peek", "--peek"},
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
@@ -168,13 +168,17 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "loop", "cancel", "12"); code != 0 || out != "" {
 		t.Fatalf("loop cancel: %d %q", code, out)
 	}
+	if code, out, _ := run(path, "open", "file:docs/a.md"); code != 0 || out != "" {
+		t.Fatalf("open file: %d %q", code, out)
+	}
 	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
 		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
 		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"},
 		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
-		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12}}
+		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12},
+		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
 	}
