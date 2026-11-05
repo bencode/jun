@@ -132,6 +132,29 @@ func TestRegionOpenMoveCloseAndFocus(t *testing.T) {
 	}
 }
 
+func TestAClickThatMovesALittleSelectsTheTab(t *testing.T) {
+	a, tt := testApp(t)
+	r := a.state.CurrentPerspective().Columns[0]
+	if _, err := a.state.OpenView(r.ID, layout.ViewTerminal, "Jun"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Frame()
+	first := r.Views[0]
+	tab, ok := tt.Find(a.title(first))
+	if !ok || r.Active == first.ID {
+		t.Fatalf("the first tab: %v, active %d", ok, r.Active)
+	}
+	x, y := tab.X+tab.W/2, tab.Y+tab.H/2
+	tt.Press(x, y)
+	tt.Move(x+6, y)
+	tt.Release(x+6, y)
+	tt.Frame()
+	if r.Active != first.ID || r.Views[0] != first {
+		t.Fatalf("active %d, want %d, in place: %v", r.Active, first.ID, r.Views[0] == first)
+	}
+}
+
 func TestTabDragAndKeyboardSelection(t *testing.T) {
 	a, tt := testApp(t)
 	p := a.state.CurrentPerspective()
