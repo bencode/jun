@@ -130,7 +130,10 @@ func (a *app) drop(element ui.Element, target layout.RegionID, before layout.Vie
 	if _, over := ui.DragOver[layout.ViewID](element); over {
 		element.Border(1, a.theme.Accent)
 	}
-	if view, ok := ui.Drop[layout.ViewID](element); ok {
+	view, ok := ui.Drop[layout.ViewID](element)
+	if ok && view == before { // a click the hand moved a little: the drag took it
+		a.selectTab(a.state.Region(target), view)
+	} else if ok {
 		a.moveView(view, target, before)
 	}
 }
