@@ -11,7 +11,7 @@ The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" to
 
 ## Start
 
-Do this once, when the user asks. The interval is 10 minutes unless they say otherwise; every tick wakes you and spends tokens.
+Do this when the user asks. The interval is 3 minutes unless they say otherwise; every tick wakes you and spends tokens. To change the interval, run this again with the new one: it replaces the loop.
 
 ```sh
 self=$("$JUN_BIN" tool terminals | jq -r '.[] | select(.self) | .id')
@@ -22,7 +22,7 @@ self=$("$JUN_BIN" tool terminals | jq -r '.[] | select(.self) | .id')
 
 tick='s=$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==SELF) | .status")
 if [ "$s" = idle ]; then "$JUN_BIN" tool send SELF "[jun-tick] Look over the agents, as the jun-deputy skill says."; else echo "skipped: $s"; fi'
-"$JUN_BIN" tool loop 10m "${tick//SELF/$self}"
+"$JUN_BIN" tool loop 3m "${tick//SELF/$self}"
 ```
 
 The tick reaches you only while you are `idle`: when you are busy or asking the user something, it skips that run. The loop's first run comes at once and skips, as you are working; the first tick comes an interval later.
