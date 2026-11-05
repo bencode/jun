@@ -12,7 +12,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 | Status | Meaning | Order |
 |---|---|---|
-| Waiting | The agent asks you something, such as a permission or a choice | first |
+| Waiting | The agent asks you something, such as a permission or a choice, or Claude Code shows a notice that waits for Enter | first |
 | Working | The agent is busy | second |
 | Idle | The agent waits for a new prompt | last |
 

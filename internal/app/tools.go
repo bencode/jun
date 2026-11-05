@@ -36,7 +36,7 @@ func (a *app) startTools(configPath string, stop <-chan struct{}) {
 	if err == nil {
 		a.tools, err = tool.Start(socket, func(req tool.Request, callers []int) tool.Response {
 			return a.handleTool(stop, req, callers)
-		})
+		}, func() (<-chan tool.Event, func()) { return a.subscribeAgents(stop) })
 	}
 	if err != nil {
 		a.report(fmt.Errorf("%s: %w", a.text("Agent tools unavailable", "Agent 工具不可用"), err))
@@ -57,19 +57,7 @@ func (a *app) stopTools() {
 // handleTool runs on the connection's goroutine: it reads Jun's state on
 // the UI thread, and a terminal's text off it, as the agent poller does.
 func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) tool.Response {
-	onUI := func(fn func()) bool {
-		done := make(chan struct{})
-		a.window.Update(func() {
-			fn()
-			close(done)
-		})
-		select {
-		case <-done:
-			return true
-		case <-stop:
-			return false
-		}
-	}
+	onUI := func(fn func()) bool { return a.onUI(stop, fn) }
 	closing := tool.Response{Error: "Jun is closing"}
 	layout := slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op)
 	if layout && !a.awaitRepo(stop, onUI, req.Target, callers) {
@@ -100,6 +88,21 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 		return tool.Response{Error: err.Error()}
 	}
 	return tool.Response{Screen: tool.Tail(source.Text(), req.Lines)}
+}
+
+// onUI runs fn on the UI thread and waits for it, unless Jun closes first.
+func (a *app) onUI(stop <-chan struct{}, fn func()) bool {
+	done := make(chan struct{})
+	a.window.Update(func() {
+		fn()
+		close(done)
+	})
+	select {
+	case <-done:
+		return true
+	case <-stop:
+		return false
+	}
 }
 
 // uiAnswers answer the ops that one call on the UI thread does.

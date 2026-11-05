@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const usage = "usage: jun tool help | terminals | screen <id> [--lines N] |\n" +
+const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - |\n" +
 	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
@@ -32,6 +32,14 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
         agent    claude, codex or pi, when one runs in it; absent otherwise
         status   waiting, working or idle, with agent
         self     true for the terminal the caller runs in
+  jun tool watch
+      Agents' status as it changes, a JSON object a line, until Jun quits
+      or the reader falls behind; then status 1. It starts with each
+      agent, from empty:
+        id, project, agent, title   as terminals has them
+        from, to                    the status before and now; from is
+                                    empty for a new agent, to for one gone
+      Jun tells idle after it holds for a few seconds, the rest at once.
   jun tool screen <id> [--lines N]
       The last N lines of the terminal's text, scrollback included, as
       plain text (default 40, at most 500). A line the terminal wraps is
@@ -131,6 +139,10 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 	path := getenv(EnvAPI)
 	if path == "" {
 		fmt.Fprintf(stderr, "jun tool: %s is not set; run inside a Jun terminal\n", EnvAPI)
+		return 1
+	}
+	if req.Op == OpWatch {
+		fmt.Fprintf(stderr, "jun tool: %v\n", watch(path, stdout))
 		return 1
 	}
 	resp, err := call(path, req)

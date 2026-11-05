@@ -34,6 +34,7 @@ const idleMarker = "✳"
 
 var (
 	claudeWaiting      = regexp.MustCompile(`❯\s+\d+\.`)
+	claudeNotice       = regexp.MustCompile(`Enter to continue · Esc to cancel\s*$`) // the screen's last line
 	codexActionTitle   = regexp.MustCompile(`^\[\s*[!.]\s*\]\s*Action Required(?:\s*\|.*)?\s*$`)
 	codexWaitingCursor = regexp.MustCompile(`(?m)^\s*›\s+\d+\.`)
 	codexWaitingFooter = regexp.MustCompile(`(?i)\benter to (?:submit answer|select|confirm)\b`)
@@ -76,7 +77,7 @@ func DetectStatus(kind Kind, title, screen string) Status {
 	if spinner(title) || strings.HasPrefix(title, "◐") || strings.HasPrefix(title, "◑") {
 		return Working
 	}
-	if strings.HasPrefix(title, idleMarker) && claudeWaiting.MatchString(screen) {
+	if strings.HasPrefix(title, idleMarker) && claudeWaiting.MatchString(screen) || claudeNotice.MatchString(screen) {
 		return Waiting
 	}
 	return Idle

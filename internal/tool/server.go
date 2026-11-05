@@ -21,6 +21,7 @@ type Handler func(req Request, callers []int) Response
 
 type Server struct {
 	listener *net.UnixListener
+	closed   chan struct{}
 }
 
 const exchangeTimeout = 10 * time.Second
@@ -28,7 +29,7 @@ const exchangeTimeout = 10 * time.Second
 // Start serves handle at path, a socket only the user can connect to. A
 // socket left there by a Jun that ended is replaced; one that answers is
 // another Jun's, and Start fails.
-func Start(path string, handle Handler) (*Server, error) {
+func Start(path string, handle Handler, subscribe Subscribe) (*Server, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, err
 	}
@@ -52,16 +53,19 @@ func Start(path string, handle Handler) (*Server, error) {
 	if err := os.Chmod(path, 0o600); err != nil {
 		return nil, errors.Join(err, listener.Close())
 	}
-	s := &Server{listener: listener}
-	go s.serve(handle)
+	s := &Server{listener: listener, closed: make(chan struct{})}
+	go s.serve(handle, subscribe)
 	return s, nil
 }
 
 // Close stops serving and removes the socket; connections being answered
-// finish on their own.
-func (s *Server) Close() error { return s.listener.Close() }
+// finish on their own, and watches end.
+func (s *Server) Close() error {
+	close(s.closed)
+	return s.listener.Close()
+}
 
-func (s *Server) serve(handle Handler) {
+func (s *Server) serve(handle Handler, subscribe Subscribe) {
 	for {
 		conn, err := s.listener.AcceptUnix()
 		if errors.Is(err, net.ErrClosed) {
@@ -71,11 +75,11 @@ func (s *Server) serve(handle Handler) {
 			log.Printf("Jun: agent tools stopped: %v", err)
 			return
 		}
-		go answer(conn, handle)
+		go s.answer(conn, handle, subscribe)
 	}
 }
 
-func answer(conn *net.UnixConn, handle Handler) {
+func (s *Server) answer(conn *net.UnixConn, handle Handler, subscribe Subscribe) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Printf("Jun: agent tools: %v", err)
@@ -85,32 +89,46 @@ func answer(conn *net.UnixConn, handle Handler) {
 		log.Printf("Jun: agent tools: %v", err)
 		return
 	}
-	if err := json.NewEncoder(conn).Encode(respond(conn, handle)); err != nil {
+	req, callers, err := receive(conn)
+	if err == nil && req.Op == OpWatch {
+		if err := streamEvents(conn, subscribe, s.closed); err != nil {
+			log.Printf("Jun: agent tools: watch: %v", err)
+		}
+		return
+	}
+	resp := Response{}
+	if err != nil {
+		resp.Error = err.Error()
+	} else {
+		resp = handle(req, callers)
+	}
+	if err := json.NewEncoder(conn).Encode(resp); err != nil {
 		log.Printf("Jun: agent tools: %v", err)
 	}
 }
 
-func respond(conn *net.UnixConn, handle Handler) Response {
+// receive reads the request, and who sent it.
+func receive(conn *net.UnixConn) (Request, []int, error) {
 	uid, pid, err := peer(conn)
 	if err != nil {
-		return Response{Error: fmt.Sprintf("caller: %v", err)}
+		return Request{}, nil, fmt.Errorf("caller: %w", err)
 	}
 	if uid != uint32(os.Getuid()) {
-		return Response{Error: "not your user"}
+		return Request{}, nil, errors.New("not your user")
 	}
 	callers, err := ancestry(pid, parent)
 	if err != nil {
-		return Response{Error: fmt.Sprintf("caller: %v", err)}
+		return Request{}, nil, fmt.Errorf("caller: %w", err)
 	}
 	line, err := bufio.NewReader(conn).ReadBytes('\n')
 	if err != nil {
-		return Response{Error: fmt.Sprintf("read request: %v", err)}
+		return Request{}, nil, fmt.Errorf("read request: %w", err)
 	}
 	var req Request
 	if err := json.Unmarshal(line, &req); err != nil {
-		return Response{Error: "bad request"}
+		return Request{}, nil, errors.New("bad request")
 	}
-	return handle(req, callers)
+	return req, callers, nil
 }
 
 // peer is who connected, as the system tells: neither can be forged.
