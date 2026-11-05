@@ -37,6 +37,7 @@ func (a *app) applicationMenu() *mygo.Menu {
 		{Role: mygo.RoleEditMenu},
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
+			{Label: a.text("Toggle Messages", "展开或收起消息"), Click: action(a.toggleMessages)},
 			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
 			mygo.Separator(), a.headingItem, a.widthItem, mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
@@ -58,6 +59,13 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 	}
 	button.Menu(func(m *ui.Menu) {
 		if r == a.state.Global {
+			label := a.text("Hide Messages", "收起消息")
+			if a.state.MessagesHidden {
+				label = a.text("Show Messages", "显示消息")
+			}
+			if m.Item(label).Chosen() {
+				a.toggleMessages()
+			}
 			if m.Item(a.text("Hide Global", "收起 Global")).Chosen() {
 				a.toggleGlobal()
 			}

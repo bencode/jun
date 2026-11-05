@@ -39,6 +39,16 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
   - When its tab was closed, the terminal reopens in its project, in the column or bottom region you focused last.
 - **Right-click an agent** → **Review Changes** opens a [Diff](diff.md) of the branch the agent works on. This is offered for agents of the current project.
 
+## Messages
+
+**Messages**, below the Agents view in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
+
+- Each message shows the terminal it is about, its project, its age and its text, the latest first.
+- **Click a message** to [peek](#peek) at that agent, or to show the terminal when it runs no agent. Clicked again, it closes the peek. **⌘-click** shows an agent's tab.
+  - A message of a terminal that has ended, or of an earlier run of Jun, cannot be clicked.
+- Drag the line above it to change how Global's height is shared.
+- **⋯ → Hide Messages** gives Global to the Agents view, and **Show Messages** brings it back; **Toggle Messages** in the View menu and the command palette does both, and shows Global too when it is hidden. Messages keep coming while hidden.
+
 ## Peek
 
 Peek opens an agent's terminal in a drawer that slides out of Global's edge, so you can answer it without leaving the project and perspective you are in. The rest of the work area dims; Global stays bright, and its card for the agent says **Peeking**.

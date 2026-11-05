@@ -89,9 +89,9 @@ func TestFixedRegionsKeepTheirViews(t *testing.T) {
 			t.Fatalf("fixed tab %s can be closed", label)
 		}
 	}
-	for r, item := range map[*layout.Region]string{p.Side: "Hide Side Bar", a.state.Global: "Hide Global"} {
+	for r, want := range map[*layout.Region][]string{p.Side: {"Hide Side Bar"}, a.state.Global: {"Hide Messages", "Hide Global"}} {
 		click(t, tt, fmt.Sprintf("Region menu %d", r.ID))
-		if items := tt.Menu(); !slices.Equal(items, []string{item}) {
+		if items := tt.Menu(); !slices.Equal(items, want) {
 			t.Fatalf("region %d menu offers %v", r.ID, items)
 		}
 		tt.CloseMenu()
@@ -119,7 +119,7 @@ func TestGlobalShowsAgentsWithoutProject(t *testing.T) {
 		t.Fatal("Global did not show Agents")
 	}
 	click(t, tt, fmt.Sprintf("Region menu %d", a.state.Global.ID))
-	if items := tt.Menu(); !slices.Equal(items, []string{"Hide Global"}) {
+	if items := tt.Menu(); !slices.Equal(items, []string{"Hide Messages", "Hide Global"}) {
 		t.Fatalf("Global menu offers %v", items)
 	}
 	tt.CloseMenu()

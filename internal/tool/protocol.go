@@ -21,6 +21,7 @@ const (
 	DefaultLines = 40
 	MaxLines     = 500
 	MaxText      = 1 << 20 // the bytes send takes
+	MaxMessage   = 4096    // the bytes message takes
 )
 
 type Op string
@@ -33,6 +34,7 @@ const (
 	OpBack       Op = "back"
 	OpForward    Op = "forward"
 	OpSend       Op = "send"
+	OpMessage    Op = "message" // to the user, in Global
 	OpRun        Op = "run"
 	OpLoop       Op = "loop"        // registers one
 	OpLoops      Op = "loops"       // lists them
@@ -70,7 +72,9 @@ type Request struct {
 	// selected, or made when there is none.
 	In   string `json:"in,omitempty"`
 	Peek bool   `json:"peek,omitempty"` // open terminal: in the peek drawer
-	Text string `json:"text,omitempty"` // send: to submit, its line breaks kept
+	Text string `json:"text,omitempty"` // send: to submit, its line breaks kept; message: to show
+	// About is the terminal a message is about; none is the caller's.
+	About uint64 `json:"about,omitempty"`
 	// Command is the shell command line run and loop run, in Dir, an
 	// absolute path.
 	Command string        `json:"command,omitempty"`

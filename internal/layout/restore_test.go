@@ -59,6 +59,7 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		},
 		"nil region":        func(s *State) { s.CurrentPerspective().Bottom = nil },
 		"invalid ratio":     func(s *State) { s.CenterPercent = 100 },
+		"agents ratio":      func(s *State) { s.AgentsPercent = 100 },
 		"invalid splits":    func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
 		"unknown kind":      func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
 		"agents layout":     func(s *State) { s.CurrentPerspective().Columns[0].Views[0].AgentsLayout = AgentsList },
@@ -119,6 +120,17 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 				t.Fatal("failed restoration mutated allocator")
 			}
 		})
+	}
+}
+
+func TestRestoreGivesAnEarlierLayoutTheDefaultMessagesShare(t *testing.T) {
+	s := decodedLayout(t)
+	s.AgentsPercent = 0
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if s.AgentsPercent != defaultAgentsPercent || s.MessagesHidden {
+		t.Fatalf("Messages restored at %v, hidden %v", s.AgentsPercent, s.MessagesHidden)
 	}
 }
 

@@ -126,6 +126,7 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpClose:      layout,
 		tool.OpBack:       layout,
 		tool.OpForward:    layout,
+		tool.OpMessage:    func() tool.Response { return outcome(a.toolMessage(req, callers)) },
 		tool.OpRun:        func() tool.Response { return started(a.toolRun(req, callers)) },
 		tool.OpLoop:       func() tool.Response { return started(a.toolLoop(req, callers)) },
 		tool.OpLoops:      func() tool.Response { return tool.Response{Loops: a.toolLoops()} },

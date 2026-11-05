@@ -8,6 +8,7 @@ import (
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/message"
 	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
@@ -49,6 +50,10 @@ type app struct {
 	prefsErr        error             // why the settings file last failed to read
 	settingsPath    string            // the settings file
 	settingsTab     *settingsTab      // the settings tab's editor, while it is open
+	messages        []message.Message // oldest first
+	messagesPath    string            // their file
+	messageLines    int               // the lines in the file
+	messagesScroll  ui.ScrollState
 	perspectiveForm struct {
 		open        bool
 		project     string
@@ -135,6 +140,7 @@ func Run() error {
 	} else {
 		a.restoreConfig(path)
 	}
+	a.loadMessages(path)
 	a.startPrefs()
 	mygo.App.OnSecondInstance(func(args []string, wd string) {
 		if a.window == nil {

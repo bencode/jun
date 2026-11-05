@@ -58,6 +58,9 @@ func resize(tt *ui.Tester, width, height int) {
 
 func TestAgentsLayoutFitsRoom(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
+	a.toggleMessages() // the room is all Global's
+	tt.Frame()
+	tt.Frame()
 	if len(a.previews) != 3 || row(t, tt, a, sessions[2]).H < cardMinHeight {
 		t.Fatal("three agents in Global did not show as cards")
 	}

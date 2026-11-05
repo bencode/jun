@@ -46,11 +46,11 @@ A perspective is a named layout within a project, such as one for working and on
 | Columns (1–3) | center | tabs: terminals, files, sessions, diffs, settings | the perspective |
 | Bottom | below the columns | tabs, like a column | the perspective |
 | Side bar | left of the columns | **Sessions**, **Files** (fixed) | the perspective |
-| Global | right of the columns | **Agents** (fixed) | every project |
+| Global | right of the columns | **Agents** (fixed), with [Messages](agents-view.md#messages) below it | every project |
 
 - **Columns**: each column's **⋯** offers **Add Column to Right** and **Remove This Column**.
   - Removing a column moves its tabs to the column on its left; the first column's tabs go to the right instead. Its terminals keep running.
-- **Fixed regions**: the side bar's and Global's tabs cannot be closed or moved, and other tabs cannot be moved into them. Their **⋯** only hides the region.
+- **Fixed regions**: the side bar's and Global's tabs cannot be closed or moved, and other tabs cannot be moved into them. Their **⋯** only hides the region, and in Global, [Messages](agents-view.md#messages).
 - **Side bar**: ⌘B shows or hides it. Drag its edge to resize it.
   - It keeps its width as the window or Global changes.
   - When the columns would get narrower than their minimum, it gives way, and gets its width back once there is room.

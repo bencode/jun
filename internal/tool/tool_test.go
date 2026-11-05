@@ -61,6 +61,8 @@ func TestMainUsage(t *testing.T) {
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
 		{"send", "3", strings.Repeat("x", MaxText+1)},
+		{"message"}, {"message", " \n"}, {"message", "a", "b"}, {"message", "--about", "0", "hi"}, {"message", "--about", "x", "hi"},
+		{"message", "--help"}, {"message", "--about"}, {"message", "--about", "3"}, {"message", strings.Repeat("x", MaxMessage+1)},
 		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--dir", "", "x"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
 		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
@@ -155,6 +157,12 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, _, _ := runWith(path, "x\n", "send", "3", "-"); code != 0 {
 		t.Fatalf("send from standard input: %d", code)
 	}
+	if code, out, _ := run(path, "message", "--about", "3", "It waits"); code != 0 || out != "" {
+		t.Fatalf("message: %d %q", code, out)
+	}
+	if code, _, _ := runWith(path, "a\nb\n", "message", "-"); code != 0 {
+		t.Fatalf("message from standard input: %d", code)
+	}
 	if code, out, _ := run(path, "run", "--open", "codex", "--full-auto"); code != 0 || out != "12\n" {
 		t.Fatalf("run: %d %q", code, out)
 	}
@@ -175,6 +183,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
 		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
 		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"},
+		{Op: OpMessage, About: 3, Text: "It waits"}, {Op: OpMessage, Text: "a\nb"},
 		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
 		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12},
