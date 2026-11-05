@@ -20,11 +20,9 @@ func (a *app) applicationMenu() *mygo.Menu {
 			}
 		}
 	}
-	a.readingOn = a.activeMarkdown() != nil
-	a.readingItems = []*mygo.MenuItem{
-		{Label: a.text("Go to Heading…", "跳转到标题…"), Accelerator: goToHeadingKeys.accelerator(), Click: action(a.goToHeading), Disabled: !a.readingOn},
-		{Label: a.text("Reading Width", "阅读宽度"), Submenu: a.widthMenu(action), Disabled: !a.readingOn},
-	}
+	a.readingOn = a.activeReading()
+	a.headingItem = &mygo.MenuItem{Label: a.text("Go to Heading…", "跳转到标题…"), Accelerator: goToHeadingKeys.accelerator(), Click: action(a.goToHeading), Disabled: !a.readingOn.heading}
+	a.widthItem = &mygo.MenuItem{Label: a.text("Reading Width", "阅读宽度"), Submenu: a.widthMenu(action), Disabled: !a.readingOn.width}
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Label: "Jun", Submenu: []*mygo.MenuItem{
 			{Role: mygo.RoleAbout}, mygo.Separator(),
@@ -40,7 +38,7 @@ func (a *app) applicationMenu() *mygo.Menu {
 		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
 			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
 			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
-			mygo.Separator(), a.readingItems[0], a.readingItems[1], mygo.Separator(),
+			mygo.Separator(), a.headingItem, a.widthItem, mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 		}},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
@@ -109,21 +107,27 @@ func (a *app) columnMenu(m *ui.Menu, r *layout.Region, p *layout.Perspective) {
 	}
 }
 
-// syncReadingMenu enables the menu items for Markdown pages while the
-// active tab shows one, and disables them otherwise.
+// readingState is what the active tab has for the menu to act on:
+// headings to go to, a width to read at.
+type readingState struct{ heading, width bool }
+
+func (a *app) activeReading() readingState {
+	return readingState{heading: a.activeMarkdown() != nil, width: a.readsAtWidth()}
+}
+
+// syncReadingMenu enables the menu's items for pages to read as the
+// active tab has what they act on.
 func (a *app) syncReadingMenu() {
-	on := a.activeMarkdown() != nil
-	if on == a.readingOn {
+	on := a.activeReading()
+	if a.headingItem == nil || on == a.readingOn {
 		return
 	}
 	a.readingOn = on
-	for _, item := range a.readingItems {
-		item.SetEnabled(on)
-	}
+	a.headingItem.SetEnabled(on.heading)
+	a.widthItem.SetEnabled(on.width)
 }
 
-// widthMenu offers the widths Markdown pages read at, the current one
-// checked.
+// widthMenu offers the widths pages read at, the current one checked.
 func (a *app) widthMenu(action func(func()) func(*mygo.MenuItem, *mygo.Window)) []*mygo.MenuItem {
 	items := make([]*mygo.MenuItem, len(settings.MarkdownWidths))
 	for i, w := range settings.MarkdownWidths {

@@ -376,7 +376,6 @@ func TestMarkdownGoToHeading(t *testing.T) {
 	tt.Frame()
 	click(t, tt, "long.md")
 	tt.Frame()
-	a.focusRegion(p.Columns[0].ID)
 	if !goToHeading() {
 		t.Fatal("the palette does not offer Go to Heading on a Markdown tab")
 	}

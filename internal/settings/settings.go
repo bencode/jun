@@ -34,7 +34,8 @@ type Settings struct {
 	} `yaml:"claude,omitempty"`
 }
 
-// MarkdownWidths are the widths Markdown pages read at, narrowest first.
+// MarkdownWidths are the widths Markdown pages and session tabs read at,
+// narrowest first.
 var MarkdownWidths = []string{"narrow", "medium", "wide", "full"}
 
 // Font sizes, in DIPs.

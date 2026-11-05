@@ -43,6 +43,7 @@
   - in its header, the agent, the branch, the number of messages, and when the session started and was last active.
 - **A Pi session that went back** to an earlier point keeps each branch in its file. The tab shows the current one, the branch Pi continues.
 - The tab is read again as the session goes on.
+- **Reading width**: View ▸ Reading Width, or Reading Width in the command palette, as for [Markdown pages](files.md). One width serves both.
 
 ## Resume and other actions
 
