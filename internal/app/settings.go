@@ -67,16 +67,16 @@ func (a *app) setTextSize(size float32) {
 }
 
 // markdownMaxWidths are how wide each of settings.MarkdownWidths lets a
-// Markdown page be, in DIPs: 0 for as wide as its tab.
+// page to read be, in DIPs: 0 for as wide as its tab.
 var markdownMaxWidths = map[string]float32{"narrow": 640, "medium": 760, "wide": 960, "full": 0}
 
-// markdownWidth is the width Markdown pages read at, one of
-// settings.MarkdownWidths.
+// markdownWidth is the width Markdown pages and session tabs read at, one
+// of settings.MarkdownWidths.
 func (a *app) markdownWidth() string { return cmp.Or(a.prefs.Markdown.Width, "medium") }
 
 func (a *app) setMarkdownWidth(width string) { a.setPref([]string{"markdown", "width"}, width) }
 
-// widthLabel names a Markdown width in the interface's language.
+// widthLabel names a reading width in the interface's language.
 func (a *app) widthLabel(width string) string {
 	labels := map[string][2]string{"narrow": {"Narrow", "窄"}, "medium": {"Medium", "适中"}, "wide": {"Wide", "宽"}, "full": {"Full", "铺满"}}
 	l := labels[width]

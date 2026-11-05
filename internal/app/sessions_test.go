@@ -105,6 +105,55 @@ func TestSessionsListSearchShowAndResume(t *testing.T) {
 	}
 }
 
+func TestSessionTranscriptReadsAtTheChosenWidth(t *testing.T) {
+	dir := gitRepo(t)
+	config := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", config)
+	t.Setenv("CODEX_HOME", t.TempDir())
+	claudeSession(t, config, dir, "c1", "Sessions plan", time.Now(), "Plan the sessions list")
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", dir); err != nil {
+		t.Fatal(err)
+	}
+	p := a.state.CurrentPerspective()
+	if err := a.state.SelectView(p.Side.ID, p.Side.Views[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	tt := ui.NewTester(a.view, 1800, 700)
+	tt.Frame()
+	tt.Frame()
+	tt.Click("Sessions plan")
+	tt.Frame()
+
+	offers := func(title string) bool {
+		return slices.ContainsFunc(a.commands(), func(item paletteItem) bool { return item.title == title })
+	}
+	for _, focus := range []layout.RegionID{p.Side.ID, p.Columns[0].ID} {
+		a.focusRegion(focus)
+		tt.Frame()
+		if on := a.activeReading(); on.heading || !on.width {
+			t.Fatalf("with the focus on region %d, the menu's items are %+v", focus, on)
+		}
+		if offers("Go to Heading…") || !offers("Reading Width: Wide") {
+			t.Fatalf("with the focus on region %d, the palette offers the wrong commands", focus)
+		}
+	}
+
+	width := func(setting string) float32 {
+		a.setMarkdownWidth(setting)
+		tt.Frame()
+		tt.Frame()
+		message, ok := tt.Find("Plan the sessions list")
+		if !ok {
+			t.Fatalf("no message at %s: %v", setting, tt.Texts())
+		}
+		return message.W
+	}
+	if narrow, wide, full := width("narrow"), width("wide"), width("full"); narrow >= wide || wide >= full {
+		t.Fatalf("the message is %g wide when narrow, %g when wide, %g when full", narrow, wide, full)
+	}
+}
+
 func TestSessionsListsTheSettingsClaudeConfigFolders(t *testing.T) {
 	dir := gitRepo(t)
 	def, other := t.TempDir(), t.TempDir()

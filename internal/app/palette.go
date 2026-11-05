@@ -187,7 +187,10 @@ func (a *app) commands() []paletteItem {
 		}},
 	}
 	if a.activeMarkdown() != nil {
-		items = append(items, a.readingCommands()...)
+		items = append(items, a.headingCommand())
+	}
+	if a.readsAtWidth() {
+		items = append(items, a.widthCommands()...)
 	}
 	for i, p := range a.state.Projects {
 		item := paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }}

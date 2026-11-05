@@ -22,11 +22,11 @@ type app struct {
 	persistence *persistence
 	window      *mygo.Window
 	theme       *ui.Theme
-	// readingItems are the menu items for Markdown pages, enabled while
-	// readingOn: while the active tab shows one.
-	readingItems []*mygo.MenuItem
-	readingOn    bool
-	projectForm  struct {
+	// headingItem and widthItem are the menu's Go to Heading and Reading
+	// Width, nil until the menu is built, enabled as readingOn says.
+	headingItem, widthItem *mygo.MenuItem
+	readingOn              readingState
+	projectForm            struct {
 		open              bool
 		name, path, error string
 	}

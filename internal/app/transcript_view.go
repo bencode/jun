@@ -95,7 +95,11 @@ func (a *app) transcriptView(c *ui.Context, v *layout.View) {
 		messages := st.messages
 		ui.List(c, &st.list, len(messages), func(i int) {
 			ui.Column(c).FillWidth().AlignItems(ui.Center).Padding(7, 32).Children(func() {
-				ui.Column(c).FillWidth().MaxWidth(760).Gap(10).Children(func() {
+				message := ui.Column(c).FillWidth().Gap(10)
+				if w := markdownMaxWidths[a.markdownWidth()]; w > 0 {
+					message.MaxWidth(w)
+				}
+				message.Children(func() {
 					a.transcriptMessage(c, agent.Kind(s.Agent), messages[i], st)
 				})
 			})

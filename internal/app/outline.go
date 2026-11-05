@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/settings"
 )
 
@@ -15,11 +16,17 @@ func (a *app) goToHeading() {
 	a.palette.caretEnd = true
 }
 
-// readingCommands are the palette's commands for Markdown pages: going to
-// a heading, and the widths, the current one checked.
-func (a *app) readingCommands() []paletteItem {
-	items := []paletteItem{{title: a.text("Go to Heading…", "跳转到标题…"), keys: goToHeadingKeys.String(),
-		keywords: "outline heading 大纲 标题", run: a.goToHeading}}
+// headingCommand is the palette's command going to a Markdown page's
+// heading.
+func (a *app) headingCommand() paletteItem {
+	return paletteItem{title: a.text("Go to Heading…", "跳转到标题…"), keys: goToHeadingKeys.String(),
+		keywords: "outline heading 大纲 标题", run: a.goToHeading}
+}
+
+// widthCommands are the palette's commands for the widths pages read at,
+// the current one checked.
+func (a *app) widthCommands() []paletteItem {
+	var items []paletteItem
 	for _, w := range settings.MarkdownWidths {
 		item := paletteItem{title: a.text("Reading Width: ", "阅读宽度：") + a.widthLabel(w), keywords: "width reading markdown 宽度 阅读",
 			run: func() { a.setMarkdownWidth(w) }}
@@ -31,14 +38,27 @@ func (a *app) readingCommands() []paletteItem {
 	return items
 }
 
-// activeMarkdown is the Markdown page the active region's tab shows, or
-// nil when it shows something else.
-func (a *app) activeMarkdown() *markdownRender {
-	r := a.targetRegion()
+// readingTab is the tab a page is read in: the active one where new tabs
+// go, as a page shown from the side bar leaves the focus there.
+func (a *app) readingTab() *layout.View {
+	r := a.tabsTarget()
 	if r == nil {
 		return nil
 	}
-	v := activeView(r)
+	return activeView(r)
+}
+
+// readsAtWidth is whether the reading tab shows a page that reads at
+// Reading Width: a Markdown page or a session's transcript.
+func (a *app) readsAtWidth() bool {
+	v := a.readingTab()
+	return v != nil && (v.Transcript != nil || a.activeMarkdown() != nil)
+}
+
+// activeMarkdown is the Markdown page the reading tab shows, or nil when
+// it shows something else.
+func (a *app) activeMarkdown() *markdownRender {
+	v := a.readingTab()
 	if v == nil {
 		return nil
 	}
