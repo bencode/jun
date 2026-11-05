@@ -1,73 +1,184 @@
 package app
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bencode/jun/internal/config"
-	"github.com/bencode/jun/internal/message"
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
 	"github.com/egoist/mygo/ui"
 )
 
-func say(t *testing.T, a *app, from *terminal.Session, about terminal.ID, text string) tool.Response {
+func post(t *testing.T, a *app, from *terminal.Session, req tool.Request) tool.Response {
 	t.Helper()
-	req := tool.Request{Op: tool.OpMessage, About: uint64(about), Text: text}
+	req.Op = tool.OpMessage
 	return a.uiAnswers(req, shellOf(t, from))[tool.OpMessage]()
+}
+
+func say(t *testing.T, a *app, from *terminal.Session, text string) tool.Response {
+	t.Helper()
+	return post(t, a, from, tool.Request{Text: text})
+}
+
+func link(t *testing.T, a *app, from *terminal.Session, text string, to *tool.Target) {
+	t.Helper()
+	if resp := post(t, a, from, tool.Request{Text: text, Target: to}); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+}
+
+// brain adds a project with a terminal, beside testApp's.
+func brain(t *testing.T, a *app) (string, *terminal.Session) {
+	t.Helper()
+	dir := t.TempDir()
+	if err := a.state.AddProject("Brain", dir); err != nil {
+		t.Fatal(err)
+	}
+	a.state.ActiveProject = "Jun"
+	s, err := a.terminals.Create("Brain", dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir, s
+}
+
+func writeFile(t *testing.T, path string) string {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func TestAnyTerminalTellsTheUser(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.GlobalVisible = true
-	configPath := filepath.Join(t.TempDir(), "config.json")
-	a.loadMessages(configPath)
-	sender, other := sessions[0], sessions[1]
-	a.lastTerminal = other.ID
-
-	if resp := say(t, a, sender, 0, "The tests pass"); resp.Error != "" {
+	req := tool.Request{Title: "It asks", Kind: tool.MessageAsk, Text: "Whether to open a PR"}
+	if resp := post(t, a, sessions[0], req); resp.Error != "" {
 		t.Fatal(resp.Error)
 	}
-	if resp := say(t, a, sender, other.ID, "It waits for you"); resp.Error != "" {
+	if resp := post(t, a, sessions[0], tool.Request{Title: "Tests pass"}); resp.Error != "" {
 		t.Fatal(resp.Error)
 	}
-	if resp := say(t, a, sender, 0, " "); resp.Error == "" {
+	if resp := say(t, a, sessions[0], " "); resp.Error == "" {
 		t.Fatal("took a blank message")
 	}
-	if resp := say(t, a, sender, 999, "No one"); resp.Error != "no terminal 999" {
-		t.Fatalf("about no terminal: %q", resp.Error)
-	}
-	req := tool.Request{Op: tool.OpMessage, Text: "From outside"}
-	if resp := a.uiAnswers(req, nil)[tool.OpMessage](); resp.Error != "caller is not a terminal of this Jun" {
+	outside := tool.Request{Op: tool.OpMessage, Text: "From outside"}
+	if resp := a.uiAnswers(outside, nil)[tool.OpMessage](); resp.Error != "caller is not a terminal of this Jun" {
 		t.Fatalf("from outside Jun: %q", resp.Error)
 	}
 	tt.Frame()
-	if !tt.HasText("The tests pass") || !tt.HasText("It waits for you") {
-		t.Fatalf("Global shows %v", tt.Texts())
+	for _, text := range []string{"It asks", "Whether to open a PR", "Tests pass"} {
+		if !tt.HasText(text) {
+			t.Fatalf("no %q in %v", text, tt.Texts())
+		}
+	}
+	if tt.HasText(fmt.Sprintf("#%d Jun", sessions[0].ID)) {
+		t.Fatal("plain news has a tag")
 	}
 
-	a.messages = nil
-	a.loadMessages(configPath)
-	if len(a.messages) != 2 {
-		t.Fatalf("read back %+v", a.messages)
+	// Plain news leads nowhere, by mouse or key.
+	revealed := a.state.ActiveProject + fmt.Sprint(a.lastTerminal)
+	if err := tt.Click("Whether to open a PR"); err != nil {
+		t.Fatal(err)
 	}
-	if m := a.messages[0]; m.Terminal != uint64(sender.ID) || m.Project != sender.ProjectName {
-		t.Fatalf("from the sender: %+v", m)
-	}
-	if m := a.messages[1]; m.Terminal != uint64(other.ID) || m.Project != other.ProjectName {
-		t.Fatalf("about the other terminal: %+v", m)
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.peek.id != 0 || a.errorOpen || a.state.ActiveProject+fmt.Sprint(a.lastTerminal) != revealed {
+		t.Fatalf("plain news went somewhere: peek %d, error %q", a.peek.id, a.errorMessage)
 	}
 }
 
-func TestAMessageOpensOnlyWhatItIsAbout(t *testing.T) {
+// A loop in one project reports on all of them: what it links to tells the
+// project, not where it runs.
+func TestALinkTellsAMessagesProject(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.GlobalVisible = true
-	configPath := filepath.Join(t.TempDir(), "config.json")
+	dir, other := brain(t, a)
+	notes := writeFile(t, filepath.Join(dir, "notes.md"))
+	outside := writeFile(t, filepath.Join(t.TempDir(), "elsewhere.md"))
+	for _, c := range []struct {
+		to      *tool.Target
+		project string
+		label   string
+	}{
+		{target(tool.TargetTerminal, other.ID, ""), "Brain", fmt.Sprintf("#%d Brain", other.ID)},
+		{target(tool.TargetFile, 0, notes), "Brain", "Brain · notes.md"},
+		{target(tool.TargetFile, 0, outside), "Jun", "Jun · elsewhere.md"},
+		{target(tool.TargetProject, 0, "brain"), "Brain", "Brain"},
+	} {
+		link(t, a, sessions[0], "Report", c.to)
+		m := a.messages[len(a.messages)-1]
+		tt.Frame()
+		if m.Project.Name != c.project || !tt.HasText(c.label) {
+			t.Fatalf("%+v in %v", m, tt.Texts())
+		}
+	}
+}
+
+func TestAMessageFollowsItsProject(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	brain(t, a)
+	link(t, a, sessions[0], "Go there", target(tool.TargetProject, 0, "Brain"))
+	if err := a.state.RenameProject("Brain", "Mind"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText("Mind") {
+		t.Fatalf("no new name in %v", tt.Texts())
+	}
+	if err := tt.Click("Go there"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.errorOpen || a.state.ActiveProject != "Mind" {
+		t.Fatalf("in %s, error %q", a.state.ActiveProject, a.errorMessage)
+	}
+}
+
+func TestTheLatestMessageShows(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	for i := range 60 {
+		say(t, a, sessions[0], fmt.Sprintf("Message %d", i))
+	}
+	tt.Frame()
+	tt.Frame()
+	say(t, a, sessions[0], "The latest")
+	tt.Frame()
+	tt.Frame()
+	if !tt.HasText("The latest") {
+		t.Fatal("the list moved away from the latest message")
+	}
+}
+
+func TestALinkToNothingShowsNoMessage(t *testing.T) {
+	a, _, sessions := agentsApp(t)
+	for _, to := range []*tool.Target{
+		target(tool.TargetTerminal, 999, ""), target(tool.TargetDiff, 999, ""), target(tool.TargetDiff, sessions[1].ID, ""),
+		target(tool.TargetFile, 0, filepath.Join(t.TempDir(), "gone.md")), target(tool.TargetFile, 0, t.TempDir()),
+		target(tool.TargetProject, 0, "Nothing"), target(tool.TargetPerspective, 0, "Work"),
+	} {
+		if resp := post(t, a, sessions[0], tool.Request{Text: "Report", Target: to}); resp.Error == "" {
+			t.Errorf("took %+v", to)
+		}
+	}
+	if len(a.messages) != 0 {
+		t.Fatalf("kept %+v", a.messages)
+	}
+}
+
+func TestAMessageTakesTheUserToItsTerminal(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
 	var s *terminal.Session
 	for _, session := range sessions {
 		if !a.terminalOnScreen(session.ID) {
@@ -77,42 +188,54 @@ func TestAMessageOpensOnlyWhatItIsAbout(t *testing.T) {
 	if s == nil {
 		t.Fatal("every agent's terminal shows")
 	}
-	earlier := message.Message{Time: time.Now(), Terminal: uint64(s.ID), Project: "Jun", Text: "From an earlier run"}
-	if err := message.Append(filepath.Join(filepath.Dir(configPath), "messages.jsonl"), earlier); err != nil {
+	link(t, a, sessions[0], "It waits", target(tool.TargetTerminal, s.ID, ""))
+	a.messages = append(a.messages, message{ID: 99, Time: time.Now(), Text: "Of an ended terminal",
+		Project: a.state.CurrentProject(), Link: target(tool.TargetTerminal, 999, "")})
+	tt.Frame()
+	if err := tt.Click("Of an ended terminal"); err != nil {
 		t.Fatal(err)
 	}
-	a.loadMessages(configPath)
-	say(t, a, sessions[0], s.ID, "From this run")
-	a.messages = append(a.messages, message.Message{Time: time.Now(), Terminal: 999, Text: "Of an ended terminal", Live: true})
-	tt.Frame()
-	for _, text := range []string{"From an earlier run", "Of an ended terminal"} {
-		if err := tt.Click(text); err != nil {
-			t.Fatal(err)
-		}
-		if a.peek.id != 0 {
-			t.Fatalf("%q peeked terminal %d", text, a.peek.id)
-		}
+	if a.peek.id != 0 || a.errorOpen {
+		t.Fatalf("an ended terminal's message: peek %d, error %q", a.peek.id, a.errorMessage)
 	}
-	if err := tt.Click("From this run"); err != nil {
+	if err := tt.Click("It waits"); err != nil {
 		t.Fatal(err)
 	}
 	if a.peek.id != s.ID {
 		t.Fatalf("peeking terminal %d", a.peek.id)
 	}
+	tt.Frame()
+	if err := tt.Click("It waits"); err != nil { // a double click, which the row's button keeps from the list
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.peek.id != 0 {
+		t.Fatalf("clicked again, it still peeks terminal %d", a.peek.id)
+	}
 
-	// ⌘W closes the peek, then finds the focus in Global, which keeps its tabs.
+	tt.Frame()
+	if err := tt.ClickWith(ui.Super, "It waits"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.peek.id != 0 || !a.terminalOnScreen(s.ID) {
+		t.Fatalf("⌘-click: peek %d, on screen %v", a.peek.id, a.terminalOnScreen(s.ID))
+	}
+
+	// ⌘W closes no tab of the column from Global.
+	a.focusRegion(a.state.Global.ID)
+	tt.Frame()
 	tabs := len(a.state.CurrentPerspective().Columns[0].Views)
 	tt.Key(ui.Super, ui.KeyW)
 	tt.Frame()
-	tt.Key(ui.Super, ui.KeyW)
-	tt.Frame()
-	if a.peek.id != 0 || len(a.state.CurrentPerspective().Columns[0].Views) != tabs {
-		t.Fatalf("⌘W left peek %d and closed a tab of the column", a.peek.id)
+	if len(a.state.CurrentPerspective().Columns[0].Views) != tabs {
+		t.Fatal("⌘W closed a tab of the column")
 	}
 
 	delete(a.agents, s.ID)
+	a.revealSession(sessions[0].ID)
 	tt.Frame()
-	if err := tt.Click("From this run"); err != nil {
+	if err := tt.Click("It waits"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -121,85 +244,236 @@ func TestAMessageOpensOnlyWhatItIsAbout(t *testing.T) {
 	}
 }
 
-func TestTheFileIsCutBackAsMessagesCome(t *testing.T) {
-	a, _, sessions := agentsApp(t)
-	configPath := filepath.Join(t.TempDir(), "config.json")
-	a.loadMessages(configPath)
-	callers := shellOf(t, sessions[0])
-	for i := range 2*message.Keep + 1 {
-		if err := a.toolMessage(tool.Request{Text: fmt.Sprint(i)}, callers); err != nil {
-			t.Fatal(err)
+func fileTabs(a *app, path string) []*layout.View {
+	var views []*layout.View
+	for _, p := range a.state.Projects {
+		for _, perspective := range p.Perspectives {
+			for _, r := range perspective.Columns {
+				for _, v := range r.Views {
+					if v.File != nil && v.File.Path == filepath.Base(path) {
+						views = append(views, v)
+					}
+				}
+			}
 		}
 	}
-	data, err := os.ReadFile(a.messagesPath)
-	if err != nil || bytes.Count(data, []byte("\n")) != message.Keep {
-		t.Fatalf("the file has %d lines: %v", bytes.Count(data, []byte("\n")), err)
-	}
-	if len(a.messages) != message.Keep || a.messages[len(a.messages)-1].Text != fmt.Sprint(2*message.Keep) {
-		t.Fatalf("Jun keeps %d messages", len(a.messages))
-	}
+	return views
 }
 
-func TestAMessageTheFileDoesNotTakeStillShows(t *testing.T) {
+func TestAMessageKeepsAResourceToOneTab(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.GlobalVisible = true
-	a.messagesPath = t.TempDir() // a directory: Append fails
-	if resp := say(t, a, sessions[0], 0, "Not saved"); !strings.HasPrefix(resp.Error, "shown, but not saved") {
-		t.Fatalf("the sender heard %q", resp.Error)
+	dir, _ := brain(t, a)
+	notes := writeFile(t, filepath.Join(dir, "notes.md"))
+	link(t, a, sessions[0], "The report", target(tool.TargetFile, 0, notes))
+	tt.Frame()
+
+	if err := tt.Click("The report"); err != nil {
+		t.Fatal(err)
 	}
 	tt.Frame()
-	if !tt.HasText("Not saved") {
-		t.Fatalf("Global shows %v", tt.Texts())
+	if views := fileTabs(a, notes); a.state.ActiveProject != "Brain" || len(views) != 1 || views[0].ProjectName != "Brain" {
+		t.Fatalf("in %s: %+v", a.state.ActiveProject, views)
+	}
+
+	a.selectProject("Jun")
+	tt.Frame()
+	if err := tt.Click("The report"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if views := fileTabs(a, notes); a.state.ActiveProject != "Brain" || len(views) != 1 {
+		t.Fatalf("back in %s: %+v", a.state.ActiveProject, views)
+	}
+
+	if err := os.Remove(notes); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.Click("The report"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.errorOpen {
+		t.Fatal("a file gone since says nothing")
 	}
 }
 
-func TestACutBackThatFailsIsTriedAgain(t *testing.T) {
-	a, tt, sessions := agentsApp(t)
-	directory := t.TempDir()
-	path := filepath.Join(directory, "messages.jsonl")
-	for i := range 2 * message.Keep {
-		if err := message.Append(path, message.Message{Time: time.Now(), Text: fmt.Sprint(i)}); err != nil {
-			t.Fatal(err)
-		}
+func TestAMessageKeepsADiffToOneTab(t *testing.T) {
+	a := testNewApp(t)
+	if err := a.state.AddProject("Jun", gitRepo(t)); err != nil {
+		t.Fatal(err)
 	}
-	access := func(mode os.FileMode) {
-		t.Helper()
-		if err := os.Chmod(directory, mode); err != nil {
-			t.Fatal(err)
-		}
-	}
-	access(0o500)
-	t.Cleanup(func() { access(0o700) })
-	lines := func() int {
-		t.Helper()
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return bytes.Count(data, []byte("\n"))
-	}
-
-	a.loadMessages(filepath.Join(directory, "config.json"))
+	a.state.GlobalVisible = true
+	tt := ui.NewTester(a.view, 1440, 900)
 	tt.Frame()
-	if a.errorOpen || lines() != 2*message.Keep {
-		t.Fatalf("a failed cut left %d lines, dialog open %v", lines(), a.errorOpen)
+	project := a.state.CurrentProject()
+	s, err := a.terminals.Create("Jun", project.CWD, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diff := target(tool.TargetDiff, s.ID, "")
+	onUI := func(fn func()) bool { fn(); return true }
+	a.awaitRepo(nil, onUI, diff, func() bool { return false })
+	link(t, a, s, "Look at the changes", diff)
+	tt.Frame()
+	if !tt.HasText(fmt.Sprintf("#%d Jun · Diff", s.ID)) {
+		t.Fatalf("no tag in %v", tt.Texts())
+	}
+	diffs := func() int {
+		count := 0
+		for _, r := range a.state.CurrentPerspective().Columns {
+			for _, v := range r.Views {
+				if v.Diff != nil {
+					count++
+				}
+			}
+		}
+		return count
+	}
+	for range 2 {
+		if err := tt.Click("Look at the changes"); err != nil {
+			t.Fatal(err)
+		}
+		tt.Frame()
+		if a.errorOpen || diffs() != 1 {
+			t.Fatalf("%d Diffs, error %q", diffs(), a.errorMessage)
+		}
+	}
+}
+
+func TestKeysGoThroughMessages(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	hidden := sessions[slices.IndexFunc(sessions, func(s *terminal.Session) bool { return !a.terminalOnScreen(s.ID) })]
+	link(t, a, sessions[0], "Older", target(tool.TargetTerminal, hidden.ID, ""))
+	say(t, a, sessions[1], "Newer")
+	tt.Frame()
+	a.focusRegion(a.state.Global.ID)
+	tt.Frame()
+	tt.Key(ui.Super, ui.Key2)
+	tt.Frame()
+	if !tt.Focused("Messages") {
+		t.Fatal("⌘2 did not reach Messages")
+	}
+	tt.Key(0, ui.KeyTab)
+	tt.Frame()
+	tt.Key(0, ui.KeyDown)
+	tt.Frame()
+	tt.Key(0, ui.KeyDown)
+	tt.Frame()
+	if a.messageSelected != 1 || a.peek.id != 0 {
+		t.Fatalf("row %d, peek %d", a.messageSelected, a.peek.id)
+	}
+	say(t, a, sessions[2], "Newest")
+	tt.Frame()
+	if a.messageSelected != 2 {
+		t.Fatalf("the choice left its message: row %d", a.messageSelected)
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.peek.id != hidden.ID {
+		t.Fatalf("peeking %d", a.peek.id)
+	}
+}
+
+func TestALongMessageFolds(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	hidden := sessions[slices.IndexFunc(sessions, func(s *terminal.Session) bool { return !a.terminalOnScreen(s.ID) })]
+	say(t, a, sessions[0], "Short")
+	tt.Frame()
+	tt.Frame()
+	if tt.HasText("Show more") {
+		t.Fatal("a short text folds")
+	}
+	link(t, a, sessions[0], strings.Repeat("A long report of what happened. ", 40), target(tool.TargetTerminal, hidden.ID, ""))
+	tt.Frame()
+	tt.Frame()
+	if err := tt.Click("Show more"); err != nil {
+		t.Fatalf("%v in %v", err, tt.Texts())
+	}
+	tt.Frame()
+	if !tt.HasText("Show less") || a.peek.id != 0 {
+		t.Fatalf("opening it peeked %d, or did not open: %v", a.peek.id, tt.Texts())
 	}
 
-	access(0o700)
-	if resp := say(t, a, sessions[0], 0, "The next message"); resp.Error != "" {
-		t.Fatal(resp.Error)
+	// The click left the keyboard on the list, with that row chosen.
+	tt.Key(0, ui.KeyLeft)
+	tt.Frame()
+	if !tt.HasText("Show more") {
+		t.Fatal("← did not fold it")
 	}
-	if lines() != message.Keep {
-		t.Fatalf("the next message left %d lines", lines())
+	tt.Key(0, ui.KeyRight)
+	tt.Frame()
+	if !tt.HasText("Show less") {
+		t.Fatal("→ did not open it")
 	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.peek.id != hidden.ID {
+		t.Fatalf("↩ peeked %d", a.peek.id)
+	}
+}
+
+func TestFoldingKeepsTheRowInView(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	say(t, a, sessions[0], strings.Repeat("A long report of what happened. ", 120))
+	for i := range 40 {
+		say(t, a, sessions[0], fmt.Sprintf("Message %d", i))
+	}
+	tt.Frame()
+	tt.Frame()
+	long := len(a.messages) - 1 // the row of the oldest
+	a.setMessageWhole(a.messages[0].ID, true)
+	a.messagesList.ScrollIntoView(long)
+	tt.Frame()
+	tt.Frame()
+	a.setMessageWhole(a.messages[0].ID, false)
+	tt.Frame()
+	tt.Frame()
+	if first, last := a.messagesList.Visible(); long < first || long > last {
+		t.Fatalf("row %d is out of %d to %d", long, first, last)
+	}
+}
+
+func TestRowsStayWhileScrolledAway(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	for i := range 60 {
+		say(t, a, sessions[0], fmt.Sprintf("Message %d", i))
+	}
+	tt.Frame()
+	tt.Frame()
+	a.messagesList.ScrollIntoView(45)
+	tt.Frame()
+	tt.Frame()
+	before, ok := tt.Find("Message 20")
+	if !ok {
+		t.Fatalf("not in %v", tt.Texts())
+	}
+	say(t, a, sessions[0], "One more")
+	tt.Frame()
+	tt.Frame()
+	if after, ok := tt.Find("Message 20"); !ok || after.Y != before.Y {
+		t.Fatalf("it moved from %v to %v", before, after)
+	}
+}
+
+func TestTheOldMessagesFileGoes(t *testing.T) {
+	config := filepath.Join(t.TempDir(), "config.json")
+	old := writeFile(t, filepath.Join(filepath.Dir(config), "messages.jsonl"))
+	removeOldMessages(config)
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Fatalf("still there: %v", err)
+	}
+	removeOldMessages(config) // nothing to remove is fine
 }
 
 func TestHiddenMessagesKeepComing(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.GlobalVisible = true
-	a.loadMessages(filepath.Join(t.TempDir(), "config.json"))
 	tt.Frame()
-	say(t, a, sessions[0], 0, "Before hiding")
+	say(t, a, sessions[0], "Before hiding")
 	tt.Frame()
 	menu(t, tt, a, a.state.Global, "Messages")
 	tt.Frame()
@@ -217,7 +491,7 @@ func TestHiddenMessagesKeepComing(t *testing.T) {
 		t.Fatalf("restored %v: %v", s, err)
 	}
 
-	say(t, a, sessions[0], 0, "While hidden")
+	say(t, a, sessions[0], "While hidden")
 	menu(t, tt, a, a.state.Global, "Messages")
 	tt.Frame()
 	if !tt.HasText("Before hiding") || !tt.HasText("While hidden") {

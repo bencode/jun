@@ -107,26 +107,59 @@ func parseSend(args []string, stdin io.Reader) (Request, error) {
 }
 
 func parseMessage(args []string, stdin io.Reader) (Request, error) {
-	var about uint64
-	if len(args) > 0 && args[0] == "--about" {
-		if len(args) != 3 {
-			return Request{}, errors.New("message --about takes a terminal id and a text")
-		}
-		id, err := strconv.ParseUint(args[1], 10, 64)
-		if err != nil || id == 0 {
-			return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[1])
-		}
-		about, args = id, args[2:]
+	req := Request{Op: OpMessage}
+	flags := map[string]func(string) error{
+		"--title": func(title string) error {
+			if strings.TrimSpace(title) == "" || strings.ContainsAny(title, "\r\n") || len(title) > MaxTitle {
+				return fmt.Errorf("title must be one line of 1 to %d bytes", MaxTitle)
+			}
+			req.Title = title
+			return nil
+		},
+		"--kind": func(kind string) error {
+			if !slices.Contains(MessageKinds, MessageKind(kind)) {
+				return fmt.Errorf("kind must be one of %v, not %q", MessageKinds, kind)
+			}
+			req.Kind = MessageKind(kind)
+			return nil
+		},
+		"--link": func(resource string) error {
+			target, err := parseTarget(resource)
+			if err != nil {
+				return err
+			}
+			if target.Kind == TargetPeek || target.Kind == TargetPerspective {
+				return errors.New("--link takes terminal:<id>, diff:<id>, file:<path> or project:<name>")
+			}
+			req.Target = &target
+			return nil
+		},
 	}
-	if len(args) != 1 || args[0] == "--help" || args[0] == "-h" {
-		return Request{}, errors.New("message takes a text, or - for standard input, and optionally --about <id> before it")
+	for len(args) > 1 && flags[args[0]] != nil {
+		if err := flags[args[0]](args[1]); err != nil {
+			return Request{}, err
+		}
+		delete(flags, args[0])
+		args = args[2:]
+	}
+	if len(args) == 0 && req.Title != "" {
+		return req, nil
+	}
+	if len(args) != 1 || strings.HasPrefix(args[0], "--") && !strings.Contains(args[0], " ") || args[0] == "-h" {
+		return Request{}, errors.New("message takes a text, or - for standard input, after --title <title>, --kind <kind> and --link <resource>, all optional")
 	}
 	text, err := readText(args[0], stdin, MaxMessage)
+	if errors.Is(err, errBlank) && req.Title != "" {
+		return req, nil
+	}
 	if err != nil {
 		return Request{}, err
 	}
-	return Request{Op: OpMessage, About: about, Text: text}, nil
+	req.Text = text
+	return req, nil
 }
+
+var errBlank = errors.New("text must not be blank")
 
 // readText is the text argument, or standard input for -, without the line
 // breaks at its end.
@@ -146,8 +179,11 @@ func readText(arg string, stdin io.Reader, limit int) (string, error) {
 		text = string(b)
 	}
 	text = strings.TrimRight(text, "\r\n")
-	if strings.TrimSpace(text) == "" || len(text) > limit {
-		return "", fmt.Errorf("text must be 1 to %d bytes, not blank", limit)
+	if strings.TrimSpace(text) == "" {
+		return "", errBlank
+	}
+	if len(text) > limit {
+		return "", fmt.Errorf("text must be at most %d bytes", limit)
 	}
 	return text, nil
 }

@@ -81,10 +81,10 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 2. Report only what changed or needs the user: for each agent, one message, what you saw and what you suggest. The latest message shows first, so send the most urgent last.
 
    ```sh
-   "$JUN_BIN" tool message --about <id> '<what you saw>. <what you suggest>'
+   "$JUN_BIN" tool message --title '<what you saw>' --kind <ask|warn|done|info> --link terminal:<id> '<what you suggest>'
    ```
 
-   Jun adds the id, the project and the time, and shows it in Messages in Global, so the user reads it without opening you. Say the same in a line in your own terminal. When nothing changed, send nothing and answer with one short line. Messages stay, so do not send again what you already sent about an agent unless it got worse: an agent still waiting for the same thing is no news, on a tick or when a restarted watch tells of it again.
+   `<id>` is the agent's, as `terminals` and `watch` give it: without `--link` the user cannot go to it. `ask` is for what waits for the user, `warn` for what looks stuck. Jun adds the project and the time, and shows it in Messages in Global, so the user reads it without opening you, and a click peeks that agent. Say the same in a line in your own terminal. When nothing changed, send nothing and answer with one short line. Messages stay, so do not send again what you already sent about an agent unless it got worse: an agent still waiting for the same thing is no news, on a tick or when a restarted watch tells of it again.
 3. When an agent waits for the user, show it: `open terminal:<id> --peek`, one at a time. Jun refuses this when the user is elsewhere; then the report is enough.
 
 ## What you may do

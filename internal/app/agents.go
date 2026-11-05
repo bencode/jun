@@ -151,6 +151,29 @@ func (a *app) waitingByProject() map[string]int {
 	return counts
 }
 
+// revealTab goes to the tab, in whatever project and perspective it is.
+func (a *app) revealTab(view layout.ViewID) error {
+	previous := a.state.ActiveProject
+	region, err := a.state.RevealView(view)
+	if err != nil {
+		return err
+	}
+	a.layoutChanged()
+	a.focusRegion(region)
+	if a.state.ActiveProject != previous {
+		a.checkCurrentDirectory()
+	}
+	return nil
+}
+
+// enterProject makes the project the current one, and tells whether it is.
+func (a *app) enterProject(name string) bool {
+	if name != a.state.ActiveProject {
+		a.selectProject(name)
+	}
+	return a.state.ActiveProject == name
+}
+
 // revealSession shows the session's tab. When its tab was closed, it
 // reopens where new tabs go, in the session's project.
 func (a *app) revealSession(id terminal.ID) {
@@ -163,24 +186,11 @@ func (a *app) revealSession(id terminal.ID) {
 		if bound != id {
 			continue
 		}
-		previous := a.state.ActiveProject
-		region, err := a.state.RevealView(view)
-		if err != nil {
-			a.report(err)
-			return
-		}
-		a.layoutChanged()
-		a.focusRegion(region)
-		if a.state.ActiveProject != previous {
-			a.checkCurrentDirectory()
-		}
+		a.report(a.revealTab(view))
 		return
 	}
-	if session.ProjectName != a.state.ActiveProject {
-		a.selectProject(session.ProjectName)
-		if a.state.ActiveProject != session.ProjectName {
-			return
-		}
+	if !a.enterProject(session.ProjectName) {
+		return
 	}
 	target := a.tabsTarget()
 	if target == nil {

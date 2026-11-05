@@ -43,9 +43,22 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 **Messages**, in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
 
-- Each message shows the terminal it is about, its project, its age and its text, the latest first.
-- **Click a message** to [peek](#peek) at that agent, or to show the terminal when it runs no agent. Clicked again, it closes the peek. **⌘-click** shows an agent's tab.
-  - A message of a terminal that has ended, or of an earlier run of Jun, cannot be clicked.
+- Each message shows an icon for its kind, its title, its age, its text and, when it links to something, a tag, the latest first.
+  - The icons tell what asks for you, a warning, what is done and what is for your information.
+  - The tag names the project and the terminal, Diff or file: `#13 yimi`, `#13 yimi · Diff`, `yimi · notes.md`.
+- **Click a message with a tag** to go to what it links to:
+
+  | It links to | Click | ⌘-click |
+  |---|---|---|
+  | An agent's terminal | [Peeks](#peek) at it; clicked again, closes the peek | Shows its tab |
+  | Another terminal | Shows its tab | Shows its tab |
+  | A Diff or a file | Goes to its tab wherever it is, else opens one in its project | The same |
+  | A project | Switches to it | The same |
+
+  - A message whose terminal has ended, or whose project is gone, cannot be clicked.
+- A long text shows four lines. **Show more** opens it where it is, and **Show less** folds it.
+- **Tab** from the title of Messages, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** acts as a click, and **→** and **←** open and fold a long text.
+- Messages last until Jun quits. It keeps the last 500.
 
 Global shows its views together, without tabs:
 

@@ -13,7 +13,7 @@ import (
 
 const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
-	"  send <id> <text> | send <id> - | message [--about <id>] <text> | message [--about <id>] - |\n" +
+	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
@@ -87,16 +87,20 @@ Sending:
       takes it, whatever it is doing, the caller's own too; a terminal
       running no agent does not. Prints nothing once the agent works,
       else "sent, not started yet" after 5 seconds.
-  jun tool message [--about <id>] <text>
-  jun tool message [--about <id>] -
+  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>
+  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] -
       Shows the text to the user, in Messages in Global, without
-      disturbing them: any terminal may, at any time. It tells the
-      caller's terminal and project, or with --about those of the
-      terminal it is about; clicking it peeks that agent, or shows a
-      terminal running none. With -, the text is standard input. Line
-      breaks at its end go; at most 4 KiB. Jun keeps the last 500. Prints
-      nothing. "shown, but not saved" is status 1 with the message shown:
-      do not send it again.
+      disturbing them: any terminal may, at any time. A title of one
+      line, at most 200 bytes, goes above it; with a title the text may
+      go. The kind, ask, warn, done or info, the default, gives it its
+      icon. The resource, terminal:<id>, diff:<id>, file:<path> or
+      project:<name>, is where it takes the user, and Jun tells the
+      project from it; report on another agent with terminal:<its id>.
+      Without one it is plain news, leading nowhere. A resource that
+      does not exist is status 1 and shows nothing. With -, the text is
+      standard input.
+      Line breaks at its end go; at most 4 KiB. Jun keeps the last 500,
+      until it quits. Prints nothing.
 
 Running commands, each in a terminal of its own, in the caller's
 project, with no tab unless asked for:

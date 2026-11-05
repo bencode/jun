@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
@@ -60,7 +61,11 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 	onUI := func(fn func()) bool { return a.onUI(stop, fn) }
 	closing := tool.Response{Error: "Jun is closing"}
 	layout := slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op)
-	if layout && !a.awaitRepo(stop, onUI, req.Target, callers) {
+	refused := func() bool { return layout && a.toolGuard(a.toolCaller(callers), req.Target) != nil }
+	if (layout || req.Op == tool.OpMessage) && !a.awaitRepo(stop, onUI, req.Target, refused) {
+		return closing
+	}
+	if req.Op == tool.OpMessage && req.Target != nil && req.Target.Kind == tool.TargetFile && !a.await(stop, onUI, a.reposLoading) {
 		return closing
 	}
 	if answer, ok := a.uiAnswers(req, callers)[req.Op]; ok {
@@ -165,15 +170,14 @@ func (a *app) handleSend(stop <-chan struct{}, onUI func(func()) bool, req tool.
 // target's repository to be read, as Jun reads them in the background
 // once a project's repository is first asked for. Jun reads them again
 // once when the terminal is in none of the worktrees read: agents make
-// worktrees as they go. Only for a caller the guard lets through.
-// False: Jun closed.
-func (a *app) awaitRepo(stop <-chan struct{}, onUI func(func()) bool, target *tool.Target, callers []int) bool {
+// worktrees as they go. Not for a call refused anyway. False: Jun closed.
+func (a *app) awaitRepo(stop <-chan struct{}, onUI func(func()) bool, target *tool.Target, refused func() bool) bool {
 	if target == nil || target.Kind != tool.TargetDiff {
 		return true
 	}
 	reread := false
 	loading := func() bool {
-		if a.toolGuard(a.toolCaller(callers), target) != nil {
+		if refused() {
 			return false // refused as it is, at once
 		}
 		s, err := a.toolTerminal(target.ID)
@@ -189,6 +193,17 @@ func (a *app) awaitRepo(stop <-chan struct{}, onUI func(func()) bool, target *to
 		}
 		return errors.Is(err, errRepoLoading)
 	}
+	return a.await(stop, onUI, loading) // the change itself then says the repository is still loading
+}
+
+// reposLoading tells whether a project's worktrees are still being read: a
+// file's project may be told only by them. It starts the reads not begun.
+func (a *app) reposLoading() bool {
+	return slices.ContainsFunc(a.state.Projects, func(p *layout.Project) bool { return a.repoFor(p.CWD).loading })
+}
+
+// await polls, up to a few seconds, until loading says no. False: Jun closed.
+func (a *app) await(stop <-chan struct{}, onUI func(func()) bool, loading func() bool) bool {
 	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); {
 		still := false
 		if !onUI(func() { still = loading() }) {
@@ -203,7 +218,7 @@ func (a *app) awaitRepo(stop <-chan struct{}, onUI func(func()) bool, target *to
 			return false
 		}
 	}
-	return true // the change itself then says the repository is still loading
+	return true
 }
 
 // toolTerminals lists the running terminals by id.

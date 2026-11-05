@@ -22,6 +22,7 @@ const (
 	MaxLines     = 500
 	MaxText      = 1 << 20 // the bytes send takes
 	MaxMessage   = 4096    // the bytes message takes
+	MaxTitle     = 200     // the bytes a message's title takes
 )
 
 type Op string
@@ -63,18 +64,30 @@ type Target struct {
 	Name string     `json:"name,omitempty"`
 }
 
+// MessageKind tells at a glance what a message asks of the user.
+type MessageKind string
+
+const (
+	MessageInfo MessageKind = "info"
+	MessageAsk  MessageKind = "ask" // the user has something to do
+	MessageWarn MessageKind = "warn"
+	MessageDone MessageKind = "done"
+)
+
+var MessageKinds = []MessageKind{MessageAsk, MessageWarn, MessageDone, MessageInfo}
+
 type Request struct {
 	Op       Op      `json:"op"`
 	Terminal uint64  `json:"terminal,omitempty"` // screen
 	Lines    int     `json:"lines,omitempty"`    // screen, 1 to MaxLines
-	Target   *Target `json:"target,omitempty"`   // open, close
+	Target   *Target `json:"target,omitempty"`   // open, close, what a message links to
 	// In is the perspective a Diff opens in, of the terminal's project:
 	// selected, or made when there is none.
-	In   string `json:"in,omitempty"`
-	Peek bool   `json:"peek,omitempty"` // open terminal: in the peek drawer
-	Text string `json:"text,omitempty"` // send: to submit, its line breaks kept; message: to show
-	// About is the terminal a message is about; none is the caller's.
-	About uint64 `json:"about,omitempty"`
+	In    string      `json:"in,omitempty"`
+	Peek  bool        `json:"peek,omitempty"`  // open terminal: in the peek drawer
+	Text  string      `json:"text,omitempty"`  // send: to submit, its line breaks kept; message: to show
+	Title string      `json:"title,omitempty"` // message
+	Kind  MessageKind `json:"kind,omitempty"`  // message; none is MessageInfo
 	// Command is the shell command line run and loop run, in Dir, an
 	// absolute path.
 	Command string        `json:"command,omitempty"`
