@@ -12,6 +12,7 @@ const (
 	ViewDiff       ViewKind = "diff"
 	ViewFile       ViewKind = "file"
 	ViewAgents     ViewKind = "agents"     // in Global
+	ViewMessages   ViewKind = "messages"   // in Global
 	ViewSessions   ViewKind = "sessions"   // agents' sessions, in the side region
 	ViewSkills     ViewKind = "skills"     // a placeholder an earlier side preset had, which loading drops
 	ViewTranscript ViewKind = "transcript" // an agent session, read-only
@@ -35,6 +36,8 @@ type View struct {
 	File         *FileRef     `json:"file,omitempty"`       // a file view's file
 	Transcript   *SessionRef  `json:"transcript,omitempty"` // a transcript view's session
 	Diff         *DiffRef     `json:"diff,omitempty"`       // what a Diff view compares
+	Hidden       bool         `json:"hidden,omitempty"`     // Global does not show it
+	Share        float32      `json:"share,omitempty"`      // its weight among the views Global shows
 }
 
 // DiffRef is what a Diff view compares: a source of the view's project's
@@ -87,30 +90,30 @@ type Project struct {
 	Perspectives      []*Perspective `json:"perspectives"`
 }
 type State struct {
-	Projects      []*Project `json:"projects"`
-	ActiveProject string     `json:"activeProject"`
-	Global        *Region    `json:"global"`
-	GlobalVisible bool       `json:"globalVisible"`
-	RailExpanded  bool       `json:"railExpanded"`
+	Projects      []*Project    `json:"projects"`
+	ActiveProject string        `json:"activeProject"`
+	Global        *Region       `json:"global"`
+	GlobalVisible bool          `json:"globalVisible"`
+	GlobalArrange GlobalArrange `json:"globalArrange,omitempty"`
+	RailExpanded  bool          `json:"railExpanded"`
 	// Chinese, Theme and TextSize are where earlier versions kept settings
 	// the settings file now holds: read once to move them there.
 	Chinese       bool    `json:"chinese,omitempty"`
 	Theme         string  `json:"theme,omitempty"`
 	TextSize      float32 `json:"textSize,omitempty"`
 	CenterPercent float32 `json:"centerPercent"`
-	// MessagesHidden and AgentsPercent are how Global shows Messages: below
-	// its region, which gets this share of its height.
+	// MessagesHidden and AgentsPercent are where earlier versions kept what
+	// Global's views now hold: read once to move them there.
 	MessagesHidden bool    `json:"messagesHidden,omitempty"`
 	AgentsPercent  float32 `json:"agentsPercent,omitempty"`
 	nextID         uint64
 }
 
-const defaultAgentsPercent float32 = 60
-
 func New() *State {
-	s := &State{CenterPercent: 76, AgentsPercent: defaultAgentsPercent}
+	s := &State{CenterPercent: 52}
 	s.Global = s.newRegion()
 	s.fill(s.Global, globalPreset, "")
+	s.fillGlobalShares()
 	return s
 }
 

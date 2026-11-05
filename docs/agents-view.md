@@ -41,13 +41,20 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 ## Messages
 
-**Messages**, below the Agents view in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
+**Messages**, in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
 
 - Each message shows the terminal it is about, its project, its age and its text, the latest first.
 - **Click a message** to [peek](#peek) at that agent, or to show the terminal when it runs no agent. Clicked again, it closes the peek. **⌘-click** shows an agent's tab.
   - A message of a terminal that has ended, or of an earlier run of Jun, cannot be clicked.
-- Drag the line above it to change how Global's height is shared.
-- **⋯ → Hide Messages** gives Global to the Agents view, and **Show Messages** brings it back; **Toggle Messages** in the View menu and the command palette does both, and shows Global too when it is hidden. Messages keep coming while hidden.
+
+Global shows its views together, without tabs:
+
+- **⋯ → Agents** and **Messages** show or hide each view. Its room goes to the other views. Hiding the last one hides Global, and it comes back with Global.
+  - Messages keep coming while hidden.
+- **⋯ → Side by Side** puts the views in columns, each as high as Global, and **Stacked** puts them one above the other.
+- Drag the line between two views to share their room. Both layouts use the same shares.
+- **Toggle Agents**, **Toggle Messages** and **Toggle Global Layout** are in the View menu and the command palette. With Global hidden, the first two show it too.
+- **⌃Tab** and **⌘1**–**⌘9** move between the views shown.
 
 ## Peek
 

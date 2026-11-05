@@ -81,7 +81,7 @@ func TestLoadV1PreservesStateAndSavesV3(t *testing.T) {
 		}
 	}
 	if s.ActiveProject != "Brain" || s.Projects[0].Perspective(s.Projects[0].ActivePerspective).Name != "Review" ||
-		s.CurrentPerspective().Name != "Work" || len(s.Global.Views) != 1 || s.Global.Views[0].Kind != layout.ViewAgents ||
+		s.CurrentPerspective().Name != "Work" || len(s.Global.Views) != 2 || s.Global.Views[0].Kind != layout.ViewAgents ||
 		s.GlobalVisible || !s.RailExpanded || s.CenterPercent != 71 {
 		t.Fatal("migration lost selection or global state")
 	}
@@ -201,7 +201,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 		{"Jun Work bottom", work.Bottom, nil, 0},
 		{"Jun Review column", review.Columns[0], []layout.ViewID{16}, 16},
 		{"Brain Work column", brain.Perspectives[0].Columns[0], []layout.ViewID{14, 18}, 14},
-		{"Global", s.Global, []layout.ViewID{17}, 17},
+		{"Global", s.Global, []layout.ViewID{17, 23}, 17},
 	}
 	for _, c := range cases {
 		if got := ids(c.region); !reflect.DeepEqual(got, c.views) || c.region.Active != c.active {

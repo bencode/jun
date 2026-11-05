@@ -89,7 +89,7 @@ func TestFixedRegionsKeepTheirViews(t *testing.T) {
 			t.Fatalf("fixed tab %s can be closed", label)
 		}
 	}
-	for r, want := range map[*layout.Region][]string{p.Side: {"Hide Side Bar"}, a.state.Global: {"Hide Messages", "Hide Global"}} {
+	for r, want := range map[*layout.Region][]string{p.Side: {"Hide Side Bar"}, a.state.Global: {"Agents", "Messages", "-", "Side by Side", "Stacked", "-", "Hide Global"}} {
 		click(t, tt, fmt.Sprintf("Region menu %d", r.ID))
 		if items := tt.Menu(); !slices.Equal(items, want) {
 			t.Fatalf("region %d menu offers %v", r.ID, items)
@@ -119,13 +119,13 @@ func TestGlobalShowsAgentsWithoutProject(t *testing.T) {
 		t.Fatal("Global did not show Agents")
 	}
 	click(t, tt, fmt.Sprintf("Region menu %d", a.state.Global.ID))
-	if items := tt.Menu(); !slices.Equal(items, []string{"Hide Messages", "Hide Global"}) {
+	if items := tt.Menu(); !slices.Equal(items, []string{"Agents", "Messages", "-", "Side by Side", "Stacked", "-", "Hide Global"}) {
 		t.Fatalf("Global menu offers %v", items)
 	}
 	tt.CloseMenu()
 	a.prefs.Language = "zh"
 	tt.Frame()
-	if !tt.HasText("没有正在运行的 agent") || len(a.state.Global.Views) != 1 || len(a.bindings) != 0 {
+	if !tt.HasText("没有正在运行的 agent") || len(a.state.Global.Views) != 2 || len(a.bindings) != 0 {
 		t.Fatal("Agents did not translate or started a shell")
 	}
 }

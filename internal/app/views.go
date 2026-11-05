@@ -15,6 +15,10 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.agentsView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewMessages {
+		a.messagesView(c)
+		return
+	}
 	if v.Kind == layout.ViewTree {
 		a.filesView(c, v)
 		return

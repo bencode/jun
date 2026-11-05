@@ -10,7 +10,7 @@ Symbols: ⌘ Command, ⌥ Option, ⌃ Control, ⇧ Shift.
 
 ## Tabs
 
-Tab shortcuts act on the active region: the side bar, column, bottom region or Global that holds keyboard focus. The side bar’s and Global’s tabs are fixed: there ⌘W does nothing, and ⌘T opens the terminal in the column or bottom region focused last, else the first column.
+Tab shortcuts act on the active region: the side bar, column, bottom region or Global that holds keyboard focus. In Global they move between the views shown. The side bar’s tabs and Global’s views are fixed: there ⌘W does nothing, and ⌘T opens the terminal in the column or bottom region focused last, else the first column.
 
 | Action | Shortcut |
 |---|---|

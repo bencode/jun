@@ -311,7 +311,7 @@ func TestProjectSubmissionIsSavedAndRestored(t *testing.T) {
 	tt.Advance(400 * time.Millisecond)
 	restored := testNewApp(t)
 	restored.restoreConfig(path)
-	if restored.state.ActiveProject != "Jun" || restored.state.CurrentProject().CWD != cwd || restored.state.GlobalVisible || len(restored.state.Global.Views) != 1 ||
+	if restored.state.ActiveProject != "Jun" || restored.state.CurrentProject().CWD != cwd || restored.state.GlobalVisible || len(restored.state.Global.Views) != 2 ||
 		!restored.state.CurrentPerspective().SideVisible {
 		t.Fatal("project/default layout did not survive restart")
 	}

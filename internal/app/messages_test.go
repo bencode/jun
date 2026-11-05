@@ -201,7 +201,7 @@ func TestHiddenMessagesKeepComing(t *testing.T) {
 	tt.Frame()
 	say(t, a, sessions[0], 0, "Before hiding")
 	tt.Frame()
-	menu(t, tt, a, a.state.Global, "Hide Messages")
+	menu(t, tt, a, a.state.Global, "Messages")
 	tt.Frame()
 	if tt.HasText("Before hiding") {
 		t.Fatal("hidden messages show")
@@ -213,21 +213,15 @@ func TestHiddenMessagesKeepComing(t *testing.T) {
 	if err := config.Save(path, a.state); err != nil {
 		t.Fatal(err)
 	}
-	if s, err := config.Load(path); err != nil || !s.MessagesHidden {
-		t.Fatalf("restored hidden %v: %v", s != nil && s.MessagesHidden, err)
+	if s, err := config.Load(path); err != nil || !s.Global.Views[1].Hidden {
+		t.Fatalf("restored %v: %v", s, err)
 	}
 
 	say(t, a, sessions[0], 0, "While hidden")
-	menu(t, tt, a, a.state.Global, "Show Messages")
+	menu(t, tt, a, a.state.Global, "Messages")
 	tt.Frame()
 	if !tt.HasText("Before hiding") || !tt.HasText("While hidden") {
 		t.Fatalf("Global shows %v", tt.Texts())
-	}
-
-	a.state.GlobalVisible, a.state.MessagesHidden = false, true
-	a.toggleMessages()
-	if !a.state.GlobalVisible || a.state.MessagesHidden {
-		t.Fatal("Toggle Messages left them hidden with Global")
 	}
 }
 

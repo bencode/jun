@@ -75,17 +75,6 @@ func (a *app) cutMessages(limit int) {
 	a.messageLines = len(a.messages)
 }
 
-// toggleMessages shows or hides Messages; with Global hidden, it shows both.
-// Global's region is built anew, so the focus in it has to come back.
-func (a *app) toggleMessages() {
-	a.state.MessagesHidden = a.state.GlobalVisible && !a.state.MessagesHidden
-	a.state.GlobalVisible = true
-	a.layoutChanged()
-	if a.activeRegion == a.state.Global.ID && a.peek.id == 0 {
-		a.focusRegion(a.state.Global.ID)
-	}
-}
-
 // messageTerminal is the running terminal the message is about, if any.
 func (a *app) messageTerminal(m message.Message) (terminal.ID, bool) {
 	id := terminal.ID(m.Terminal)

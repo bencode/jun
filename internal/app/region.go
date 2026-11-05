@@ -11,17 +11,11 @@ import (
 func (a *app) region(c *ui.Context, r *layout.Region) {
 	views := slices.Clone(r.Views)
 	p := a.state.CurrentPerspective()
-	count, bottom, side := 0, false, false
-	if p != nil {
-		count, bottom, side = len(p.Columns), p.BottomVisible, p.SideVisible
-	}
+	count, bottom, side := len(p.Columns), p.BottomVisible, p.SideVisible
 	fixed := a.state.Fixed(r.ID)
 	// A menu choice can replace the layout during this build; keep focus pending for its next frame.
 	current := func() bool {
-		if r == a.state.Global {
-			return a.state.GlobalVisible
-		}
-		return p != nil && a.state.CurrentPerspective() == p && len(p.Columns) == count && p.BottomVisible == bottom &&
+		return a.state.CurrentPerspective() == p && len(p.Columns) == count && p.BottomVisible == bottom &&
 			p.SideVisible == side && (slices.Contains(p.Columns, r) || r == p.Bottom && bottom || r == p.Side && side)
 	}
 	bar := false

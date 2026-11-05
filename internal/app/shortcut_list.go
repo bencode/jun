@@ -40,8 +40,8 @@ func shortcutGroups() []shortcutGroup {
 				"In the active column or bottom region; from the side bar or Global, in the one focused last, else the first column",
 				"当前列或底部区域；焦点在侧边栏或 Global 时，放到最近聚焦的列或底部区域，否则第一列"}},
 			{bilingual{"Close tab", "关闭当前标签"}, keys(closeTabKeys.String()), bilingual{
-				"Columns and the bottom region; the terminal keeps running in the background. The side bar’s and Global’s tabs stay; the region stays open after its last tab",
-				"列和底部区域；终端会话保留在后台。侧边栏和 Global 的固定标签不关闭；关闭最后一个标签后区域保留"}},
+				"Columns and the bottom region; the terminal keeps running in the background. The side bar’s tabs and Global’s views stay; the region stays open after its last tab",
+				"列和底部区域；终端会话保留在后台。侧边栏的固定标签和 Global 的视图不关闭；关闭最后一个标签后区域保留"}},
 			{bilingual{"Next tab", "下一个标签"}, keys("⌃Tab", "⌘⇧]"), inRegion},
 			{bilingual{"Previous tab", "上一个标签"}, keys("⌃⇧Tab", "⌘⇧["), inRegion},
 			{bilingual{"Tab 1–8", "第 1–8 个标签"}, keys("⌘1–⌘8"), bilingual{"In the active region; beyond the last does nothing", "当前区域；超出时无操作"}},
