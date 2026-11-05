@@ -56,10 +56,11 @@ type SessionRef struct {
 
 // FileRef is a file a file view shows: its path in a source of the view's
 // project's repository, which Source names: a local branch, or the
-// directory of a detached worktree.
+// directory of a detached worktree; or its path in a directory outside the
+// repository, absolute in Source.
 type FileRef struct {
 	Source string `json:"source"`
-	Path   string `json:"path"` // relative to the repository's top level, slash-separated
+	Path   string `json:"path"` // relative to the repository's top level, or that directory; slash-separated
 }
 type Region struct {
 	ID     RegionID `json:"id"`

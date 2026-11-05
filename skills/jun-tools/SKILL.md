@@ -1,6 +1,6 @@
 ---
 name: jun-tools
-description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; show the user a terminal or a branch's changes; run a command in a new terminal; run one on a schedule. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
+description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; show the user a terminal, a file or a branch's changes; run a command in a new terminal; run one on a schedule. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
 ---
 
 # Jun tools
@@ -25,8 +25,9 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 | `send <id> <text>` / `send <id> -` | Submits the text to the agent in that terminal, as pasted then Enter; `-` reads standard input |
 | `open terminal:<id> [--peek]` | Shows that terminal to the user: its tab, or the peek drawer |
 | `open diff:<id> [--in <perspective>]` | Opens the changes of the branch that terminal is on |
+| `open file:<path>` | Opens the file in a tab, read-only, wherever it is; opened again, reads it again |
 | `open project:<name>` / `open perspective:<name>` | Switches the user's project or perspective |
-| `close terminal:<id>` / `close diff:<id>` / `close peek` | Closes what `open` opened; a terminal's shell keeps running |
+| `close terminal:<id>` / `close diff:<id>` / `close file:<path>` / `close peek` | Closes what `open` opened; a terminal's shell keeps running |
 | `close perspective:<name>` | Deletes the perspective; with terminals in it, Jun asks the user to confirm |
 | `back` / `forward` | Steps through where the user has been |
 | `run [--dir <path>] [--open] <command…>` | Starts a terminal running the command; prints its id |
@@ -64,6 +65,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 
 ```sh
 "$JUN_BIN" tool open diff:7            # the changes on terminal 7's branch
+"$JUN_BIN" tool open file:report.md    # a file, from your directory or any other
 "$JUN_BIN" tool open terminal:7 --peek # an agent waiting for the user's answer
 ```
 
@@ -104,4 +106,5 @@ The command checks that the agent is `idle` first, since `send` does not look: s
 - **`send` does not look.** It pastes and presses Enter whatever the agent shows: on a `waiting` question, that Enter can answer it. Read the `screen` before you send, and have a scheduled send check the status.
 - **Drafts.** `send` goes into the agent's input box as is. Text already there, such as the user's draft or a prompt Claude Code put back after Esc, comes first in the message. When that matters, read the input box on `screen` before sending.
 - **Questions are the user's.** A `waiting` agent asks the user; do not answer its permissions or choices with `send`. Show it to the user with `open terminal:<id> --peek`.
+- **A file shown outside the project does not follow its changes.** After writing to it, `open file:` again.
 - **Changing what the user sees.** `open`, `close`, `back`, `forward` and `run --open` work only for the terminal the user is with (shown in the peek drawer, or last focused), and not while a Jun dialog is open. Otherwise they are refused: tell the user what you would show.

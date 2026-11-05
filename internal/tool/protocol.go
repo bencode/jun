@@ -50,6 +50,7 @@ const (
 	TargetDiff        TargetKind = "diff"        // the changes of the branch a terminal, by ID, is on
 	TargetProject     TargetKind = "project"     // by Name
 	TargetPerspective TargetKind = "perspective" // by Name, in the current project
+	TargetFile        TargetKind = "file"        // by Name, an absolute path
 	TargetPeek        TargetKind = "peek"        // closing only
 )
 

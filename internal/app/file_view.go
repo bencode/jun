@@ -31,7 +31,8 @@ type fileViewState struct {
 }
 
 // fileView shows a file of a source of the project's repository, read
-// again as the worktree it is read from changes.
+// again as the worktree it is read from changes, or of a directory outside
+// it, read as a worktree is.
 func (a *app) fileView(c *ui.Context, v *layout.View) {
 	project := a.project(v.ProjectName)
 	if project == nil || v.File == nil {
@@ -44,6 +45,9 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 		a.fileViews[v.ID] = st
 	}
 	s, found := r.source(v.File.Source)
+	if !found && filepath.IsAbs(v.File.Source) {
+		s, found = repo.Source{Worktree: v.File.Source}, true
+	}
 	if found && !st.loading && (!st.read || st.source != s || s.Worktree != "" && st.version != r.version) {
 		a.readFile(fileEnv{a, r, s, *v.File, v.ProjectName}, st)
 	}

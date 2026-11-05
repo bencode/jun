@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -41,9 +42,9 @@ func (a *app) toolChange(req tool.Request, caller terminal.ID) (string, error) {
 		return "", errors.New("no target")
 	}
 	if req.Op == tool.OpOpen {
-		return "", a.toolOpen(req)
+		return "", a.toolOpen(req, caller)
 	}
-	return a.toolClose(*req.Target)
+	return a.toolClose(*req.Target, caller)
 }
 
 // toolGuard lets a caller change what the user sees only while the user
@@ -70,8 +71,15 @@ func (a *app) dialogOpen() bool {
 		a.persistence != nil && a.persistence.errorOpen
 }
 
-func (a *app) toolOpen(req tool.Request) error {
+func (a *app) toolOpen(req tool.Request, caller terminal.ID) error {
 	t := *req.Target
+	if t.Kind == tool.TargetFile {
+		project, err := a.newTerminalProject(caller)
+		if err != nil {
+			return err
+		}
+		return a.showFile(project, t.Name)
+	}
 	if t.Kind == tool.TargetProject {
 		i := slices.IndexFunc(a.state.Projects, func(p *layout.Project) bool { return strings.EqualFold(p.Name, t.Name) })
 		if i < 0 {
@@ -129,7 +137,10 @@ func (a *app) toolOpenDiff(s *terminal.Session, in string) error {
 	return nil
 }
 
-func (a *app) toolClose(t tool.Target) (string, error) {
+func (a *app) toolClose(t tool.Target, caller terminal.ID) (string, error) {
+	if t.Kind == tool.TargetFile {
+		return "", a.toolCloseFile(t.Name, caller)
+	}
 	if t.Kind == tool.TargetPeek {
 		if a.peek.id == 0 {
 			return "", errors.New("no peek")
@@ -150,13 +161,21 @@ func (a *app) toolClose(t tool.Target) (string, error) {
 	return "", a.toolCloseTabs(t.Kind, s)
 }
 
-// toolCloseTabs closes, in the current perspective's columns and bottom,
-// the terminal's tab, or the Diffs of the branch it is on.
-func (a *app) toolCloseTabs(kind tool.TargetKind, s *terminal.Session) error {
-	p := a.state.CurrentPerspective()
-	if p == nil {
-		return errors.New("no perspective")
+func (a *app) toolCloseFile(path string, caller terminal.ID) error {
+	project, err := a.newTerminalProject(caller)
+	if err != nil {
+		return err
 	}
+	n := a.fileAt(project, path)
+	refs := []layout.FileRef{{Source: n.source, Path: n.path},
+		{Source: filepath.Dir(path), Path: filepath.Base(path)}} // as opened before its repository was read
+	shows := func(v *layout.View) bool { return v.File != nil && slices.Contains(refs, *v.File) }
+	return a.closeTabs(shows, fmt.Errorf("no tab of %s here", path))
+}
+
+// toolCloseTabs closes the terminal's tab, or the Diffs of the branch it
+// is on.
+func (a *app) toolCloseTabs(kind tool.TargetKind, s *terminal.Session) error {
 	shows := func(v *layout.View) bool { return a.bindings[v.ID] == s.ID }
 	missing := fmt.Errorf("terminal %d has no tab here", s.ID)
 	if kind == tool.TargetDiff {
@@ -168,6 +187,16 @@ func (a *app) toolCloseTabs(kind tool.TargetKind, s *terminal.Session) error {
 			return v.Kind == layout.ViewDiff && v.ProjectName == s.ProjectName && v.Diff != nil && v.Diff.Source == source.Key()
 		}
 		missing = fmt.Errorf("no Diff of %s here", diffSourceName(source.Key()))
+	}
+	return a.closeTabs(shows, missing)
+}
+
+// closeTabs closes the tabs that shows picks in the current perspective's
+// columns and bottom, or returns missing when there are none.
+func (a *app) closeTabs(shows func(*layout.View) bool, missing error) error {
+	p := a.state.CurrentPerspective()
+	if p == nil {
+		return errors.New("no perspective")
 	}
 	closed := false
 	for _, r := range append(slices.Clone(p.Columns), p.Bottom) {

@@ -135,8 +135,19 @@ func parseTarget(arg string) (Target, error) {
 	}
 	kind, value, ok := strings.Cut(arg, ":")
 	target := Target{Kind: TargetKind(kind)}
-	if !ok || !slices.Contains([]TargetKind{TargetTerminal, TargetDiff, TargetProject, TargetPerspective}, target.Kind) {
-		return Target{}, fmt.Errorf("target must be terminal:<id>, diff:<id>, project:<name>, perspective:<name> or peek: %q", arg)
+	if !ok || !slices.Contains([]TargetKind{TargetTerminal, TargetDiff, TargetProject, TargetPerspective, TargetFile}, target.Kind) {
+		return Target{}, fmt.Errorf("target must be terminal:<id>, diff:<id>, file:<path>, project:<name>, perspective:<name> or peek: %q", arg)
+	}
+	if target.Kind == TargetFile {
+		if value == "" {
+			return Target{}, errors.New("file needs a path")
+		}
+		path, err := filepath.Abs(value)
+		if err != nil {
+			return Target{}, err
+		}
+		target.Name = path
+		return target, nil
 	}
 	if target.Kind == TargetProject || target.Kind == TargetPerspective {
 		target.Name = strings.TrimSpace(value)

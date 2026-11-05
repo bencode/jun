@@ -101,6 +101,7 @@ Runs until Jun quits, printing a line as soon as there is news of an agent:
 |---|---|---|
 | `terminal:<id>` | Shows the terminal's tab, switching project and perspective as needed, and reopens its tab when it was closed. With `--peek`, an agent's terminal shows in the [peek drawer](agents-view.md#peek) instead, or its tab when that is on screen. | Closes its tab in the current perspective. The shell keeps running. |
 | `diff:<id>` | Opens the changes of the branch the terminal is on, as its agent card's Review Changes does, in the current perspective. With `--in <perspective>`, first switches to that perspective of the terminal's project, made when there is none. | Closes the Diff of that branch in the current perspective. |
+| `file:<path>` | Opens the file in a tab of its own, read-only, wherever it is: see [Files](files.md#files-outside-the-project). A relative path starts from the caller's directory. Opened again, the file is read again. | Closes its tab in the current perspective |
 | `project:<name>` | Switches to the project | — |
 | `perspective:<name>` | Switches to the perspective of the current project, made when there is none | Deletes it, as Delete Perspective… does: with terminals in it, Jun asks you to confirm, and prints `waiting for the user to confirm`. A project keeps at least one perspective. |
 | `peek` | — | Closes the peek drawer |

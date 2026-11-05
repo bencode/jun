@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -218,5 +219,39 @@ func TestLayoutToolsOpenAndCloseTheDiffOfATerminalsBranch(t *testing.T) {
 	}
 	if resp := a.toolLayout(req, shellOf(t, caller)); resp.Error != "" || activeView(a.tabsTarget()).Diff.Source != "feature" {
 		t.Fatalf("open diff of the new worktree: %q", resp.Error)
+	}
+}
+
+func TestLayoutToolsOpenAndCloseFiles(t *testing.T) {
+	a, tt := testApp(t)
+	tt.Frame()
+	caller, other, _ := testTerminals(t, a)
+	path := filepath.Join(t.TempDir(), "report.txt")
+	if err := os.WriteFile(path, []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file := target(tool.TargetFile, 0, path)
+	focus(t, a, tt, other)
+	if resp := layoutTool(t, a, tt, caller, tool.Request{Op: tool.OpOpen, Target: file}); resp.Error != "the user is not with you" {
+		t.Fatalf("from another terminal: %q", resp.Error)
+	}
+	focus(t, a, tt, caller)
+	if resp := layoutTool(t, a, tt, caller, tool.Request{Op: tool.OpOpen, Target: file}); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+	if v := activeView(a.tabsTarget()); v.File == nil || v.File.Path != "report.txt" {
+		t.Fatalf("the file did not open: %+v", v)
+	}
+	focus(t, a, tt, caller)
+	if resp := layoutTool(t, a, tt, caller, tool.Request{Op: tool.OpClose, Target: file}); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+	focus(t, a, tt, caller)
+	if resp := layoutTool(t, a, tt, caller, tool.Request{Op: tool.OpClose, Target: file}); !strings.Contains(resp.Error, "no tab of") {
+		t.Fatalf("closed twice: %q", resp.Error)
+	}
+	missing := target(tool.TargetFile, 0, path+".gone")
+	if resp := layoutTool(t, a, tt, caller, tool.Request{Op: tool.OpOpen, Target: missing}); !strings.Contains(resp.Error, "no file") {
+		t.Fatalf("a missing file: %q", resp.Error)
 	}
 }
