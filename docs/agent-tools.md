@@ -9,7 +9,7 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 Two skills build on these tools, in the [Agent Skills](https://agentskills.io) format, which Claude Code, Codex and Pi read:
 
 - [`jun-tools`](../skills/jun-tools/SKILL.md) teaches an agent the tools: when to use them, the common work, and the pitfalls.
-- [`jun-deputy`](../skills/jun-deputy/SKILL.md) makes a session your deputy: it wakes itself on a schedule, looks over your agents, and reports what needs you.
+- [`jun-deputy`](../skills/jun-deputy/SKILL.md) makes a session your deputy: it hears of your agents as they change, looks them over on a schedule, and reports what needs you.
 
 Install them for your user with the [skills](https://github.com/vercel-labs/skills) CLI:
 
@@ -25,6 +25,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 |---|---|
 | `jun tool help` | The commands, fields, environment and exit status |
 | `jun tool terminals` | Jun's running terminals, as a JSON array, by id |
+| `jun tool watch` | Agents' status as it changes, as JSON, a line each, until it ends |
 | `jun tool screen <id> [--lines N]` | The last N lines of the terminal's text, as plain text |
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
@@ -64,6 +65,29 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 | `self` | `true` for the terminal the caller runs in |
 
 Terminals with closed tabs are listed too: their shells keep running. Terminals whose shell has ended are not.
+
+### watch
+
+Runs until Jun quits, printing a line as soon as there is news of an agent:
+
+```json
+{"id":3,"project":"web","agent":"claude","title":"Fix the login form","from":"working","to":"waiting"}
+```
+
+| Field | Meaning |
+|---|---|
+| `id`, `project`, `agent`, `title` | As `terminals` has them |
+| `from` | The status before; empty for an agent that is new |
+| `to` | The status now; empty for an agent that is gone, or whose terminal closed |
+
+- **It starts** with a line for each agent, `from` empty, so that a change just before it began is not lost.
+- **When Jun tells**: Jun reads the agents' status every second. `waiting`, `working`, a new agent and one gone are told at once. `idle` is told once it has held for 3 seconds: agents go idle for a moment between steps, and that is no news.
+- **It ends** with status 1 when Jun quits, or when the reader falls too far behind, for Jun never waits for a reader. Run it again to catch up, from a loop for instance.
+- **Filter** with `jq`, which needs `--unbuffered` in a pipeline to pass each line on as it comes:
+
+```sh
+"$JUN_BIN" tool watch | jq --unbuffered -c 'select(.to == "waiting")'
+```
 
 ### screen
 

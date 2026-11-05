@@ -53,7 +53,7 @@ func TestMainUsage(t *testing.T) {
 		t.Fatalf("help without Jun: %d", code)
 	}
 	for _, args := range [][]string{
-		{"help", "me"}, {"terminal"}, {"terminals", "1"}, {"screen"}, {"screen", "0"}, {"screen", "x"},
+		{"help", "me"}, {"terminal"}, {"terminals", "1"}, {"watch", "1"}, {"screen"}, {"screen", "0"}, {"screen", "x"},
 		{"screen", "1", "--lines"}, {"screen", "1", "--lines", "0"}, {"screen", "1", "--lines", "501"}, {"screen", "1", "-n", "5"},
 		{"open"}, {"open", "7"}, {"open", "terminal:0"}, {"open", "terminal:x"}, {"open", "project: "}, {"open", "file:a"},
 		{"open", "peek"}, {"open", "peek:1"}, {"open", "diff:7", "--peek"}, {"open", "terminal:7", "--in", "Review"},
@@ -106,7 +106,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 			return Response{}
 		}
 		return Response{Terminals: []Terminal{{ID: 3, Project: "Jun", Agent: "claude", Status: "idle", Self: true}}}
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,9 +180,65 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	}
 
 	// A second Jun on the socket is refused while the first answers.
-	if _, err := Start(path, nil); err == nil || !strings.Contains(err.Error(), "another Jun") {
+	if _, err := Start(path, nil, nil); err == nil || !strings.Contains(err.Error(), "another Jun") {
 		t.Fatalf("second server: %v", err)
 	}
+}
+
+func TestWatchPrintsEventsUntilJunCloses(t *testing.T) {
+	path := socketPath(t)
+	events := make(chan Event, 2)
+	canceled := make(chan struct{})
+	s, err := Start(path, nil, func() (<-chan Event, func()) { return events, func() { close(canceled) } })
+	if err != nil {
+		t.Fatal(err)
+	}
+	events <- Event{ID: 3, Project: "Jun", Agent: "claude", Title: "Fix", To: "working"}
+	events <- Event{ID: 3, Project: "Jun", Agent: "claude", Title: "Fix", From: "working", To: "waiting"}
+
+	stdout := lineWriter{lines: make(chan string, 2)}
+	code := make(chan int, 1)
+	go func() {
+		code <- Main([]string{"watch"}, strings.NewReader(""), stdout, &bytes.Buffer{}, func(string) string { return path })
+	}()
+	// Each event arrives as it happens, not at the end.
+	for _, want := range []string{`"from":""`, `"from":"working","to":"waiting"`} {
+		if line := <-stdout.lines; !strings.Contains(line, want) {
+			t.Fatalf("event %s, want %s", line, want)
+		}
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-code; got != 1 {
+		t.Fatalf("exit %d", got)
+	}
+	<-canceled
+}
+
+func TestWatchEndsForAReaderThatFellBehind(t *testing.T) {
+	path := socketPath(t)
+	events := make(chan Event)
+	close(events)
+	s, err := Start(path, nil, func() (<-chan Event, func()) { return events, func() {} })
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if code, out, stderr := run(path, "watch"); code != 1 || out != "" || !strings.Contains(stderr, "the watch ended") {
+		t.Fatalf("exit %d, %q, %q", code, out, stderr)
+	}
+}
+
+type lineWriter struct{ lines chan string }
+
+func (w lineWriter) Write(p []byte) (int, error) {
+	w.lines <- string(p)
+	return len(p), nil
 }
 
 func TestStartReplacesAStaleSocket(t *testing.T) {
@@ -195,7 +251,7 @@ func TestStartReplacesAStaleSocket(t *testing.T) {
 	if err := stale.Close(); err != nil {
 		t.Fatal(err)
 	}
-	s, err := Start(path, func(Request, []int) Response { return Response{} })
+	s, err := Start(path, func(Request, []int) Response { return Response{} }, nil)
 	if err != nil {
 		t.Fatalf("stale socket: %v", err)
 	}
@@ -208,7 +264,7 @@ func TestStartReplacesAStaleSocket(t *testing.T) {
 	if err := os.WriteFile(path, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Start(path, nil); err == nil {
+	if _, err := Start(path, nil, nil); err == nil {
 		t.Fatal("Start replaced a file that is no socket")
 	}
 }

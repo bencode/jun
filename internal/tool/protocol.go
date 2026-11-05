@@ -1,7 +1,7 @@
 // Package tool lets programs in Jun's terminals, agents above all, ask the
 // Jun that runs them about its terminals and change what it shows:
 // `jun tool …` talks to Jun over a Unix socket, one JSON request and one
-// JSON response a connection.
+// JSON response a connection, or a stream of them for watch.
 package tool
 
 import (
@@ -37,6 +37,7 @@ const (
 	OpLoop       Op = "loop"        // registers one
 	OpLoops      Op = "loops"       // lists them
 	OpCancelLoop Op = "cancel-loop" // the one of Request.Terminal
+	OpWatch      Op = "watch"       // answers with events until the connection ends
 )
 
 // MinEvery is the shortest interval a loop takes.
@@ -93,6 +94,17 @@ type Loop struct {
 	Command string `json:"command"`
 	Project string `json:"project"`
 	Dir     string `json:"dir"`
+}
+
+// Event is an agent's status changing, as watch tells it. A watch starts
+// with one for each agent, From empty.
+type Event struct {
+	ID      uint64 `json:"id"` // its terminal's
+	Project string `json:"project"`
+	Agent   string `json:"agent"`
+	Title   string `json:"title"`
+	From    string `json:"from"` // empty: the agent is new
+	To      string `json:"to"`   // empty: the agent is gone
 }
 
 type Terminal struct {

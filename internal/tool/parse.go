@@ -23,6 +23,9 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 	if command == "terminals" && len(rest) == 0 {
 		return Request{Op: OpTerminals}, nil
 	}
+	if command == "watch" && len(rest) == 0 {
+		return Request{Op: OpWatch}, nil
+	}
 	if (command == "back" || command == "forward") && len(rest) == 0 {
 		return Request{Op: Op(command)}, nil
 	}

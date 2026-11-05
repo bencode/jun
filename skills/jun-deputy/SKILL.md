@@ -1,6 +1,6 @@
 ---
 name: jun-deputy
-description: Run this session as the user's deputy in Jun, the terminal workspace - a standing session that wakes itself on a schedule, looks over the Claude Code, Codex and Pi agents in Jun's terminals, and reports what needs the user. Use only when the user asks for a deputy, or for a session to watch or monitor their Jun agents, and on a [jun-tick] message.
+description: Run this session as the user's deputy in Jun, the terminal workspace - a standing session that hears of the Claude Code, Codex and Pi agents in Jun's terminals as they change, looks them over on a schedule, and reports what needs the user. Use only when the user asks for a deputy, or for a session to watch or monitor their Jun agents, and on a [jun-tick] message.
 ---
 
 # Jun deputy
@@ -9,29 +9,53 @@ You are the user's deputy: you watch every agent in Jun, so that the user does n
 
 The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API` set, as in any terminal of Jun, and `jq`.
 
+Two things reach you: **events**, the moment an agent waits for the user or finishes, and a **tick** every 15 minutes, for what no event tells, such as an agent stuck in `working`.
+
 ## Start
 
-Do this when the user asks. The interval is 3 minutes unless they say otherwise; every tick wakes you and spends tokens. To change the interval, run this again with the new one: it replaces the loop.
+Do this when the user asks. Run it again to change something: it replaces what ran before.
+
+**1. The tick.** Every tick wakes you and spends tokens. It reaches you only while you are `idle`.
 
 ```sh
 self=$("$JUN_BIN" tool terminals | jq -r '.[] | select(.self) | .id')
+echo "your id: $self"
 
-# one deputy loop at a time: end any left by an earlier session
-"$JUN_BIN" tool loop | jq -r '.[] | select(.command | contains("[jun-tick]")) | .id' |
+# one deputy at a time: end the loops of an earlier one
+"$JUN_BIN" tool loop | jq -r '.[] | select(.command | test("jun-tick|jun-deputy")) | .id' |
   while read -r id; do "$JUN_BIN" tool loop cancel "$id"; done
 
 tick='s=$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==SELF) | .status")
 if [ "$s" = idle ]; then "$JUN_BIN" tool send SELF "[jun-tick] Look over the agents, as the jun-deputy skill says."; else echo "skipped: $s"; fi'
-"$JUN_BIN" tool loop 3m "${tick//SELF/$self}"
+"$JUN_BIN" tool loop 15m "${tick//SELF/$self}"
 ```
 
-The tick reaches you only while you are `idle`: when you are busy or asking the user something, it skips that run. The loop's first run comes at once and skips, as you are working; the first tick comes an interval later.
+The loop's first run comes at once and skips, as you are working.
 
-Then tell the user the loop's id, its interval, and that a tick can join anything they left unsent in your input box.
+**2. The events.** Leave yourself out, or each of your own replies would wake you: write your id, printed above, in place of `<id>`, as each command runs in a shell of its own.
+
+- In **Claude Code**, start its Monitor tool with the longest timeout it allows, after stopping one you started earlier, and start it again whenever it ends. Each line then reaches you as a notification, without touching your input box:
+
+  ```sh
+  "$JUN_BIN" tool watch | jq --unbuffered -c --argjson self <id> \
+    'select(.id != $self and (.to == "waiting" or (.from == "working" and .to == "idle")))'
+  ```
+
+- In **Codex or Pi**, run the script beside this file in a loop of its own, giving the folder of this skill. It holds events until you are `idle`, then sends them, and the loop starts it again if the watch ends:
+
+  ```sh
+  "$JUN_BIN" tool loop 1m "bash '<this skill's folder>/scripts/watch.sh' <id>"
+  ```
+
+**3. Tell the user** the loops' ids and what you started. In Codex or Pi, add that a message can join anything they left unsent in your input box.
 
 Loops last until Jun quits. After Jun restarts, or in a new session, start again: ids change.
 
-## On each tick
+## On an event
+
+Read the `screen` of the agents it names, then report them as below. The watch starts by telling of those already waiting.
+
+## On a tick
 
 1. List the agents, without yourself:
 
@@ -40,26 +64,28 @@ Loops last until Jun quits. After Jun restarts, or in a new session, start again
    ```
 
 2. Read each one's `screen <id> --lines 30`. Do not stop at `status`.
-3. Sort them, comparing with your last look:
+
+## Reporting
+
+1. Sort what you read, comparing with your last look:
 
    | What you see | Means |
    |---|---|
    | `waiting` | It asks the user: report it |
-   | `idle`, with a notice such as `Enter to continue · Esc to cancel` | It sits on a key press: report it, as low priority |
    | `idle`, a question in its last reply | It needs an answer: report it |
    | `idle`, text left in its input box | The user may have forgotten to submit it: report it, as low priority |
    | `idle`, newly finished | Report the result in a line |
    | `working`, the same screen as your last look | It may be stuck: report it |
    | `idle` or `working`, nothing new | Say nothing about it |
 
-4. Report only what changed or needs the user, most urgent first, one line each: the id, the project, what you saw, what you suggest. When nothing did, answer with one short line. Do not repeat an item the user has already seen unless it got worse.
-5. When an agent waits for the user, show it: `open terminal:<id> --peek`, one at a time. Jun refuses this when the user is elsewhere; then the report is enough.
+2. Report only what changed or needs the user, most urgent first, one line each: the id, the project, what you saw, what you suggest. When nothing did, answer with one short line. Do not repeat an item the user has already seen unless it got worse.
+3. When an agent waits for the user, show it: `open terminal:<id> --peek`, one at a time. Jun refuses this when the user is elsewhere; then the report is enough.
 
 ## What you may do
 
 | Action | Rule |
 |---|---|
-| `terminals`, `screen`, reports, `open … --peek` | On your own |
+| `terminals`, `watch`, `screen`, reports, `open … --peek` | On your own |
 | `send` to another agent, `run`, other loops | Only after the user says yes, for that action |
 | Answer an agent's permission or choice | Never: that question is the user's |
 | Press a key for a notice, close a terminal, stop an agent | Never |
@@ -70,4 +96,4 @@ Before any `send` the user approved, read that agent's `screen` for a notice or 
 
 ## Stop
 
-When the user says stop, end the loop with `loop cancel <id>` and say so. Keep to the patrol until then: a tick is not a reason to start other work.
+When the user says stop, end your loops with `loop cancel <id>`, stop the Monitor if you started one, and say so. Keep to this work until then: an event or a tick is not a reason to start other work.
