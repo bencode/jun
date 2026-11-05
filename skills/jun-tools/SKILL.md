@@ -30,7 +30,7 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 | `close terminal:<id>` / `close diff:<id>` / `close file:<path>` / `close peek` | Closes what `open` opened; a terminal's shell keeps running |
 | `close perspective:<name>` | Deletes the perspective; with terminals in it, Jun asks the user to confirm |
 | `back` / `forward` | Steps through where the user has been |
-| `message [--about <id>] <text>` | Tells the user, in Messages in Global, without disturbing them |
+| `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` | Tells the user, in Messages in Global, without disturbing them |
 | `run [--dir <path>] [--open] <command…>` | Starts a terminal running the command; prints its id |
 | `loop <every> [--dir <path>] <command…>` | Runs the command every interval (at least `1m`) in a terminal of its own; prints the loop's id |
 | `loop` / `loop cancel <id>` | Lists the loops as JSON / ends one |
@@ -70,15 +70,15 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 "$JUN_BIN" tool open terminal:7 --peek # an agent waiting for the user's answer
 ```
 
-**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. Jun adds your terminal and project, or with `--about` those of the terminal it is about, which a click on it peeks.
+**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. `--link` names what it is about, as `open` does: `terminal:<id>`, `diff:<id>` with the same id from `terminals`, `file:<path>` or `project:<name>`. Jun tells the project from it, and a click takes the user there, peeking an agent. Reporting on another agent, always give it: without it the message is plain news, which takes the user nowhere. A resource that does not exist is an error and shows nothing. `--kind` gives it its icon: `ask` when the user has something to do, `warn`, `done`, or `info`, the default. Messages last until Jun quits.
 
 ```sh
 "$JUN_BIN" tool message 'The nightly run failed: 2 tests, both in the parser.'
-"$JUN_BIN" tool message --about 7 'It asks whether to open a PR. I suggest yes.'
+"$JUN_BIN" tool message --title 'Asks to open a PR' --kind ask --link terminal:7 'I suggest yes.'
 printf '%s\n' "$long_message" | "$JUN_BIN" tool message -
 ```
 
-Keep it to what the user needs, at most 4 KiB. An error starting `shown, but not saved` means the user sees it: do not send it again. When another agent needs an answer now and the user is with you, also show it with `open terminal:<id> --peek`.
+Keep it to what the user needs, at most 4 KiB. When another agent needs an answer now and the user is with you, also show it with `open terminal:<id> --peek`.
 
 **Start another agent or a job.**
 

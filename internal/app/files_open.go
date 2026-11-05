@@ -26,15 +26,8 @@ func (a *app) fileAt(project, path string) fileNode {
 // showFile opens the file at the absolute path in a tab of its own, where
 // new tabs go, or reads it again in the tab that shows it.
 func (a *app) showFile(project, path string) error {
-	info, err := os.Stat(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf(a.text("no file %s", "没有这个文件：%s"), path)
-	}
-	if err != nil {
+	if err := a.checkFile(path); err != nil {
 		return err
-	}
-	if info.IsDir() {
-		return fmt.Errorf(a.text("%s is a directory", "%s 是目录"), path)
 	}
 	target := a.tabsTarget()
 	if target == nil {
@@ -45,6 +38,21 @@ func (a *app) showFile(project, path string) error {
 		a.fileViews[v.ID].read = false
 	}
 	a.focusRegion(target.ID)
+	return nil
+}
+
+// checkFile tells why the path is not a file Jun can open.
+func (a *app) checkFile(path string) error {
+	info, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf(a.text("no file %s", "没有这个文件：%s"), path)
+	}
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf(a.text("%s is a directory", "%s 是目录"), path)
+	}
 	return nil
 }
 

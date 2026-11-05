@@ -214,7 +214,7 @@ func TestLayoutToolsOpenAndCloseTheDiffOfATerminalsBranch(t *testing.T) {
 		t.Fatalf("before reading the repository again: %q", resp.Error)
 	}
 	onUI := func(fn func()) bool { fn(); return true }
-	if !a.awaitRepo(nil, onUI, req.Target, shellOf(t, caller)) {
+	if !a.awaitRepo(nil, onUI, req.Target, func() bool { return false }) {
 		t.Fatal("awaitRepo: Jun closed")
 	}
 	if resp := a.toolLayout(req, shellOf(t, caller)); resp.Error != "" || activeView(a.tabsTarget()).Diff.Source != "feature" {

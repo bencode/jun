@@ -31,7 +31,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
-| `jun tool message [--about <id>] <text>` / `jun tool message [--about <id>] -` | Shows the text to the user, in [Messages](agents-view.md#messages). Prints nothing. |
+| `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints nothing. |
 | `jun tool run [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
 | `jun tool loop <every> [--dir <path>] <command…>` | Runs the command every interval in a terminal of its own. Prints the loop's id. |
 | `jun tool loop` | The loops, as a JSON array |
@@ -96,13 +96,24 @@ Runs until Jun quits, printing a line as soon as there is news of an agent:
 - A line the terminal wraps on screen counts as one.
 - An agent's text includes what it draws around its messages: frames, status bars and its input box.
 
+### Resources
+
+A resource names something in Jun. `open` and `message --link` take these forms, and `close` all but `project:`. `open` and `close` also take the `perspective:` and `peek` of the table below, which are no resources: they depend on where the user is.
+
+| Resource | What it is |
+|---|---|
+| `terminal:<id>` | A terminal, with the `id` that `terminals` and `watch` give |
+| `diff:<id>` | The changes of the branch that terminal is on: the same id |
+| `file:<path>` | A file. A relative path starts from the caller's directory |
+| `project:<name>` | A project, whatever the case of its name |
+
 ### open and close
 
 | Target | `open` | `close` |
 |---|---|---|
 | `terminal:<id>` | Shows the terminal's tab, switching project and perspective as needed, and reopens its tab when it was closed. With `--peek`, an agent's terminal shows in the [peek drawer](agents-view.md#peek) instead, or its tab when that is on screen. | Closes its tab in the current perspective. The shell keeps running. |
 | `diff:<id>` | Opens the changes of the branch the terminal is on, as its agent card's Review Changes does, in the current perspective. With `--in <perspective>`, first switches to that perspective of the terminal's project, made when there is none. | Closes the Diff of that branch in the current perspective. |
-| `file:<path>` | Opens the file in a tab of its own, read-only, wherever it is: see [Files](files.md#files-outside-the-project). A relative path starts from the caller's directory. Opened again, the file is read again. | Closes its tab in the current perspective |
+| `file:<path>` | Opens the file in a tab of its own, read-only, wherever it is: see [Files](files.md#files-outside-the-project). Opened again, the file is read again. | Closes its tab in the current perspective |
 | `project:<name>` | Switches to the project | — |
 | `perspective:<name>` | Switches to the perspective of the current project, made when there is none | Deletes it, as Delete Perspective… does: with terminals in it, Jun asks you to confirm, and prints `waiting for the user to confirm`. A project keeps at least one perspective. |
 | `peek` | — | Closes the peek drawer |
@@ -133,14 +144,17 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 
 `message` tells the user something without disturbing them: it appears in [Messages](agents-view.md#messages), in Global.
 
-- **Who may send**: any terminal of Jun, at any time, whatever the user is looking at. Outside Jun's terminals it is refused.
-- **What it shows**: Jun adds the terminal, its project and the time. `--about <id>` ties the message to that terminal instead of the caller's, as a deputy reporting on another agent does.
-- **The text**: with `-`, standard input. Line breaks at its end go; at most 4 KiB.
-- **`shown, but not saved`**: Jun could not write it to its file. The user sees it, so do not send it again; it is gone after Jun restarts.
-
 ```sh
-"$JUN_BIN" tool message --about 7 'It asks whether to open a PR. I suggest yes.'
+"$JUN_BIN" tool message --title 'Asks to open a PR' --kind ask --link terminal:7 'I suggest yes.'
 ```
+
+- **Who may send**: any terminal of Jun, at any time, whatever the user is looking at. Outside Jun's terminals it is refused.
+- **`--title`**: one line, at most 200 bytes. With a title, the text may go.
+- **`--kind`**: `ask` when the user has something to do, `warn`, `done`, or `info`, the default. It gives the message its icon and color.
+- **`--link`**: the [resource](#resources) it is about, where a click takes the user. Jun tells the project from it, so a loop reporting on every agent gives only this. Without it, the message is plain news: no tag, and a click does nothing.
+- **A resource that does not exist** is status 1, and shows nothing: the terminal, file or project, or a terminal in no worktree for `diff:`. `peek` and `perspective:` are not for messages.
+- **The text**: with `-`, standard input. Line breaks at its end go; at most 4 KiB.
+- **How long it stays**: Jun keeps the last 500, until it quits. A terminal's id lasts as long, so a message's link never points at another terminal.
 
 ### run and loop
 

@@ -1,12 +1,11 @@
 # Configuration and saved state
 
-Jun keeps three files. **Preferences** live in the settings file, which you edit. **State** lives in the layout file, which Jun writes, and what agents tell you in the messages file.
+Jun keeps two files. **Preferences** live in the settings file, which you edit. **State** lives in the layout file, which Jun writes.
 
 | File | Holds | Default location | Override |
 |---|---|---|---|
 | `settings.yaml` | language, theme, text size, reading width, Claude Code folders | `~/.config/jun/settings.yaml` | `JUN_SETTINGS_PATH` |
 | `config.json` | projects, perspectives, regions, tabs | `~/Library/Application Support/Jun/config.json` | `JUN_CONFIG_PATH` |
-| `messages.jsonl` | [Messages](agents-view.md#messages) | beside `config.json` | follows `JUN_CONFIG_PATH` |
 
 - The settings file is described in [Settings](settings.md).
 - In both overrides, a relative path resolves against the directory Jun was launched from.
@@ -27,14 +26,11 @@ Jun keeps three files. **Preferences** live in the settings file, which you edit
 - Which of Global's views show, how they are arranged, and how they share its room.
 - Whether the project rail is expanded.
 
-## What the messages file saves
-
-Jun shows and keeps the last 500 messages, a JSON object a line. It adds new ones as they come, and cuts the file back to 500 when it starts and when it passes twice that.
-
 ## What it does not save
 
 - Running processes and their output. Every saved terminal tab starts a fresh shell on the next launch; see [Terminals](terminals.md#quitting-and-restarting).
 - Closed tabs, scroll offsets, and the window's size and position.
+- [Messages](agents-view.md#messages): they last until Jun quits.
 
 ## How Jun saves
 

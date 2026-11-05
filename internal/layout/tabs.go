@@ -130,6 +130,30 @@ func (s *State) OpenDiff(target RegionID, project string, ref DiffRef) (ViewID, 
 	return r.Active, nil
 }
 
+// FindFile is the tab showing the file in the project, in any region, or 0.
+func (s *State) FindFile(project string, ref FileRef) ViewID {
+	return s.findView(func(v *View) bool {
+		return v.Kind == ViewFile && v.ProjectName == project && v.File != nil && *v.File == ref
+	})
+}
+
+// FindDiff is the tab showing the source's changes in the project, in any
+// region, or 0.
+func (s *State) FindDiff(project, source string) ViewID {
+	return s.findView(func(v *View) bool {
+		return v.Kind == ViewDiff && v.ProjectName == project && v.Diff != nil && v.Diff.Source == source
+	})
+}
+
+func (s *State) findView(match func(*View) bool) ViewID {
+	for _, r := range s.regions() {
+		if i := slices.IndexFunc(r.Views, match); i >= 0 {
+			return r.Views[i].ID
+		}
+	}
+	return 0
+}
+
 func validDiff(ref DiffRef) error {
 	hex := func(s string) bool { return strings.Trim(strings.ToLower(s), "0123456789abcdef") == "" }
 	if ref.Source == "" || ref.Base != "" && (strings.HasPrefix(ref.Base, "-") || strings.ContainsAny(ref.Base, " \t\n\x00")) ||

@@ -237,14 +237,18 @@ func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
 // agentClick peeks the agent, or closes the drawer peeking it; with ⌘
 // held, it shows its tab.
 func (a *app) agentClick(e ui.Element, id terminal.ID) func() {
-	return func() {
-		if e.ClickModifiers()&ui.Super != 0 {
-			a.revealSession(id)
-		} else if id == a.peek.id {
-			a.closePeek()
-		} else {
-			a.peekAgent(id)
-		}
+	return func() { a.clickAgent(id, e.ClickModifiers()&ui.Super != 0) }
+}
+
+// clickAgent peeks the agent, or closes its peek; with reveal, it shows the
+// agent's terminal in its tab.
+func (a *app) clickAgent(id terminal.ID, reveal bool) {
+	if reveal {
+		a.revealSession(id)
+	} else if id == a.peek.id {
+		a.closePeek()
+	} else {
+		a.peekAgent(id)
 	}
 }
 
