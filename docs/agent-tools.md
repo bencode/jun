@@ -6,13 +6,18 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 
 ## As a skill
 
-The [`jun-coordinator`](../skills/jun-coordinator/SKILL.md) skill teaches an agent these tools: when to use them, the common work, and the pitfalls. It follows the [Agent Skills](https://agentskills.io) format, which Claude Code, Codex and Pi read. Install it for your user with the [skills](https://github.com/vercel-labs/skills) CLI:
+Two skills build on these tools, in the [Agent Skills](https://agentskills.io) format, which Claude Code, Codex and Pi read:
+
+- [`jun-tools`](../skills/jun-tools/SKILL.md) teaches an agent the tools: when to use them, the common work, and the pitfalls.
+- [`jun-deputy`](../skills/jun-deputy/SKILL.md) makes a session your deputy: it wakes itself on a schedule, looks over your agents, and reports what needs you.
+
+Install them for your user with the [skills](https://github.com/vercel-labs/skills) CLI:
 
 ```sh
 npx skills add bencode/jun -g
 ```
 
-Or copy `skills/jun-coordinator` to `~/.claude/skills/` for Claude Code (`$CLAUDE_CONFIG_DIR/skills/` when that is set), or to `~/.agents/skills/` for Codex and Pi.
+Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUDE_CONFIG_DIR/skills/` when that is set), or to `~/.agents/skills/` for Codex and Pi.
 
 ## Commands
 
@@ -115,6 +120,8 @@ Jun runs what it is asked: a loop may run `run`, or start another loop. A loop t
 ```sh
 "$JUN_BIN" tool loop 10m "$JUN_BIN" tool send 7 "'How is it going? Report anything blocking you.'"
 ```
+
+`send` presses Enter whatever the agent shows, so a loop that may meet a question should check the agent's `status` first.
 
 ### loop
 
