@@ -1,11 +1,11 @@
 ---
-name: jun-coordinator
-description: Coordinate the other agents and terminals of Jun, the terminal workspace, with "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; show the user a terminal or a branch's changes; run a command in a new terminal; run one on a schedule. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
+name: jun-tools
+description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; show the user a terminal or a branch's changes; run a command in a new terminal; run one on a schedule. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
 ---
 
-# Jun coordinator
+# Jun tools
 
-Jun runs agents in terminals. `jun tool` lets a program in one of them see the others and act on them. Jun gives the tools only: how you coordinate is up to your task and the user's instructions.
+Jun runs agents in terminals. `jun tool` lets a program in one of them see the others and act on them. Jun gives the tools only: how you use them is up to your task and the user's instructions.
 
 ## Before you start
 
@@ -40,7 +40,7 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 - `waiting`: the agent asks the user something, such as a permission or a choice.
 - `working`: it is busy.
-- `idle`: it waits for a new prompt. Idle does not tell done from stuck or from a question asked in its reply: read its `screen`.
+- `idle`: nothing runs. Idle does not tell done from stuck, from a question asked in its reply, or from a notice waiting for a key, such as `Enter to continue · Esc to cancel`: read its `screen`.
 
 ## Common work
 
@@ -78,17 +78,21 @@ The new terminal belongs to your project and has no tab: follow it with `screen 
 **Check in on a schedule.**
 
 ```sh
-"$JUN_BIN" tool loop 10m "$JUN_BIN" tool send 7 "'Report your progress and anything blocking you.'"
+tick='[ "$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==7) | .status")" = idle ] && "$JUN_BIN" tool send 7 "Report your progress and anything blocking you."'
+"$JUN_BIN" tool loop 10m "$tick"
 "$JUN_BIN" tool loop                # the loops
 "$JUN_BIN" tool loop cancel 12      # end one
 ```
 
+The command checks that the agent is `idle` first, since `send` does not look: see the pitfalls. It needs `jq`.
+
 ## Pitfalls
 
-- **Quoting.** The words of a command are joined by spaces into one command line, as `ssh` joins them. To keep quotes inside it, quote the whole command, or quote twice as in the loop above.
+- **Quoting.** The words of a command are joined by spaces into one command line, as `ssh` joins them. To keep quotes inside it, quote the whole command, as the loop above does.
 - **Loops run as scripts.** A loop runs its command with `$SHELL -l -c`: login files apply, `.zshrc` does not. Write absolute paths, or `"$JUN_BIN"`. A run waits for the one before to end.
 - **Loops cost.** Each run that sends wakes an agent and spends its tokens. Choose the interval for the task, and cancel loops you no longer need: they last until cancelled or Jun quits.
 - **Only agents take `send`.** A terminal running no agent refuses it, since the text would run as a command.
+- **`send` does not look.** It pastes and presses Enter whatever the agent shows: on a `waiting` question or an idle notice, that Enter can answer it. Read the `screen` before you send, and have a scheduled send check the status.
 - **Drafts.** `send` goes into the agent's input box as is. Text already there, such as the user's draft or a prompt Claude Code put back after Esc, comes first in the message. When that matters, read the input box on `screen` before sending.
 - **Questions are the user's.** A `waiting` agent asks the user; do not answer its permissions or choices with `send`. Show it to the user with `open terminal:<id> --peek`.
 - **Changing what the user sees.** `open`, `close`, `back`, `forward` and `run --open` work only for the terminal the user is with (shown in the peek drawer, or last focused), and not while a Jun dialog is open. Otherwise they are refused: tell the user what you would show.
