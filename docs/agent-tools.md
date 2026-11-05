@@ -31,6 +31,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
+| `jun tool message [--about <id>] <text>` / `jun tool message [--about <id>] -` | Shows the text to the user, in [Messages](agents-view.md#messages). Prints nothing. |
 | `jun tool run [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
 | `jun tool loop <every> [--dir <path>] <command…>` | Runs the command every interval in a terminal of its own. Prints the loop's id. |
 | `jun tool loop` | The loops, as a JSON array |
@@ -127,6 +128,19 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - With `-`, the text is standard input, for long or multi-line messages. Line breaks at its end go; at most 1 MiB.
 - Any agent takes it, whatever it is doing, the caller's own terminal too. A terminal running no agent does not: text there would run as a command.
 - Once sent, Jun waits up to 5 seconds for the agent to work. If it does not by then, `send` prints `sent, not started yet`, still with status 0.
+
+### message
+
+`message` tells the user something without disturbing them: it appears in [Messages](agents-view.md#messages), in Global.
+
+- **Who may send**: any terminal of Jun, at any time, whatever the user is looking at. Outside Jun's terminals it is refused.
+- **What it shows**: Jun adds the terminal, its project and the time. `--about <id>` ties the message to that terminal instead of the caller's, as a deputy reporting on another agent does.
+- **The text**: with `-`, standard input. Line breaks at its end go; at most 4 KiB.
+- **`shown, but not saved`**: Jun could not write it to its file. The user sees it, so do not send it again; it is gone after Jun restarts.
+
+```sh
+"$JUN_BIN" tool message --about 7 'It asks whether to open a PR. I suggest yes.'
+```
 
 ### run and loop
 

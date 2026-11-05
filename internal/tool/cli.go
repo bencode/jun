@@ -13,7 +13,7 @@ import (
 
 const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
-	"  send <id> <text> | send <id> - |\n" +
+	"  send <id> <text> | send <id> - | message [--about <id>] <text> | message [--about <id>] - |\n" +
 	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
@@ -87,6 +87,16 @@ Sending:
       takes it, whatever it is doing, the caller's own too; a terminal
       running no agent does not. Prints nothing once the agent works,
       else "sent, not started yet" after 5 seconds.
+  jun tool message [--about <id>] <text>
+  jun tool message [--about <id>] -
+      Shows the text to the user, in Messages in Global, without
+      disturbing them: any terminal may, at any time. It tells the
+      caller's terminal and project, or with --about those of the
+      terminal it is about; clicking it peeks that agent, or shows a
+      terminal running none. With -, the text is standard input. Line
+      breaks at its end go; at most 4 KiB. Jun keeps the last 500. Prints
+      nothing. "shown, but not saved" is status 1 with the message shown:
+      do not send it again.
 
 Running commands, each in a terminal of its own, in the caller's
 project, with no tab unless asked for:

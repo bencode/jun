@@ -23,7 +23,7 @@ func (a *app) view(c *ui.Context) {
 			}
 			center := func() { a.center(c, (width-1)*a.state.CenterPercent/100) }
 			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, minimumRegionWidth, center, func() {
-				a.region(c, a.state.Global)
+				a.globalPane(c)
 			}, a.layoutChanged).Grow(1).MinWidth(0).FillHeight()
 		} else {
 			ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() { a.center(c, width) })

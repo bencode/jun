@@ -98,11 +98,17 @@ type State struct {
 	Theme         string  `json:"theme,omitempty"`
 	TextSize      float32 `json:"textSize,omitempty"`
 	CenterPercent float32 `json:"centerPercent"`
-	nextID        uint64
+	// MessagesHidden and AgentsPercent are how Global shows Messages: below
+	// its region, which gets this share of its height.
+	MessagesHidden bool    `json:"messagesHidden,omitempty"`
+	AgentsPercent  float32 `json:"agentsPercent,omitempty"`
+	nextID         uint64
 }
 
+const defaultAgentsPercent float32 = 60
+
 func New() *State {
-	s := &State{CenterPercent: 76}
+	s := &State{CenterPercent: 76, AgentsPercent: defaultAgentsPercent}
 	s.Global = s.newRegion()
 	s.fill(s.Global, globalPreset, "")
 	return s

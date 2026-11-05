@@ -78,14 +78,20 @@ Read the `screen` of the agents it names, then report them as below. The watch s
    | `working`, the same screen as your last look | It may be stuck: report it |
    | `idle` or `working`, nothing new | Say nothing about it |
 
-2. Report only what changed or needs the user, most urgent first, one line each: the id, the project, what you saw, what you suggest. When nothing did, answer with one short line. Do not repeat an item the user has already seen unless it got worse.
+2. Report only what changed or needs the user: for each agent, one message, what you saw and what you suggest. The latest message shows first, so send the most urgent last.
+
+   ```sh
+   "$JUN_BIN" tool message --about <id> '<what you saw>. <what you suggest>'
+   ```
+
+   Jun adds the id, the project and the time, and shows it in Messages in Global, so the user reads it without opening you. Say the same in a line in your own terminal. When nothing changed, send nothing and answer with one short line. Messages stay, so do not send again what you already sent about an agent unless it got worse: an agent still waiting for the same thing is no news, on a tick or when a restarted watch tells of it again.
 3. When an agent waits for the user, show it: `open terminal:<id> --peek`, one at a time. Jun refuses this when the user is elsewhere; then the report is enough.
 
 ## What you may do
 
 | Action | Rule |
 |---|---|
-| `terminals`, `watch`, `screen`, reports, `open … --peek` | On your own |
+| `terminals`, `watch`, `screen`, `message`, reports, `open … --peek` | On your own |
 | `send` to another agent, `run`, other loops | Only after the user says yes, for that action |
 | Answer an agent's permission or choice | Never: that question is the user's |
 | Press a key for a notice, close a terminal, stop an agent | Never |

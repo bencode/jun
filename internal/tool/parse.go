@@ -38,6 +38,9 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 	if command == "send" {
 		return parseSend(rest, stdin)
 	}
+	if command == "message" {
+		return parseMessage(rest, stdin)
+	}
 	if command == "run" {
 		return parseRun(rest)
 	}
@@ -96,25 +99,57 @@ func parseSend(args []string, stdin io.Reader) (Request, error) {
 	if err != nil || id == 0 {
 		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[0])
 	}
-	text := args[1]
+	text, err := readText(args[1], stdin, MaxText)
+	if err != nil {
+		return Request{}, err
+	}
+	return Request{Op: OpSend, Terminal: id, Text: text}, nil
+}
+
+func parseMessage(args []string, stdin io.Reader) (Request, error) {
+	var about uint64
+	if len(args) > 0 && args[0] == "--about" {
+		if len(args) != 3 {
+			return Request{}, errors.New("message --about takes a terminal id and a text")
+		}
+		id, err := strconv.ParseUint(args[1], 10, 64)
+		if err != nil || id == 0 {
+			return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[1])
+		}
+		about, args = id, args[2:]
+	}
+	if len(args) != 1 || args[0] == "--help" || args[0] == "-h" {
+		return Request{}, errors.New("message takes a text, or - for standard input, and optionally --about <id> before it")
+	}
+	text, err := readText(args[0], stdin, MaxMessage)
+	if err != nil {
+		return Request{}, err
+	}
+	return Request{Op: OpMessage, About: about, Text: text}, nil
+}
+
+// readText is the text argument, or standard input for -, without the line
+// breaks at its end.
+func readText(arg string, stdin io.Reader, limit int) (string, error) {
+	text := arg
 	if text == "-" {
-		// A line break at the end may come beyond MaxText, as it goes; read
+		// A line break at the end may come beyond the limit, as it goes; read
 		// one byte more than that allows, to tell a longer text.
 		const room = len("\r\n")
-		b, err := io.ReadAll(io.LimitReader(stdin, int64(MaxText+room+1)))
+		b, err := io.ReadAll(io.LimitReader(stdin, int64(limit+room+1)))
 		if err != nil {
-			return Request{}, fmt.Errorf("read standard input: %w", err)
+			return "", fmt.Errorf("read standard input: %w", err)
 		}
-		if len(b) > MaxText+room {
-			return Request{}, fmt.Errorf("text must be at most %d bytes", MaxText)
+		if len(b) > limit+room {
+			return "", fmt.Errorf("text must be at most %d bytes", limit)
 		}
 		text = string(b)
 	}
 	text = strings.TrimRight(text, "\r\n")
-	if strings.TrimSpace(text) == "" || len(text) > MaxText {
-		return Request{}, fmt.Errorf("text must be 1 to %d bytes, not blank", MaxText)
+	if strings.TrimSpace(text) == "" || len(text) > limit {
+		return "", fmt.Errorf("text must be 1 to %d bytes, not blank", limit)
 	}
-	return Request{Op: OpSend, Terminal: id, Text: text}, nil
+	return text, nil
 }
 
 func parseClose(arg string) (Request, error) {

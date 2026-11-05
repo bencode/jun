@@ -24,6 +24,9 @@ func (s *State) Restore() error {
 		return fmt.Errorf("no ID space for preset views")
 	}
 	s.nextID = maximum
+	if s.AgentsPercent == 0 { // saved before Messages
+		s.AgentsPercent = defaultAgentsPercent
+	}
 	s.fillPresets()
 	s.dropPlaceholders()
 	return nil
@@ -64,6 +67,9 @@ func (s *State) validatedMaxID() (uint64, error) {
 	}
 	if !percentage(s.CenterPercent) {
 		return 0, fmt.Errorf("centerPercent must be between 0 and 100")
+	}
+	if s.AgentsPercent != 0 && !percentage(s.AgentsPercent) {
+		return 0, fmt.Errorf("agentsPercent must be between 0 and 100")
 	}
 	if err := check.region(s.Global, fixedKinds, "", true); err != nil {
 		return 0, fmt.Errorf("global: %w", err)
