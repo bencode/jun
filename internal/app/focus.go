@@ -79,8 +79,9 @@ func (a *app) cycleTab(delta int) {
 	if r == nil || len(r.Views) == 0 {
 		return
 	}
-	index := slices.IndexFunc(r.Views, func(v *layout.View) bool { return v.ID == r.Active })
-	a.selectTab(r, r.Views[(index+delta+len(r.Views))%len(r.Views)].ID)
+	views := layout.Shown(r.Views)
+	index := slices.IndexFunc(views, func(v *layout.View) bool { return v.ID == r.Active })
+	a.selectTab(r, views[(index+delta+len(views))%len(views)].ID)
 }
 
 func (a *app) selectTab(r *layout.Region, view layout.ViewID) {

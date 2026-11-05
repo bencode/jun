@@ -10,9 +10,9 @@ const DefaultSideWidth float32 = 260
 // preset's views, in its order.
 var (
 	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript, ViewSettings}
-	fixedKinds   = []ViewKind{ViewTree, ViewSessions, ViewSkills, ViewAgents}
 	sidePreset   = []ViewKind{ViewSessions, ViewTree}
-	globalPreset = []ViewKind{ViewAgents}
+	globalPreset = []ViewKind{ViewAgents, ViewMessages}
+	fixedKinds   = slices.Concat(sidePreset, globalPreset, []ViewKind{ViewSkills})
 )
 
 // Fixed reports whether the region is Global or a side region.

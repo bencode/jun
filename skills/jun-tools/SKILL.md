@@ -70,7 +70,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 "$JUN_BIN" tool open terminal:7 --peek # an agent waiting for the user's answer
 ```
 
-**Tell the user something.** `message` shows it in Messages in Global, below the Agents view, for the user to read when they look. Any terminal may send one at any time. Jun adds your terminal and project, or with `--about` those of the terminal it is about, which a click on it peeks.
+**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. Jun adds your terminal and project, or with `--about` those of the terminal it is about, which a click on it peeks.
 
 ```sh
 "$JUN_BIN" tool message 'The nightly run failed: 2 tests, both in the parser.'

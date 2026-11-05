@@ -78,7 +78,7 @@ func TestProjectMenuRenamesAndRemoves(t *testing.T) {
 	projectMenu("Lesscap", "Remove Project…")
 	click(t, tt, "Remove")
 	if len(a.state.Projects) != 0 || a.state.ActiveProject != "" || len(a.terminals.All()) != 0 || len(a.bindings) != 0 ||
-		len(a.state.Global.Views) != 1 || a.state.Validate() != nil {
+		len(a.state.Global.Views) != 2 || a.state.Validate() != nil {
 		t.Fatalf("removal left the project's terminals or views: %v", a.state.Validate())
 	}
 }

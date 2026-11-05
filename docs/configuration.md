@@ -24,7 +24,7 @@ Jun keeps three files. **Preferences** live in the settings file, which you edit
   - the session a session tab shows;
   - what a Diff tab compares.
 - Global, its visibility, and the Agents view's layout choice.
-- How Global shares its height with Messages, and whether they are hidden.
+- Which of Global's views show, how they are arranged, and how they share its room.
 - Whether the project rail is expanded.
 
 ## What the messages file saves

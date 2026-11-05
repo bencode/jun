@@ -57,9 +57,18 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 			p.ID, p.Name = 999, "work"
 			s.CurrentProject().Perspectives = append(s.CurrentProject().Perspectives, &p)
 		},
-		"nil region":        func(s *State) { s.CurrentPerspective().Bottom = nil },
-		"invalid ratio":     func(s *State) { s.CenterPercent = 100 },
-		"agents ratio":      func(s *State) { s.AgentsPercent = 100 },
+		"nil region":    func(s *State) { s.CurrentPerspective().Bottom = nil },
+		"invalid ratio": func(s *State) { s.CenterPercent = 100 },
+		"agents ratio":  func(s *State) { s.AgentsPercent = 100 },
+		"arrange":       func(s *State) { s.GlobalArrange = "diagonal" },
+		"all hidden": func(s *State) {
+			for _, v := range s.Global.Views {
+				v.Hidden = true
+			}
+		},
+		"share":             func(s *State) { s.Global.Views[0].Share = -1 },
+		"huge share":        func(s *State) { s.Global.Views[0].Share = 3e38 },
+		"hidden tab":        func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Hidden = true },
 		"invalid splits":    func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
 		"unknown kind":      func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
 		"agents layout":     func(s *State) { s.CurrentPerspective().Columns[0].Views[0].AgentsLayout = AgentsList },
@@ -123,14 +132,60 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 	}
 }
 
-func TestRestoreGivesAnEarlierLayoutTheDefaultMessagesShare(t *testing.T) {
+func TestRestoreMovesWhatEarlierVersionsKept(t *testing.T) {
 	s := decodedLayout(t)
-	s.AgentsPercent = 0
+	s.Global.Views = s.Global.Views[:1] // saved before Messages was a view
+	s.Global.Views[0].Share = 0
+	s.AgentsPercent, s.MessagesHidden = 70, true
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
 	}
-	if s.AgentsPercent != defaultAgentsPercent || s.MessagesHidden {
-		t.Fatalf("Messages restored at %v, hidden %v", s.AgentsPercent, s.MessagesHidden)
+	agents, messages := s.Global.Views[0], s.Global.Views[1]
+	if agents.Share != 70 || messages.Share != 30 || agents.Hidden || !messages.Hidden {
+		t.Fatalf("agents %+v, messages %+v", agents, messages)
+	}
+	if s.AgentsPercent != 0 || s.MessagesHidden {
+		t.Fatal("Restore left the earlier fields")
+	}
+}
+
+func TestRestoreLeavesAViewShown(t *testing.T) {
+	s := decodedLayout(t)
+	s.Global.Views = s.Global.Views[:1]
+	s.Global.Views[0].Hidden = true // by hand: no Jun writes this
+	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewMessages})
+	s.MessagesHidden = true
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.GlobalViews()) == 0 {
+		t.Fatal("Global shows nothing")
+	}
+}
+
+func TestRestoreLeavesAViewShownWhenThePresetDropsTheOnlyOne(t *testing.T) {
+	s := decodedLayout(t)
+	for _, v := range s.Global.Views {
+		v.Hidden = true
+	}
+	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewSkills})
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.GlobalViews()) == 0 {
+		t.Fatal("Global shows nothing")
+	}
+}
+
+func TestRestoreGivesALayoutWithoutSharesTheDefaults(t *testing.T) {
+	s := decodedLayout(t)
+	s.Global.Views = s.Global.Views[:1]
+	s.Global.Views[0].Share = 0
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if s.Global.Views[0].Share != 60 || s.Global.Views[1].Share != 40 || s.Global.Views[1].Hidden {
+		t.Fatalf("Global restored as %+v, %+v", s.Global.Views[0], s.Global.Views[1])
 	}
 }
 
@@ -190,8 +245,8 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != sessions || side.Views[1] != files || side.Active != sessions.ID {
 		t.Fatalf("side region restored as %v, active %d", kinds, side.Active)
 	}
-	if len(s.Global.Views) != 1 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {
-		t.Fatal("Global did not get its Agents view")
+	if len(s.Global.Views) != 2 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {
+		t.Fatal("Global did not get its views")
 	}
 	id, err := s.OpenView(s.CurrentPerspective().Columns[0].ID, ViewTerminal, "Jun")
 	if err != nil || id <= s.Global.Views[0].ID {

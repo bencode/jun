@@ -180,12 +180,15 @@ func (a *app) commands() []paletteItem {
 		{title: a.text("Theme…", "主题…"), run: a.openThemePalette},
 		{title: a.text("Keyboard Shortcuts", "键盘快捷键"), keywords: "keyboard shortcuts keys 键盘快捷键", run: a.openShortcuts},
 		{title: a.text("Toggle Global", "展开或收起 Global"), run: a.toggleGlobal},
-		{title: a.text("Toggle Messages", "展开或收起消息"), run: a.toggleMessages},
+		{title: a.toggleArrangeLabel(), run: a.toggleGlobalArrange},
 		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), keys: toggleSideKeys.String(), run: a.toggleSide},
 		{title: a.text("Toggle Project Names", "展开或收起项目名称"), run: func() {
 			a.state.RailExpanded = !a.state.RailExpanded
 			a.layoutChanged()
 		}},
+	}
+	for _, v := range a.state.Global.Views {
+		items = append(items, paletteItem{title: a.toggleViewLabel(v), run: func() { a.toggleGlobalView(v.ID) }})
 	}
 	if a.activeMarkdown() != nil {
 		items = append(items, a.headingCommand())

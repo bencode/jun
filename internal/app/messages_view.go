@@ -10,24 +10,10 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// globalPane is Global's region, with Messages below it.
-func (a *app) globalPane(c *ui.Context) {
-	if a.state.MessagesHidden {
-		a.region(c, a.state.Global)
-		return
-	}
-	ui.SplitVerticalPercent(c, &a.state.AgentsPercent,
-		func() { a.region(c, a.state.Global) },
-		func() { a.messagesView(c) }).Fill().OnChange(a.layoutChanged)
-}
-
 // messagesView lists what agents told the user, the latest first.
 func (a *app) messagesView(c *ui.Context) {
 	c.After(time.Minute) // for the ages to follow
-	pane := ui.Column(c.Key("messages")).Fill().Children(func() {
-		ui.Row(c).Height(32).FillWidth().Shrink(0).AlignItems(ui.Center).Padding(0, 12).Children(func() {
-			ui.Text(c, a.text("Messages", "消息")).Bold()
-		})
+	ui.Column(c.Key("messages")).Fill().Children(func() {
 		if len(a.messages) == 0 {
 			ui.Column(c).Grow(1).FillWidth().AlignItems(ui.Center).Justify(ui.Center).Padding(12).Children(func() {
 				ui.Text(c, a.text("Agents tell you here, with jun tool message.", "agent 用 jun tool message 发到这里。")).
@@ -44,9 +30,6 @@ func (a *app) messagesView(c *ui.Context) {
 			})
 		})
 	})
-	if pane.FocusWithin() { // a row's focus is Global's, as an agent's is
-		a.activeRegion = a.state.Global.ID
-	}
 }
 
 func (a *app) messageRow(c *ui.Context, m message.Message, now time.Time) {

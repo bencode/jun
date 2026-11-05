@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
@@ -21,9 +22,13 @@ func (a *app) view(c *ui.Context) {
 					centerMinimum += minimumRegionWidth + 1
 				}
 			}
+			globalMinimum := minimumRegionWidth
+			if a.state.GlobalArrange == layout.GlobalSide {
+				globalMinimum = columnsMinimum(len(a.state.GlobalViews()))
+			}
 			center := func() { a.center(c, (width-1)*a.state.CenterPercent/100) }
-			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, minimumRegionWidth, center, func() {
-				a.globalPane(c)
+			constrainedSplit(c, &a.state.CenterPercent, width, centerMinimum, globalMinimum, center, func() {
+				a.globalPane(c, (width-1)*(1-a.state.CenterPercent/100))
 			}, a.layoutChanged).Grow(1).MinWidth(0).FillHeight()
 		} else {
 			ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() { a.center(c, width) })

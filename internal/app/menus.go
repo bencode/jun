@@ -35,19 +35,41 @@ func (a *app) applicationMenu() *mygo.Menu {
 			{Label: a.text("Open Project…", "打开项目…"), Accelerator: openProjectKeys.accelerator(), Click: action(func() { a.openPalette("~/") })},
 		}},
 		{Role: mygo.RoleEditMenu},
-		{Label: a.text("View", "视图"), Submenu: []*mygo.MenuItem{
-			{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)},
-			{Label: a.text("Toggle Messages", "展开或收起消息"), Click: action(a.toggleMessages)},
+		{Label: a.text("View", "视图"), Submenu: slices.Concat(a.globalItems(action), []*mygo.MenuItem{
 			{Label: a.text("Toggle Side Bar", "展开或收起侧边栏"), Accelerator: toggleSideKeys.accelerator(), Click: action(a.toggleSide)},
 			mygo.Separator(), a.headingItem, a.widthItem, mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
-		}},
+		})},
 		{Label: a.text("Language", "语言"), Submenu: []*mygo.MenuItem{
 			{Label: "English", Type: mygo.MenuItemCheckbox, Checked: !a.chinese(), Click: action(func() { a.setLanguage(false) })},
 			{Label: "简体中文", Type: mygo.MenuItemCheckbox, Checked: a.chinese(), Click: action(func() { a.setLanguage(true) })},
 		}},
 		{Role: mygo.RoleWindowMenu},
 	})
+}
+
+// globalItems are the View menu's items for Global.
+func (a *app) globalItems(action func(func()) func(*mygo.MenuItem, *mygo.Window)) []*mygo.MenuItem {
+	items := []*mygo.MenuItem{{Label: a.text("Toggle Global", "展开或收起 Global"), Click: action(a.toggleGlobal)}}
+	for _, v := range a.state.Global.Views {
+		items = append(items, &mygo.MenuItem{Label: a.toggleViewLabel(v), Click: action(func() { a.toggleGlobalView(v.ID) })})
+	}
+	return append(items, &mygo.MenuItem{Label: a.toggleArrangeLabel(), Click: action(a.toggleGlobalArrange)})
+}
+
+func (a *app) toggleViewLabel(v *layout.View) string {
+	return fmt.Sprintf(a.text("Toggle %s", "显示或隐藏：%s"), a.title(v))
+}
+
+func (a *app) toggleArrangeLabel() string {
+	return a.text("Toggle Global Layout", "切换 Global 布局")
+}
+
+func (a *app) arrangeName(arrange layout.GlobalArrange) string {
+	if arrange == layout.GlobalStacked {
+		return a.text("Stacked", "横排")
+	}
+	return a.text("Side by Side", "竖排")
 }
 
 func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
@@ -59,13 +81,18 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 	}
 	button.Menu(func(m *ui.Menu) {
 		if r == a.state.Global {
-			label := a.text("Hide Messages", "收起消息")
-			if a.state.MessagesHidden {
-				label = a.text("Show Messages", "显示消息")
+			for _, v := range r.Views {
+				if m.Item(a.title(v)).Checked(!v.Hidden).Chosen() {
+					a.toggleGlobalView(v.ID)
+				}
 			}
-			if m.Item(label).Chosen() {
-				a.toggleMessages()
+			m.Separator()
+			for _, choice := range []layout.GlobalArrange{layout.GlobalSide, layout.GlobalStacked} {
+				if m.Item(a.arrangeName(choice)).Radio(a.state.GlobalArrange == choice).Chosen() && a.state.GlobalArrange != choice {
+					a.toggleGlobalArrange()
+				}
 			}
+			m.Separator()
 			if m.Item(a.text("Hide Global", "收起 Global")).Chosen() {
 				a.toggleGlobal()
 			}

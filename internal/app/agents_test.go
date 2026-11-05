@@ -58,7 +58,8 @@ func resize(tt *ui.Tester, width, height int) {
 
 func TestAgentsLayoutFitsRoom(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
-	a.toggleMessages() // the room is all Global's
+	a.state.CenterPercent = 76
+	a.toggleGlobalView(a.state.Global.Views[1].ID) // the room is all Agents'
 	tt.Frame()
 	tt.Frame()
 	if len(a.previews) != 3 || row(t, tt, a, sessions[2]).H < cardMinHeight {
@@ -136,7 +137,7 @@ func TestAgentCommandClickReopensClosedTabInItsProject(t *testing.T) {
 	column := a.state.CurrentPerspective().Columns[0]
 	view := column.Views[len(column.Views)-1]
 	if a.state.CurrentProject() != jun || column.Active != view.ID || a.bindings[view.ID] != hidden.ID ||
-		view.ProjectName != "Jun" || len(a.state.Global.Views) != 1 || !tt.Focused(contentLabel(a, view)) {
+		view.ProjectName != "Jun" || len(a.state.Global.Views) != 2 || !tt.Focused(contentLabel(a, view)) {
 		t.Fatal("click did not reopen the agent's session in its project's column")
 	}
 }

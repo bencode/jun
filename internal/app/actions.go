@@ -108,6 +108,34 @@ func (a *app) toggleGlobal() {
 	a.layoutChanged()
 }
 
+// toggleGlobalView shows or hides a view of Global.
+func (a *app) toggleGlobalView(id layout.ViewID) {
+	if err := a.state.ToggleGlobalView(id); err != nil {
+		a.report(err)
+		return
+	}
+	a.globalChanged()
+}
+
+func (a *app) toggleGlobalArrange() {
+	a.state.ToggleGlobalArrange()
+	a.globalChanged()
+}
+
+// globalChanged follows a change of what Global shows or how, which builds
+// its views anew, so the focus in them has to come back.
+func (a *app) globalChanged() {
+	a.layoutChanged()
+	if a.activeRegion != a.state.Global.ID || a.peek.id != 0 {
+		return
+	}
+	if !a.state.GlobalVisible {
+		a.focusCurrentPerspective()
+		return
+	}
+	a.focusRegion(a.state.Global.ID)
+}
+
 // toggleSide shows or hides the current perspective's side region; hiding
 // it while focused focuses the first column.
 func (a *app) toggleSide() {

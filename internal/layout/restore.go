@@ -24,10 +24,10 @@ func (s *State) Restore() error {
 		return fmt.Errorf("no ID space for preset views")
 	}
 	s.nextID = maximum
-	if s.AgentsPercent == 0 { // saved before Messages
-		s.AgentsPercent = defaultAgentsPercent
-	}
 	s.fillPresets()
+	s.moveMessagesFields()
+	s.fillGlobalShares()
+	s.settleGlobal()
 	s.dropPlaceholders()
 	return nil
 }
@@ -78,6 +78,9 @@ func (s *State) validatedMaxID() (uint64, error) {
 		if err := check.project(p); err != nil {
 			return 0, fmt.Errorf("project %q: %w", p.Name, err)
 		}
+	}
+	if err := s.validGlobal(); err != nil {
+		return 0, err
 	}
 	return check.maximum, nil
 }
