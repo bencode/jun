@@ -30,7 +30,9 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 | `close terminal:<id>` / `close diff:<id>` / `close file:<path>` / `close peek` | Closes what `open` opened; a terminal's shell keeps running |
 | `close perspective:<name>` | Deletes the perspective; with terminals in it, Jun asks the user to confirm |
 | `back` / `forward` | Steps through where the user has been |
-| `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` / `… -` | Tells the user, in Messages in Global, without disturbing them; `-` reads standard input, and with a title the text may go |
+| `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` / `… -` | Tells the user, in Messages in Global, without disturbing them, and prints the message's id; `-` reads standard input, and with a title the text may go |
+| `message update <id> [--kind <kind>] [<text>]` / `… -` | Changes the message's kind, adds the text as a reply, or both |
+| `message` | The messages as JSON, the latest first: `id`, `time`, `kind`, `title`, `text`, `project`, `link`, `replies` |
 | `run [--dir <path>] [--open] <command…>` | Starts a terminal running the command; prints its id |
 | `loop <every> [--dir <path>] <command…>` | Runs the command every interval (at least `1m`) in a terminal of its own; prints the loop's id |
 | `loop` / `loop cancel <id>` | Lists the loops as JSON / ends one |
@@ -79,7 +81,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 "$JUN_BIN" tool open terminal:7 --peek # a terminal, in the peek drawer
 ```
 
-**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. Messages last until Jun quits, and cannot be read back.
+**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. Messages last until Jun quits.
 
 - `--title`: what happened, in one line of at most 200 bytes.
 - The text: what the user needs beyond that, at most 4 KiB.
@@ -93,6 +95,14 @@ Give `--link` whenever the message is about something: without it, the message i
 "$JUN_BIN" tool message --title 'Parser fix ready to review' --kind done --link "diff:$JUN_TERMINAL"
 "$JUN_BIN" tool message 'The nightly run failed: 2 tests, both in the parser.'
 printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" -
+```
+
+**Follow a message up.** `message` prints the id; the user sees `12` as `M12`, and may call it that. A message is one matter: `ask` means the user has something to do, so when they have done it, make it `done`. Add what happens next as replies, rather than new messages. A reply moves the message to the top. Any terminal may update any message.
+
+```sh
+"$JUN_BIN" tool message update 12 --kind done 'You agreed; it goes on.'
+"$JUN_BIN" tool message update 12 'PR #53 is open, the tests pass.'
+"$JUN_BIN" tool message | jq -c '.[] | select(.kind == "ask")'    # what still waits for the user
 ```
 
 **Start another agent or a job.**

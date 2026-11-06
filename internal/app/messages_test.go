@@ -22,6 +22,29 @@ func post(t *testing.T, a *app, from *terminal.Session, req tool.Request) tool.R
 	return a.uiAnswers(req, shellOf(t, from))[tool.OpMessage]()
 }
 
+func update(t *testing.T, a *app, from *terminal.Session, req tool.Request) tool.Response {
+	t.Helper()
+	req.Op = tool.OpUpdateMessage
+	return a.uiAnswers(req, shellOf(t, from))[tool.OpUpdateMessage]()
+}
+
+func reply(t *testing.T, a *app, from *terminal.Session, id uint64, text string) {
+	t.Helper()
+	if resp := update(t, a, from, tool.Request{Message: id, Text: text}); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+}
+
+// messageTexts are the messages' texts, the top row first.
+func messageTexts(a *app) []string {
+	list := a.toolMessages()
+	texts := make([]string, len(list))
+	for i, m := range list {
+		texts[i] = m.Text
+	}
+	return texts
+}
+
 func say(t *testing.T, a *app, from *terminal.Session, text string) tool.Response {
 	t.Helper()
 	return post(t, a, from, tool.Request{Text: text})
@@ -511,5 +534,156 @@ func TestMessageAge(t *testing.T) {
 		if got := a.messageAge(now, now.Add(-age)); got != want {
 			t.Errorf("%v ago: %q", age, got)
 		}
+	}
+}
+
+func TestAReplyBringsItsMessageUp(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	asked := say(t, a, sessions[0], "Oldest").Created
+	say(t, a, sessions[0], "Middle")
+	say(t, a, sessions[0], "Newest")
+	tt.Frame()
+	a.focusRegion(a.state.Global.ID)
+	tt.Frame()
+	tt.Key(ui.Super, ui.Key2)
+	tt.Frame()
+	tt.Key(0, ui.KeyTab)
+	tt.Frame()
+	for range 3 {
+		tt.Key(0, ui.KeyDown)
+		tt.Frame()
+	}
+	if a.messageSelected != 2 {
+		t.Fatalf("row %d", a.messageSelected)
+	}
+	reply(t, a, sessions[1], asked, "You answered")
+	tt.Frame()
+	if got := messageTexts(a); !slices.Equal(got, []string{"Oldest", "Newest", "Middle"}) {
+		t.Fatalf("rows %v", got)
+	}
+	if !tt.HasText("You answered") {
+		t.Fatalf("no reply in %v", tt.Texts())
+	}
+	if a.messageSelected != 0 {
+		t.Fatalf("the choice left its message: row %d", a.messageSelected)
+	}
+}
+
+func TestANewKindLeavesAMessageInPlace(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	asked := post(t, a, sessions[0], tool.Request{Text: "Oldest", Kind: tool.MessageAsk}).Created
+	say(t, a, sessions[0], "Newest")
+	if resp := update(t, a, sessions[0], tool.Request{Message: asked, Kind: tool.MessageDone}); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+	tt.Frame()
+	list := a.toolMessages()
+	if !slices.Equal(messageTexts(a), []string{"Newest", "Oldest"}) || list[1].Kind != tool.MessageDone || len(list[1].Replies) != 0 {
+		t.Fatalf("messages %+v", list)
+	}
+}
+
+func TestARefusedUpdateChangesNothing(t *testing.T) {
+	a, _, sessions := agentsApp(t)
+	asked := post(t, a, sessions[0], tool.Request{Text: "It asks", Kind: tool.MessageAsk}).Created
+	say(t, a, sessions[0], "Newest")
+	if resp := update(t, a, sessions[0], tool.Request{Message: asked + 10, Kind: tool.MessageDone, Text: "x"}); resp.Error != fmt.Sprintf("no message %d", asked+10) {
+		t.Fatalf("no such message: %q", resp.Error)
+	}
+	if resp := update(t, a, sessions[0], tool.Request{Message: asked, Kind: "urgent", Text: "x"}); resp.Error == "" {
+		t.Fatal("took an unknown kind")
+	}
+	if resp := update(t, a, sessions[0], tool.Request{Message: asked, Text: " "}); resp.Error == "" {
+		t.Fatal("took a blank reply")
+	}
+	outside := tool.Request{Op: tool.OpUpdateMessage, Message: asked, Kind: tool.MessageDone}
+	if resp := a.uiAnswers(outside, nil)[tool.OpUpdateMessage](); resp.Error != "caller is not a terminal of this Jun" {
+		t.Fatalf("from outside Jun: %q", resp.Error)
+	}
+	list := a.toolMessages()
+	if !slices.Equal(messageTexts(a), []string{"Newest", "It asks"}) || list[1].Kind != tool.MessageAsk || len(list[1].Replies) != 0 {
+		t.Fatalf("messages %+v", list)
+	}
+}
+
+func TestAMessageKeepsItsLatestReplies(t *testing.T) {
+	a, _, sessions := agentsApp(t)
+	id := say(t, a, sessions[0], "Busy").Created
+	for i := range tool.MaxReplies + 2 {
+		reply(t, a, sessions[0], id, fmt.Sprintf("Reply %d", i))
+	}
+	replies := a.toolMessages()[0].Replies
+	if len(replies) != tool.MaxReplies || replies[0].Text != "Reply 2" {
+		t.Fatalf("%d replies from %q", len(replies), replies[0].Text)
+	}
+}
+
+func TestMessagesListAsTheyShow(t *testing.T) {
+	a, _, sessions := agentsApp(t)
+	first := post(t, a, sessions[0], tool.Request{Title: "It asks", Kind: tool.MessageAsk, Target: target(tool.TargetTerminal, sessions[1].ID, "")}).Created
+	say(t, a, sessions[0], "Plain news")
+	reply(t, a, sessions[0], first, "You answered")
+	resp := a.uiAnswers(tool.Request{Op: tool.OpMessages}, nil)[tool.OpMessages]()
+	if len(resp.Messages) != 2 {
+		t.Fatalf("messages %+v", resp.Messages)
+	}
+	top, news := resp.Messages[0], resp.Messages[1]
+	if top.ID != first || top.Kind != tool.MessageAsk || top.Project != "Jun" || top.Replies[0].Text != "You answered" {
+		t.Fatalf("top %+v", top)
+	}
+	if news.Link != "" || news.Project != "" {
+		t.Fatalf("plain news %+v", news)
+	}
+	if want := fmt.Sprintf("terminal:%d", sessions[1].ID); top.Link != want {
+		t.Fatalf("link %q, not %q", top.Link, want)
+	}
+}
+
+func TestRepliesFold(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	id := say(t, a, sessions[0], "Short").Created
+	for i := range repliesShown {
+		reply(t, a, sessions[0], id, fmt.Sprintf("Reply %d", i))
+	}
+	tt.Frame()
+	tt.Frame()
+	if tt.HasText("Show more") || !tt.HasText("Reply 0") {
+		t.Fatalf("replies that fit: %v", tt.Texts())
+	}
+	reply(t, a, sessions[0], id, "Reply 3")
+	tt.Frame()
+	tt.Frame()
+	if tt.HasText("Reply 0") || !tt.HasText("Reply 3") || !tt.HasText("1 earlier") {
+		t.Fatalf("folded: %v", tt.Texts())
+	}
+	if err := tt.Click("Show more"); err != nil {
+		t.Fatalf("%v in %v", err, tt.Texts())
+	}
+	tt.Frame()
+	if !tt.HasText("Reply 0") || tt.HasText("1 earlier") {
+		t.Fatalf("opened: %v", tt.Texts())
+	}
+}
+
+func TestMessagesFoldAtTheTextSize(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	tt.Frame()
+	tt.Frame()
+	// A title keeps the text's width, whatever the size of the row's icon.
+	post(t, a, sessions[0], tool.Request{Title: "Report", Text: strings.Repeat("word ", int(a.messagesWidth/12))})
+	tt.Frame()
+	tt.Frame()
+	if tt.HasText("Show more") {
+		t.Fatal("it folds at the default size")
+	}
+	a.prefs.Font.Size = 40
+	tt.Frame()
+	tt.Frame()
+	if !tt.HasText("Show more") {
+		t.Fatalf("it does not fold at 40: %v", tt.Texts())
 	}
 }

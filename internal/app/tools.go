@@ -126,16 +126,24 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 	}
 	layout := func() tool.Response { return a.toolLayout(req, callers) }
 	return map[tool.Op]func() tool.Response{
-		tool.OpTerminals:  func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers)} },
-		tool.OpOpen:       layout,
-		tool.OpClose:      layout,
-		tool.OpBack:       layout,
-		tool.OpForward:    layout,
-		tool.OpMessage:    func() tool.Response { return outcome(a.toolMessage(req, callers)) },
-		tool.OpRun:        func() tool.Response { return started(a.toolRun(req, callers)) },
-		tool.OpLoop:       func() tool.Response { return started(a.toolLoop(req, callers)) },
-		tool.OpLoops:      func() tool.Response { return tool.Response{Loops: a.toolLoops()} },
-		tool.OpCancelLoop: func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
+		tool.OpTerminals: func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers)} },
+		tool.OpOpen:      layout,
+		tool.OpClose:     layout,
+		tool.OpBack:      layout,
+		tool.OpForward:   layout,
+		tool.OpMessage: func() tool.Response {
+			id, err := a.toolMessage(req, callers)
+			if err != nil {
+				return outcome(err)
+			}
+			return tool.Response{Created: id}
+		},
+		tool.OpMessages:      func() tool.Response { return tool.Response{Messages: a.toolMessages()} },
+		tool.OpUpdateMessage: func() tool.Response { return outcome(a.toolUpdateMessage(req, callers)) },
+		tool.OpRun:           func() tool.Response { return started(a.toolRun(req, callers)) },
+		tool.OpLoop:          func() tool.Response { return started(a.toolLoop(req, callers)) },
+		tool.OpLoops:         func() tool.Response { return tool.Response{Loops: a.toolLoops()} },
+		tool.OpCancelLoop:    func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
 	}
 }
 

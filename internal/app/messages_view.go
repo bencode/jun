@@ -16,7 +16,6 @@ const (
 	messageLines           = 4 // of a long text, shown until it is opened
 	messagePadding float32 = 8
 	messageBorder  float32 = 2
-	messageIcon    float32 = 14
 	messageGap     float32 = 6
 )
 
@@ -85,11 +84,13 @@ func (a *app) messageList(c *ui.Context) {
 
 // messageRow reports a click on the row or on its fold control.
 func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (clicked bool) {
-	width := a.messagesWidth - 2*(messagePadding+messageBorder)
+	width, size := a.messagesWidth-2*(messagePadding+messageBorder), a.textSize()
+	textWidth := width
 	if m.Title == "" {
-		width -= messageIcon + messageGap
+		number, _ := c.MeasureText(0, ui.Span{Text: m.number(), Size: a.messageCaption()})
+		textWidth -= a.messageIconSize() + number + 2*messageGap
 	}
-	folds := messageFolds(c, m.Text, width)
+	folds := messageFolds(c, m.Text, textWidth, size) || a.repliesFold(c, m, width, now)
 	border := ui.Transparent // always there, for a peek to move no row
 	if m.Link != nil && m.Link.Kind == tool.TargetTerminal && terminal.ID(m.Link.ID) == a.peek.id {
 		border = a.theme.Accent
@@ -97,15 +98,17 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 	row := ui.Column(c).FillWidth().Gap(4).Padding(6, messagePadding).Radius(6).Border(messageBorder, border).Children(func() {
 		ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Start).Children(func() {
 			a.messageIcon(c, m.Kind, chosen)
+			a.messageNumber(c, m, chosen)
 			if m.Title != "" {
-				ui.Text(c, m.Title).Bold().SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
+				ui.Text(c, m.Title).FontSize(size).Bold().SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 			} else {
-				messageText(c, m, folds).Grow(1).MinWidth(0)
+				messageText(c, m, folds, size).Grow(1).MinWidth(0)
 			}
 		})
 		if m.Title != "" && m.Text != "" {
-			messageText(c, m, folds)
+			messageText(c, m, folds, size)
 		}
+		a.messageReplies(c, m, now, chosen)
 		clicked = a.messageFoot(c, m, now, folds, chosen)
 	})
 	live := a.messageLive(m)
@@ -122,20 +125,17 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 // messageFoot closes the row with its tag, fold control and age, and
 // reports a click on the control.
 func (a *app) messageFoot(c *ui.Context, m message, now time.Time, folds, chosen bool) (clicked bool) {
-	muted := a.theme.TextMuted
-	if chosen {
-		muted = a.theme.AccentText
-	}
+	muted, caption := a.messageMuted(chosen), a.messageCaption()
 	ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Center).Children(func() {
 		if m.Link != nil {
-			ui.Text(c, messageLinks[m.Link.Kind].label(a, m)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…").
+			ui.Text(c, messageLinks[m.Link.Kind].label(a, m)).FontSize(caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…").
 				MinWidth(0).Padding(1, 6).Radius(4).Background(a.theme.Surface)
 		}
 		if folds {
 			clicked = a.foldControl(c, m, muted)
 		}
 		ui.Spacer(c)
-		ui.Text(c, a.messageAge(now, m.Time)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
+		ui.Text(c, a.messageAge(now, m.Time)).FontSize(caption).TextColor(muted).Shrink(0)
 	})
 	return clicked
 }
@@ -143,18 +143,41 @@ func (a *app) messageFoot(c *ui.Context, m message, now time.Time, folds, chosen
 // name is what the message goes by, for the list and assistive technology.
 func (m message) name() string { return cmp.Or(m.Title, m.Text) }
 
+// number is what the user and agents call the message.
+func (m message) number() string { return fmt.Sprintf("M%d", m.ID) }
+
+// messageCaption is the size of what goes with a message's text, a step
+// under it, as the rest of Jun's captions are.
+func (a *app) messageCaption() float32 { return max(theme.Caption, a.textSize()-2) }
+
+func (a *app) messageIconSize() float32 { return a.textSize() + 1 }
+
+func (a *app) messageMuted(chosen bool) ui.Color {
+	if chosen {
+		return a.theme.AccentText
+	}
+	return a.theme.TextMuted
+}
+
+func (a *app) messageNumber(c *ui.Context, m message, chosen bool) {
+	caption := a.messageCaption()
+	ui.Box(c).Padding((a.textSize()-caption)/2, 0, 0, 0).Shrink(0).Children(func() { // down to the first line's middle
+		ui.Text(c, m.number()).FontSize(caption).TextColor(a.messageMuted(chosen))
+	})
+}
+
 // messageFolds tells whether the text runs past messageLines at the width.
-func messageFolds(c *ui.Context, text string, width float32) bool {
+func messageFolds(c *ui.Context, text string, width, size float32) bool {
 	if text == "" || width <= 0 {
 		return false
 	}
-	_, whole := c.MeasureText(width, ui.Span{Text: text})
-	_, line := c.MeasureText(width, ui.Span{Text: "x"})
+	_, whole := c.MeasureText(width, ui.Span{Text: text, Size: size})
+	_, line := c.MeasureText(width, ui.Span{Text: "x", Size: size})
 	return whole > (messageLines+0.5)*line
 }
 
-func messageText(c *ui.Context, m message, folds bool) ui.Element {
-	text := ui.Text(c, m.Text).LineHeight(1.4)
+func messageText(c *ui.Context, m message, folds bool, size float32) ui.Element {
+	text := ui.Text(c, m.Text).FontSize(size).LineHeight(1.4)
 	if folds && !m.Whole {
 		return text.MaxLines(messageLines)
 	}
@@ -169,7 +192,7 @@ func (a *app) foldControl(c *ui.Context, m message, color ui.Color) bool {
 		label = a.text("Show less", "收起")
 	}
 	control := ui.Box(c).Shrink(0).Padding(1, 4).Radius(4).Children(func() {
-		ui.Text(c, label).FontSize(theme.Caption).TextColor(color)
+		ui.Text(c, label).FontSize(a.messageCaption()).TextColor(color)
 	})
 	if !control.Clicked() {
 		return false
@@ -193,7 +216,7 @@ func (a *app) messageIcon(c *ui.Context, kind tool.MessageKind, chosen bool) {
 		color = a.theme.AccentText // the row's own color would hide the ask icon
 	}
 	ui.Box(c).Padding(2, 0, 0, 0).Shrink(0).Children(func() { // down to the first line's middle
-		ui.Icon(c, looks[kind].icon).Size(messageIcon, messageIcon).TextColor(color)
+		ui.Icon(c, looks[kind].icon).Size(a.messageIconSize(), a.messageIconSize()).TextColor(color)
 	})
 }
 

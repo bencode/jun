@@ -91,7 +91,7 @@ While an agent is peeked, Esc and every other key without ⌘ go to the agent. S
 | Smaller text | ⌘− |
 | Default text size (13) | ⌘0 |
 
-Terminals and file tabs share one text size, from 8 to 40. Jun saves it as `font.size` in the [settings file](settings.md).
+Terminals, file tabs and Messages share one text size, from 8 to 40. Jun saves it as `font.size` in the [settings file](settings.md).
 
 ## Command palette
 

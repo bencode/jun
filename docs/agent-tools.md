@@ -31,7 +31,9 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
-| `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints nothing. |
+| `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints the message's id. |
+| `jun tool message update <id> [--kind <kind>] [<text>]`, or `-` for the text | Changes the message's kind, adds a reply, or both. Prints nothing. |
+| `jun tool message` | The messages, as a JSON array, the latest first |
 | `jun tool run [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
 | `jun tool loop <every> [--dir <path>] <command…>` | Runs the command every interval in a terminal of its own. Prints the loop's id. |
 | `jun tool loop` | The loops, as a JSON array |
@@ -155,6 +157,50 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - **A resource that does not exist** is status 1, and shows nothing: the terminal, file or project, or a terminal in no worktree for `diff:`. `peek` and `perspective:` are not for messages.
 - **The text**: with `-`, standard input. Line breaks at its end go; at most 4 KiB.
 - **How long it stays**: Jun keeps the last 500, until it quits. A terminal's id lasts as long, so a message's link never points at another terminal.
+- **Its id**: `message` prints it. Jun shows it as `M12`; the commands take `12`.
+
+#### Updating a message
+
+`message update` changes what the user sees of a message: its kind, a reply below it, or both, at least one of them.
+
+```sh
+"$JUN_BIN" tool message update 12 --kind done 'You agreed; it goes on.'
+"$JUN_BIN" tool message update 12 'PR #53 is open, the tests pass.'
+"$JUN_BIN" tool message update 12 --kind done
+```
+
+- **`ask` means the user has something to do**, so `ask` becoming `done` tells them it is handled. Jun does not do this itself: whoever watches the agent decides.
+- **A reply** has its own time, and moves the message to the top. A new kind alone leaves the message where it is.
+- **The text**: as for `message`. A message keeps its last 50 replies.
+- **Who may update**: any terminal of Jun, whoever sent the message. Outside Jun's terminals it is refused.
+- **A message that does not exist** is status 1, as is one Jun no longer keeps.
+
+#### Reading messages back
+
+`message` with nothing after it lists them, for instance to find what still waits for the user:
+
+```sh
+"$JUN_BIN" tool message | jq -c '.[] | select(.kind == "ask")'
+```
+
+```json
+[
+  {
+    "id": 12,
+    "time": "2026-11-05T19:30:00+08:00",
+    "kind": "done",
+    "title": "Asks to open a PR",
+    "text": "I suggest yes.",
+    "project": "web",
+    "link": "terminal:7",
+    "replies": [
+      { "time": "2026-11-05T19:32:00+08:00", "text": "You agreed; it goes on." }
+    ]
+  }
+]
+```
+
+`link` is as `--link` takes it; `title`, `text`, `project`, `link` and `replies` are absent when there are none.
 
 ### run and loop
 

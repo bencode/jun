@@ -43,9 +43,11 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 **Messages**, in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
 
-- Each message shows an icon for its kind, its title, its age, its text and, when it links to something, a tag, the latest first.
-  - The icons tell what asks for you, a warning, what is done and what is for your information.
-  - The tag names the project and the terminal, Diff or file: `#13 yimi`, `#13 yimi · Diff`, `yimi · notes.md`.
+- Each message shows an icon for its kind, its number, its title, its age, its text and, when it links to something, a tag, the latest first.
+  - The icons tell what asks for you, a warning, what is done and what is for your information. When an agent sees that you handled what asked for you, it turns the icon to done.
+  - The number, such as `M12`, is what you and agents call the message by.
+  - The tag names the project and the terminal, Diff or file: `#13 yimi`, `#13 yimi · Diff`, `yimi · notes.md`. `#13` is the number on the agent's card.
+- **Replies** are what agents added to a message later, indented below it, each with its age. A reply brings its message to the top.
 - **Click a message with a tag** to go to what it links to:
 
   | It links to | Click | ⌘-click |
@@ -56,7 +58,8 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
   | A project | Switches to it | The same |
 
   - A message whose terminal has ended, or whose project is gone, cannot be clicked.
-- A long text shows four lines. **Show more** opens it where it is, and **Show less** folds it.
+- A long text shows four lines and a message its last three replies. **Show more** opens it where it is, and **Show less** folds it.
+- Messages use the [text size](shortcuts.md#text-size) of terminals.
 - **Tab** from the title of Messages, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** acts as a click, and **→** and **←** open and fold a long text.
 - Messages last until Jun quits. It keeps the last 500.
 

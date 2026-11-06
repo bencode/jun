@@ -1,9 +1,10 @@
 #!/bin/bash
 # Passes what needs a look on to the deputy in terminal $1: agents that wait
-# for the user, finished or went while working, each once the deputy is idle.
+# for the user, stopped waiting, finished or went while working, each once the
+# deputy is idle.
 # Run from a loop, which starts it again when the watch ends.
 self=$1
-events='select(.id != $self and (.to == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))
+events='select(.id != $self and (.to == "waiting" or .from == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))
   | "\(.id) \(.project) \(.agent) \(if .to == "" then "gone" else .to end)"'
 
 deputy_status() {

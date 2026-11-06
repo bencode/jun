@@ -14,6 +14,7 @@ import (
 const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
+	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
 	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
@@ -100,7 +101,17 @@ Sending:
       does not exist is status 1 and shows nothing. With -, the text is
       standard input.
       Line breaks at its end go; at most 4 KiB. Jun keeps the last 500,
-      until it quits. Prints nothing.
+      until it quits. Prints the message's id, which shows as M<id>.
+  jun tool message update <id> [--kind <kind>] [<text>]
+  jun tool message update <id> [--kind <kind>] -
+      Changes the message's kind, adds the text as a reply below it, or
+      both: ask becoming done tells the user it is handled. A reply moves
+      the message to the top; a message keeps its last 50. Any terminal
+      may, whoever sent it. No such message is status 1. Prints nothing.
+  jun tool message
+      The messages, the latest first, as a JSON array: id, time, kind,
+      title, text, project, link, as --link takes it, and replies, each
+      with time and text.
 
 Running commands, each in a terminal of its own, in the caller's
 project, with no tab unless asked for:
@@ -190,11 +201,17 @@ func output(w io.Writer, op Op, resp Response) error {
 		_, err = fmt.Fprintln(w, resp.Terminal)
 		return err
 	}
+	if op == OpMessage {
+		_, err = fmt.Fprintln(w, resp.Created)
+		return err
+	}
 	var list any
 	if op == OpTerminals {
 		list = append([]Terminal{}, resp.Terminals...)
 	} else if op == OpLoops {
 		list = append([]Loop{}, resp.Loops...)
+	} else if op == OpMessages {
+		list = append([]Message{}, resp.Messages...)
 	} else {
 		if resp.Message != "" {
 			_, err = fmt.Fprintln(w, resp.Message)

@@ -61,11 +61,14 @@ func TestMainUsage(t *testing.T) {
 		{"open", "terminal:7", "extra"}, {"close"}, {"close", "project:Jun"}, {"close", "peek", "1"}, {"back", "1"}, {"forward", "x"},
 		{"send"}, {"send", "3"}, {"send", "0", "hi"}, {"send", "3", " \n"}, {"send", "3", "hi", "there"},
 		{"send", "3", strings.Repeat("x", MaxText+1)},
-		{"message"}, {"message", " \n"}, {"message", "a", "b"}, {"message", "--about", "3", "hi"}, {"message", "--title"},
+		{"message", " \n"}, {"message", "a", "b"}, {"message", "--about", "3", "hi"}, {"message", "--title"},
 		{"message", "--help"}, {"message", "--kind", "ask"}, {"message", "--link", "terminal:3"}, {"message", strings.Repeat("x", MaxMessage+1)},
 		{"message", "--title", " ", "hi"}, {"message", "--title", "a\nb", "hi"}, {"message", "--title", strings.Repeat("x", MaxTitle+1), "hi"},
 		{"message", "--title", "a", "--title", "b", "hi"}, {"message", "--kind", "urgent", "hi"},
 		{"message", "--link", "peek", "hi"}, {"message", "--link", "perspective:Review", "hi"}, {"message", "--link", "terminal:0", "hi"},
+		{"message", "update", "0", "hi"}, {"message", "update", "x", "hi"}, {"message", "update", "3"}, {"message", "update", "3", " \n"},
+		{"message", "update", "3", "--kind"}, {"message", "update", "3", "--kind", "urgent"}, {"message", "update", "3", "a", "b"},
+		{"message", "update", "3", "--title", "a", "b"}, {"message", "update", "3", "-h"}, {"message", "update", "3", strings.Repeat("x", MaxMessage+1)},
 		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--dir", "", "x"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
 		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
@@ -106,6 +109,12 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		}
 		if req.Op == OpLoops {
 			return Response{Loops: []Loop{{ID: 12, Every: "5m", Command: "echo hi"}}}
+		}
+		if req.Op == OpMessage {
+			return Response{Created: 7}
+		}
+		if req.Op == OpMessages {
+			return Response{Messages: []Message{{ID: 7, Kind: MessageAsk, Link: "terminal:3", Replies: []Reply{{Text: "Answered"}}}}}
 		}
 		if req.Op != OpTerminals {
 			return Response{}
@@ -160,8 +169,24 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, _, _ := runWith(path, "x\n", "send", "3", "-"); code != 0 {
 		t.Fatalf("send from standard input: %d", code)
 	}
-	if code, out, _ := run(path, "message", "--title", "Asks", "--kind", "ask", "--link", "terminal:3", "It waits"); code != 0 || out != "" {
+	if code, out, _ := run(path, "message", "--title", "Asks", "--kind", "ask", "--link", "terminal:3", "It waits"); code != 0 || out != "7\n" {
 		t.Fatalf("message: %d %q", code, out)
+	}
+	var messages []Message
+	if code, out, _ := run(path, "message"); code != 0 || json.Unmarshal([]byte(out), &messages) != nil || len(messages) != 1 || messages[0].Replies[0].Text != "Answered" {
+		t.Fatalf("messages: %d %q", code, out)
+	}
+	if code, out, _ := run(path, "message", "update", "7", "--kind", "done", "Answered"); code != 0 || out != "" {
+		t.Fatalf("update: %d %q", code, out)
+	}
+	if code, _, _ := run(path, "message", "update", "7", "--kind", "done"); code != 0 {
+		t.Fatalf("update of the kind alone: %d", code)
+	}
+	if code, _, _ := runWith(path, "a\nb\n", "message", "update", "7", "-"); code != 0 {
+		t.Fatalf("update from standard input: %d", code)
+	}
+	if code, _, _ := run(path, "message", "update"); code != 0 {
+		t.Fatalf("the one word update is a text: %d", code)
 	}
 	if code, _, _ := run(path, "message", "--title", "Done"); code != 0 {
 		t.Fatalf("message with a title alone: %d", code)
@@ -196,6 +221,8 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
 		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"},
 		{Op: OpMessage, Title: "Asks", Kind: MessageAsk, Target: &Target{Kind: TargetTerminal, ID: 3}, Text: "It waits"},
+		{Op: OpMessages}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone, Text: "Answered"}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone},
+		{Op: OpUpdateMessage, Message: 7, Text: "a\nb"}, {Op: OpMessage, Text: "update"},
 		{Op: OpMessage, Title: "Done"}, {Op: OpMessage, Text: "-- deploy failed"}, {Op: OpMessage, Title: "Quiet"}, {Op: OpMessage, Text: "a\nb"},
 		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
