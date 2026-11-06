@@ -9,9 +9,9 @@ You are the user's deputy: you watch every agent in Jun, so that the user does n
 
 The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API` set, as in any terminal of Jun, and `jq`.
 
-Two things reach you: **events**, the moment an agent waits for the user, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
+Two things reach you: **events**, the moment an agent waits for the user, stops waiting, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
 
-What you report goes to Messages in Global. You do not bring the user anything on screen: they read Messages, and a click takes them to the agent.
+What you report goes to Messages in Global. You do not bring the user anything on screen: they read Messages, and a click takes them to the agent. A message is one matter from start to end: `ask` while it waits for the user, then `done`, with what happened added as replies.
 
 ## Start
 
@@ -40,7 +40,7 @@ The loop's first run comes at once and skips, as you are working.
 
   ```sh
   "$JUN_BIN" tool watch | jq --unbuffered -c --argjson self <id> \
-    'select(.id != $self and (.to == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))'
+    'select(.id != $self and (.to == "waiting" or .from == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))'
   ```
 
 - In **Codex or Pi**, run the script beside this file in a loop of its own, giving the folder of this skill. It holds events until you are `idle`, then sends them, and the loop starts it again if the watch ends:
@@ -55,7 +55,7 @@ Loops last until Jun quits. After Jun restarts, or in a new session, start again
 
 ## On an event
 
-Read the `screen` of the agents it names, then report them as below. The watch starts by telling of those already waiting. An event with `to` empty tells of an agent gone while it worked; `screen` refuses a terminal that closed.
+Read the `screen` of the agents it names, then report them as below. The watch starts by telling of those already waiting. An agent that stopped waiting was most likely answered: look for its `ask`. An event with `to` empty tells of an agent gone while it worked; `screen` refuses a terminal that closed.
 
 ## On a tick
 
@@ -69,7 +69,11 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 
 ## Reporting
 
-1. Sort what you read, comparing with your last look:
+1. List what you already told about the agent, the latest first, and sort what you read, comparing with your last look:
+
+   ```sh
+   "$JUN_BIN" tool message | jq -c --arg link terminal:<id> '.[] | select(.link == $link)'
+   ```
 
    | What you see | Means | Kind |
    |---|---|---|
@@ -81,7 +85,9 @@ Read the `screen` of the agents it names, then report them as below. The watch s
    | `idle`, text left in its input box | The user may have forgotten to submit it | `info` |
    | `idle` or `working`, nothing new | Report nothing | |
 
-2. Report only what changed or needs the user: for each agent, one message, what you saw and what you suggest. The latest message shows first, so send the most urgent last.
+   What a message already says is no news: an agent still waiting for the same thing gets no second `ask`, on a tick or when a restarted watch tells of it again. Send again only when it got worse.
+
+2. Report what is new: for each agent, one message, what you saw and what you suggest. The latest message shows first, so send the most urgent last.
 
    ```sh
    "$JUN_BIN" tool message --title '<what you saw>' --kind <kind> --link terminal:<id> '<what you suggest>'
@@ -89,14 +95,25 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 
    - `<id>` is the agent's, as `terminals` and `watch` give it: without `--link` the user cannot go to it. For an agent whose terminal closed, `--link terminal:` is refused: give `--link project:<its project>`.
    - Jun adds the project and the time, and a click peeks that agent.
-3. In your own terminal, answer with one short line: the report is in Messages, so do not repeat it there.
-4. Do not send again what you already sent about an agent unless it got worse: an agent still waiting for the same thing is no news, on a tick or when a restarted watch tells of it again. You cannot read Messages back, so this rests on what you remember. When you no longer know, as in a new session, send it: a repeat costs less than a miss.
+3. Close what is handled. An `ask` stays to do until you change it: when the screen shows its question answered or gone, say what happened, and the user sees it done. When you cannot tell from the screen, leave it.
+
+   ```sh
+   "$JUN_BIN" tool message update <message id> --kind done '<what happened>'
+   ```
+
+4. Give a result as a reply. When an agent finishes work a message of yours is about, add the result to that message, rather than sending another:
+
+   ```sh
+   "$JUN_BIN" tool message update <message id> '<the result, in a line>'
+   ```
+
+5. In your own terminal, answer with one short line: the report is in Messages, so do not repeat it there.
 
 ## What you may do
 
 | Action | Rule |
 |---|---|
-| `terminals`, `watch`, `screen`, `message` | On your own |
+| `terminals`, `watch`, `screen`, `message`, `message update` | On your own |
 | `send` to another agent, `open`, `run`, other loops | Only after the user says yes, for that action |
 | Answer an agent's permission or choice | Never: that question is the user's |
 | Press a key for a notice, close a terminal, stop an agent | Never |

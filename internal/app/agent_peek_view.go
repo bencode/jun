@@ -106,6 +106,7 @@ func (a *app) peekHeading(c *ui.Context, s *terminal.Session) {
 	}
 	heading.Children(func() {
 		ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
+		a.agentNumber(c, s)
 		ui.Text(c, a.agentTitle(s)).Bold().MinWidth(0).SingleLine().Ellipsis("…")
 		ui.Text(c, s.ProjectName+" · "+agentName(info.Kind)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).
 			MinWidth(0).SingleLine().Ellipsis("…")

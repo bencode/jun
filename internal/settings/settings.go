@@ -22,7 +22,7 @@ type Settings struct {
 	Language string `yaml:"language,omitempty"` // "en" or "zh"
 	Theme    string `yaml:"theme,omitempty"`    // a Ghostty theme's name; Jun's own when empty
 	Font     struct {
-		Size float32 `yaml:"size,omitempty"` // terminals' and file tabs' text size in DIPs
+		Size float32 `yaml:"size,omitempty"` // terminals', file tabs' and Messages' text size in DIPs
 	} `yaml:"font,omitempty"`
 	Markdown struct {
 		Width string `yaml:"width,omitempty"` // one of MarkdownWidths; medium when empty
@@ -47,7 +47,7 @@ const Template = `# Jun settings. Saved changes apply at once.
 # language: en          # en | zh
 # theme: ""             # a Ghostty theme's name; Jun's own when empty
 # font:
-#   size: 13            # terminals' and file tabs' text, 8 to 40
+#   size: 13            # terminals', file tabs' and Messages' text, 8 to 40
 # markdown:
 #   width: medium       # narrow | medium | wide | full
 # claude:

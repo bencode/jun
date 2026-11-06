@@ -107,6 +107,12 @@ func parseSend(args []string, stdin io.Reader) (Request, error) {
 }
 
 func parseMessage(args []string, stdin io.Reader) (Request, error) {
+	if len(args) == 0 {
+		return Request{Op: OpMessages}, nil
+	}
+	if args[0] == "update" && len(args) > 1 {
+		return parseUpdateMessage(args[1:], stdin)
+	}
 	req := Request{Op: OpMessage}
 	flags := map[string]func(string) error{
 		"--title": func(title string) error {
@@ -116,12 +122,9 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 			req.Title = title
 			return nil
 		},
-		"--kind": func(kind string) error {
-			if !slices.Contains(MessageKinds, MessageKind(kind)) {
-				return fmt.Errorf("kind must be one of %v, not %q", MessageKinds, kind)
-			}
-			req.Kind = MessageKind(kind)
-			return nil
+		"--kind": func(kind string) (err error) {
+			req.Kind, err = parseKind(kind)
+			return err
 		},
 		"--link": func(resource string) error {
 			target, err := parseTarget(resource)
@@ -145,7 +148,7 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 	if len(args) == 0 && req.Title != "" {
 		return req, nil
 	}
-	if len(args) != 1 || strings.HasPrefix(args[0], "--") && !strings.Contains(args[0], " ") || args[0] == "-h" {
+	if len(args) != 1 || isFlag(args[0]) {
 		return Request{}, errors.New("message takes a text, or - for standard input, after --title <title>, --kind <kind> and --link <resource>, all optional")
 	}
 	text, err := readText(args[0], stdin, MaxMessage)
@@ -157,6 +160,49 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 	}
 	req.Text = text
 	return req, nil
+}
+
+// parseUpdateMessage reads what follows `message update`: an id, then a
+// kind, a reply or both.
+func parseUpdateMessage(args []string, stdin io.Reader) (Request, error) {
+	id, err := strconv.ParseUint(args[0], 10, 64)
+	if err != nil || id == 0 {
+		return Request{}, fmt.Errorf("message id must be a positive integer: %q", args[0])
+	}
+	req, rest := Request{Op: OpUpdateMessage, Message: id}, args[1:]
+	if len(rest) > 1 && rest[0] == "--kind" {
+		if req.Kind, err = parseKind(rest[1]); err != nil {
+			return Request{}, err
+		}
+		rest = rest[2:]
+	}
+	if len(rest) == 0 && req.Kind != "" {
+		return req, nil
+	}
+	if len(rest) != 1 || isFlag(rest[0]) {
+		return Request{}, errors.New("message update takes an id, then --kind <kind>, a text or - for standard input, or both")
+	}
+	text, err := readText(rest[0], stdin, MaxMessage)
+	if errors.Is(err, errBlank) && req.Kind != "" {
+		return req, nil
+	}
+	if err != nil {
+		return Request{}, err
+	}
+	req.Text = text
+	return req, nil
+}
+
+// isFlag tells a mistyped option from a text, which has spaces.
+func isFlag(arg string) bool {
+	return strings.HasPrefix(arg, "--") && !strings.Contains(arg, " ") || arg == "-h"
+}
+
+func parseKind(kind string) (MessageKind, error) {
+	if !slices.Contains(MessageKinds, MessageKind(kind)) {
+		return "", fmt.Errorf("kind must be one of %v, not %q", MessageKinds, kind)
+	}
+	return MessageKind(kind), nil
 }
 
 var errBlank = errors.New("text must not be blank")
