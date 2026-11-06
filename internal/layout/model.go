@@ -17,6 +17,8 @@ const (
 	ViewSkills     ViewKind = "skills"     // a placeholder an earlier side preset had, which loading drops
 	ViewTranscript ViewKind = "transcript" // an agent session, read-only
 	ViewSettings   ViewKind = "settings"   // the settings file, to edit
+	ViewReviews    ViewKind = "reviews"    // the project's reviews, in the side region, until shown hidden
+	ViewReview     ViewKind = "review"     // a review, read in a tab
 )
 
 // AgentsLayout is how an Agents view shows the agents.
@@ -36,7 +38,8 @@ type View struct {
 	File         *FileRef     `json:"file,omitempty"`       // a file view's file
 	Transcript   *SessionRef  `json:"transcript,omitempty"` // a transcript view's session
 	Diff         *DiffRef     `json:"diff,omitempty"`       // what a Diff view compares
-	Hidden       bool         `json:"hidden,omitempty"`     // Global does not show it
+	Review       string       `json:"review,omitempty"`     // a review view's review, by its ID
+	Hidden       bool         `json:"hidden,omitempty"`     // its fixed region does not show it
 	Share        float32      `json:"share,omitempty"`      // its weight among the views Global shows
 }
 

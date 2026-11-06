@@ -3,12 +3,14 @@ package app
 import (
 	"fmt"
 
+	"github.com/bencode/jun/internal/review"
 	"github.com/egoist/mygo/ui"
 )
 
 // imageKind shows pictures, decoded off the UI thread, as large as they
 // are and at most as wide as the tab.
 var imageKind = renderKind{
+	name:  "image",
 	label: func(a *app) string { return a.text("Image", "图片") },
 	accepts: func(name string, _ []byte) bool {
 		return hasExtension(name, ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg")
@@ -60,3 +62,8 @@ func (m *imageRender) detail() string {
 	}
 	return ""
 }
+
+// A note on an image is on the whole file.
+func (m *imageRender) spot() noteSpot                    { return noteSpot{} }
+func (m *imageRender) showMarks([]noteMark)              {}
+func (m *imageRender) goToPlace(review.Place, bool) bool { return true }

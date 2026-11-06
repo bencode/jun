@@ -7,6 +7,8 @@ Jun keeps two files. **Preferences** live in the settings file, which you edit. 
 | `settings.yaml` | language, theme, text size, reading width, Claude Code folders | `~/.config/jun/settings.yaml` | `JUN_SETTINGS_PATH` |
 | `config.json` | projects, perspectives, regions, tabs | `~/Library/Application Support/Jun/config.json` | `JUN_CONFIG_PATH` |
 
+[Reviews](reviews.md) live in `reviews/`, in the directory of `config.json`, a file each.
+
 - The settings file is described in [Settings](settings.md).
 - In both overrides, a relative path resolves against the directory Jun was launched from.
 

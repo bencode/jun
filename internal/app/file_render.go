@@ -9,6 +9,7 @@ import (
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
+	"github.com/bencode/jun/internal/review"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -18,11 +19,17 @@ type fileRender interface {
 	update(data []byte)               // the content, read (again); on the UI thread
 	view(c *ui.Context, size float32) // size: the text size in DIPs
 	detail() string                   // what the header adds, as an image's size; "" for nothing
+	spot() noteSpot                   // what is selected, to note
+	showMarks(marks []noteMark)       // the notes on the file, to show
+	// goToPlace goes to the place, when it has lines, and reports whether it
+	// could yet: not before it laid out.
+	goToPlace(place review.Place, lines bool) bool
 }
 
 // renderKind is a way of showing files: which files it can show, and how
 // it starts showing one.
 type renderKind struct {
+	name    string              // as a note's anchor keeps it
 	label   func(a *app) string // its name in the header's switch
 	accepts func(name string, data []byte) bool
 	make    func(f fileEnv) fileRender
@@ -36,6 +43,7 @@ type fileEnv struct {
 	s       repo.Source
 	ref     layout.FileRef
 	project string
+	view    *layout.View
 }
 
 // renderKinds in order of preference: a file shows with the first that

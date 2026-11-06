@@ -73,6 +73,14 @@ Closing a tab is no step: back and forward skip closed tabs, and the steps ahead
 
 ⌘P shows the side bar, chooses Files and focuses its search field. It does nothing until a project is open.
 
+## Reviews
+
+| Action | Shortcut |
+|---|---|
+| Add a note on what a Diff or file tab holds selected | ⌘⇧M |
+| While writing a note: save it | ⌘↩ |
+| While writing a note: cancel | Esc |
+
 ## Agents
 
 | Action | Shortcut |

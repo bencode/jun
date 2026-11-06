@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bencode/jun/internal/config"
+	"github.com/bencode/jun/internal/review"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -25,6 +26,7 @@ type persistence struct {
 
 func (a *app) restoreConfig(path string) {
 	a.persistence = &persistence{path: path, enabled: true}
+	a.reviewRoot = review.Root(path)
 	state, err := config.Load(path)
 	if err == nil {
 		a.state = state

@@ -94,3 +94,38 @@ func TestChangesSinceForkUncommittedAndOneCommit(t *testing.T) {
 		t.Fatal("a base read as an option was accepted")
 	}
 }
+
+func TestUncommittedTellsAFileFromItsCommit(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		if _, err := git(dir, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(name, text string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run("init", "-q")
+	write("a.txt", "one\n")
+	run("add", ".")
+	run("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "first")
+	s := Source{Branch: "main", Worktree: dir}
+	check := func(name string, want bool) {
+		t.Helper()
+		if got, err := Uncommitted(s, name); err != nil || got != want {
+			t.Fatalf("Uncommitted(%s) = %v, %v; want %v", name, got, err, want)
+		}
+	}
+	check("a.txt", false)
+	write("a.txt", "two\n")
+	check("a.txt", true)
+	write("new.txt", "x\n")
+	check("new.txt", true)
+	if got, err := Uncommitted(Source{Branch: "main"}, "a.txt"); got || err != nil {
+		t.Fatalf("a branch checked out nowhere: %v, %v", got, err)
+	}
+}

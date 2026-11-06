@@ -99,6 +99,12 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 			return
 		}
 		if p := a.state.CurrentPerspective(); p != nil && r == p.Side {
+			for _, v := range r.Views {
+				if v.Kind == layout.ViewReviews && m.Item(a.title(v)).Checked(!v.Hidden).Chosen() {
+					a.toggleSideView(v.ID)
+				}
+			}
+			m.Separator()
 			if m.Item(a.text("Hide Side Bar", "收起侧边栏")).Shortcut(toggleSideKeys.mods, toggleSideKeys.key).Chosen() {
 				a.toggleSide()
 			}

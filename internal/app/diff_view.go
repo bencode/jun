@@ -78,6 +78,7 @@ func (a *app) diffView(c *ui.Context, v *layout.View) {
 }
 
 func (a *app) diffBody(c *ui.Context, v *layout.View, st *diffViewState, r *repoState, s repo.Source) {
+	a.diffJumpFile(v, st, func(row int) { a.loadDiffFile(st, r, s, st.rows[row].change) })
 	if st.err != nil {
 		ui.Column(c).Padding(16).Gap(8).Children(func() {
 			ui.Text(c, st.err.Error()).TextColor(a.theme.Danger)
@@ -98,8 +99,9 @@ func (a *app) diffBody(c *ui.Context, v *layout.View, st *diffViewState, r *repo
 	ui.Row(c).Grow(1).FillWidth().MinHeight(0).Gap(0).AlignItems(ui.Stretch).Children(func() {
 		a.diffFileList(c, st, r, s)
 		ui.Box(c).Width(1).FillHeight().Shrink(0).Background(a.theme.Border)
-		a.diffFileView(c, st, v.Diff.Unified)
+		a.diffFileView(c, v, st, v.Diff.Unified)
 	})
+	a.noteComposer(c, v)
 }
 
 // readDiff reads the comparison off the UI thread: what it can compare to,
@@ -192,6 +194,7 @@ func (a *app) diffHeader(c *ui.Context, v *layout.View, st *diffViewState, s rep
 			})
 		})
 		ui.Spacer(c)
+		a.noteActions(c, v, ref.Source, nil)
 		a.diffStats(c, st.diff.Changes)
 		toggle := iconButton(c, splitIcon, a.text("Side by Side or Unified", "并排或合并"), 28, 15)
 		if !ref.Unified {

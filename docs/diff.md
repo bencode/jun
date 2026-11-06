@@ -29,6 +29,10 @@ A **Diff** tab shows a branch's changes, for reviewing an agent's work before it
 | Uncommitted Only | only what is not committed yet |
 | One Commit | the changes of one commit |
 
+## Noting it
+
+Hover a line number and click **+**, or drag line numbers and press ⌘⇧M, to add a note to a [review](reviews.md). A note shows under its line.
+
 ## Reading it
 
 - The changed files are listed by directory, each with its lines added and deleted.

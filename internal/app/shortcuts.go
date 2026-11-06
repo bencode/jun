@@ -31,6 +31,7 @@ var (
 	toggleSideKeys     = keyCombo{ui.Super, ui.KeyB}
 	newPerspectiveKeys = keyCombo{ui.Super | ui.Shift, ui.KeyN}
 	goToHeadingKeys    = keyCombo{ui.Super | ui.Shift, ui.KeyO}
+	noteKeys           = keyCombo{ui.Super | ui.Shift, ui.KeyM}
 )
 
 // perspectiveKeys and projectKeys select the perspective or project at
@@ -104,6 +105,7 @@ func (a *app) shortcuts(c *ui.Context) {
 		c.OnShortcut(ui.Super, ui.KeyEnter, a.openPeekedTab)
 	}
 	c.OnShortcut(ui.Super, ui.KeyP, a.searchFiles)
+	c.OnShortcut(noteKeys.mods, noteKeys.key, a.noteHere)
 	c.OnShortcut(ui.Super, ui.KeyEqual, func() { a.setTextSize(a.textSize() + 1) })
 	c.OnShortcut(ui.Super|ui.Shift, ui.KeyEqual, func() { a.setTextSize(a.textSize() + 1) })
 	c.OnShortcut(ui.Super, ui.KeyMinus, func() { a.setTextSize(a.textSize() - 1) })

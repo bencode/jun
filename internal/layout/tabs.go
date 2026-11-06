@@ -18,7 +18,7 @@ func (s *State) OpenView(target RegionID, kind ViewKind, projectName string) (Vi
 	if s.Fixed(target) {
 		return 0, errFixed
 	}
-	if kind == ViewFile || kind == ViewTranscript || kind == ViewDiff || !slices.Contains(tabKinds, kind) {
+	if kind == ViewFile || kind == ViewTranscript || kind == ViewDiff || kind == ViewReview || !slices.Contains(tabKinds, kind) {
 		return 0, fmt.Errorf("view kind %s cannot be opened in a tab", kind)
 	}
 	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == projectName }) {
@@ -128,6 +128,56 @@ func (s *State) OpenDiff(target RegionID, project string, ref DiffRef) (ViewID, 
 	}
 	s.reveal(r)
 	return r.Active, nil
+}
+
+// ShowDiff shows exactly this comparison in the target region, as OpenDiff
+// does, whatever the Diff view there compared; it keeps that view's layout.
+func (s *State) ShowDiff(target RegionID, project string, ref DiffRef) (ViewID, error) {
+	id, err := s.OpenDiff(target, project, ref)
+	if err != nil {
+		return 0, err
+	}
+	r, i := s.locate(id)
+	ref.Unified = r.Views[i].Diff.Unified
+	r.Views[i].Diff = &ref
+	return id, nil
+}
+
+// OpenReview shows the review in the target region: the view there showing
+// it, else the preview view, which it replaces when that is a review too,
+// else a new view.
+func (s *State) OpenReview(target RegionID, project, review string, preview ViewID) (ViewID, error) {
+	r := s.Region(target)
+	if r == nil {
+		return 0, fmt.Errorf("region not found")
+	}
+	if s.Fixed(target) {
+		return 0, errFixed
+	}
+	if !slices.ContainsFunc(s.Projects, func(p *Project) bool { return p.Name == project }) {
+		return 0, fmt.Errorf("source project not found: %s", project)
+	}
+	if !ValidReviewID(review) {
+		return 0, fmt.Errorf("invalid review %q", review)
+	}
+	shows := func(v *View) bool { return v.Review == review && v.ProjectName == project }
+	isPreview := func(v *View) bool { return v.ID == preview && v.Kind == ViewReview }
+	if i := slices.IndexFunc(r.Views, shows); i >= 0 {
+		r.Active = r.Views[i].ID
+	} else if i := slices.IndexFunc(r.Views, isPreview); i >= 0 {
+		r.Views[i].ProjectName, r.Views[i].Review = project, review
+		r.Active = preview
+	} else {
+		s.appendView(r, ViewReview, project)
+		r.Views[len(r.Views)-1].Review = review
+	}
+	s.reveal(r)
+	return r.Active, nil
+}
+
+// ValidReviewID reports whether id can name a review and its file.
+func ValidReviewID(id string) bool {
+	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\\x00")
 }
 
 // FindFile is the tab showing the file in the project, in any region, or 0.

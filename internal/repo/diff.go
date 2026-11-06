@@ -199,6 +199,16 @@ func ends(top string, s Source, c Compare) (Diff, error) {
 	return d, err
 }
 
+// Uncommitted reports whether the file of a worktree differs from its last
+// commit, or is not in it yet; a source checked out nowhere has only commits.
+func Uncommitted(s Source, name string) (bool, error) {
+	if s.Worktree == "" {
+		return false, nil
+	}
+	out, err := git(s.Worktree, "status", "--porcelain", "--", ":(literal)"+name)
+	return len(bytes.TrimSpace(out)) > 0, err
+}
+
 // Commits lists the source's commits not in base, the latest first, at
 // most limit.
 func Commits(top string, s Source, base string, limit int) ([]Commit, error) {

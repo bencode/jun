@@ -100,6 +100,13 @@ type app struct {
 	sessionViews    map[layout.ViewID]*sessionsViewState
 	transcripts     map[layout.ViewID]*transcriptState
 	diffs           map[layout.ViewID]*diffViewState
+	reviewRoot      string                 // where reviews live
+	reviewLists     map[string]*reviewList // projects' reviews, by project directory
+	reviewViews     map[layout.ViewID]*reviewsViewState
+	reviewsChanged  int                        // counts changes of reviews, for views to place their marks again
+	reviewNotices   map[string]string          // how a jump to a note went, by noteKey
+	jumps           map[layout.ViewID]noteJump // notes views are to go to
+	composer        *noteDraft                 // the note being written
 }
 
 func newApp(runtimeDir string) *app {
@@ -109,7 +116,8 @@ func newApp(runtimeDir string) *app {
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
 		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},
-		diffs: map[layout.ViewID]*diffViewState{}}
+		diffs: map[layout.ViewID]*diffViewState{}, reviewLists: map[string]*reviewList{}, reviewViews: map[layout.ViewID]*reviewsViewState{},
+		reviewNotices: map[string]string{}, jumps: map[layout.ViewID]noteJump{}}
 	a.terminals.OnEscape(a.peekEscaped)
 	return a
 }
