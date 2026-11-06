@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -90,11 +91,17 @@ func (a *app) fileJump(c *ui.Context, v *layout.View, st *fileViewState) {
 	if !st.read || st.loading {
 		return
 	}
-	if i := slices.IndexFunc(st.kinds, func(k int) bool { return renderKinds[k].name == j.note.Anchor.Render }); i >= 0 {
+	render := cmp.Or(j.note.Anchor.Render, sourceKind.name) // a Diff's note, gone from its comparison
+	if i := slices.IndexFunc(st.kinds, func(k int) bool { return renderKinds[k].name == render }); i >= 0 {
 		st.shown = i
 	}
+	noted, ok := st.renders[st.shown].(notedRender)
+	if !ok {
+		delete(a.jumps, v.ID)
+		return
+	}
 	place := review.Locate(st.text, j.note.Anchor)
-	if !st.renders[st.shown].goToPlace(place, j.note.Anchor.Lines != nil) {
+	if !noted.goToPlace(place, j.note.Anchor.Lines != nil) {
 		c.Invalidate() // it lays out first
 		return
 	}
@@ -120,9 +127,18 @@ func (a *app) diffJumpFile(v *layout.View, st *diffViewState, load func(row int)
 		a.jumpFile(j)
 		return
 	}
-	if st.selected != row || st.file.path != j.note.Anchor.Path {
+	f := &st.file
+	if st.selected != row || f.path != j.note.Anchor.Path {
 		st.selected = row
 		load(row)
+		return
+	}
+	if !f.loading && f.err != nil {
+		delete(a.jumps, v.ID)
+		a.noteNotice(j, f.err.Error())
+	} else if !f.loading && f.note != "" {
+		delete(a.jumps, v.ID)
+		a.noteNotice(j, f.note)
 	}
 }
 
@@ -131,11 +147,6 @@ func (a *app) diffJump(c *ui.Context, v *layout.View, st *diffViewState) {
 	j, waiting := a.jumps[v.ID]
 	f := &st.file
 	if !waiting || f.path != j.note.Anchor.Path || f.loading {
-		return
-	}
-	if f.err != nil || f.note != "" {
-		delete(a.jumps, v.ID)
-		a.noteNotice(j, a.text("The file no longer shows here.", "这里已看不到这个文件。"))
 		return
 	}
 	d := f.state
@@ -153,56 +164,4 @@ func (a *app) diffJump(c *ui.Context, v *layout.View, st *diffViewState) {
 	d.SetScrollY(max(top-d.ViewportHeight()/3, 0))
 	delete(a.jumps, v.ID)
 	a.noteFound(j, place)
-}
-
-// showDiffMarks shows the open review's notes under their lines, again
-// as the review or the file changes.
-func (a *app) showDiffMarks(v *layout.View, f *diffFile) {
-	d := f.state
-	key := markKey{a.reviewsChanged, d.Old.Version() + d.New.Version()}
-	if f.marked == key {
-		return
-	}
-	f.marked = key
-	project := a.project(v.ProjectName)
-	if project == nil {
-		return
-	}
-	r, _ := a.reviewsFor(project).open(v.Diff.Source)
-	f.marks = slices.Concat(noteMarks(r.Notes, f.path, review.SideNew, d.New.String()), noteMarks(r.Notes, f.path, review.SideOld, d.Old.String()))
-	d.Annotations = nil
-	for _, m := range f.marks {
-		side := editor.DiffNew
-		if m.note.Anchor.Side == review.SideOld {
-			side = editor.DiffOld
-		}
-		d.Annotations = append(d.Annotations, editor.DiffAnnotation{Side: side, Line: m.lines.Last - 1, Key: m.note.ID,
-			Height: 12 + float32(len(firstLines(m.note.Text, quoteLines)))*a.textSize()*1.5})
-	}
-	d.RenderAnnotation = func(c *ui.Context, annotation editor.DiffAnnotation) { a.diffNote(c, v, r, annotation) }
-}
-
-// markKey is what a view's marks were placed for.
-type markKey struct {
-	reviews int
-	text    uint64
-}
-
-// diffNote shows a note under its line; a click opens its review.
-func (a *app) diffNote(c *ui.Context, v *layout.View, r review.Review, annotation editor.DiffAnnotation) {
-	i := slices.IndexFunc(r.Notes, func(n review.Note) bool { return n.ID == annotation.Key })
-	if i < 0 {
-		return
-	}
-	note := ui.ButtonBase(c).Fill().Padding(6, 12).Background(a.theme.Surface).Label(r.Notes[i].Text)
-	note.Children(func() {
-		ui.Column(c).FillWidth().MinWidth(0).Gap(0).AlignItems(ui.Start).Children(func() {
-			for _, line := range firstLines(r.Notes[i].Text, quoteLines) {
-				ui.Text(c, line).MinWidth(0).SingleLine().Ellipsis("…")
-			}
-		})
-	})
-	if note.Clicked() {
-		a.openReview(v.ProjectName, r.ID, false)
-	}
 }

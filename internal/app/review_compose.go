@@ -13,7 +13,8 @@ import (
 	"github.com/egoist/mygo/ui/editor"
 )
 
-// noteDraft is the note being written, at the bottom of the view it is on.
+// noteDraft is the note being written on a view, at its bottom: views have
+// one each, so that going to another leaves it as it is.
 type noteDraft struct {
 	view    layout.ViewID
 	project string
@@ -30,7 +31,6 @@ type noteDraft struct {
 type noteSpot struct {
 	lines *review.Lines
 	quote string
-	match string
 }
 
 // noteHere starts a note on what the active view holds selected.
@@ -52,13 +52,14 @@ func (a *app) noteInFile(v *layout.View) {
 	if st == nil || project == nil || len(st.renders) == 0 {
 		return
 	}
+	noted, ok := st.renders[st.shown].(notedRender)
 	s, found := a.repoFor(project.CWD).source(v.File.Source)
-	spot := st.renders[st.shown].spot()
-	anchor := review.Anchor{Render: renderKinds[st.kinds[st.shown]].name, Path: v.File.Path, Side: review.SideNew,
-		Lines: spot.lines, Quote: spot.quote, Match: spot.match, Head: s.Commit}
-	if !found && !filepath.IsAbs(v.File.Source) {
+	if !ok || !found && !filepath.IsAbs(v.File.Source) {
 		return
 	}
+	spot := noted.spot()
+	anchor := review.Anchor{Render: renderKinds[st.kinds[st.shown]].name, Path: v.File.Path, Side: review.SideNew,
+		Lines: spot.lines, Quote: spot.quote, Head: s.Commit}
 	a.startNote(v, v.File.Source, anchor, found, s)
 }
 
@@ -105,24 +106,19 @@ func diffSpan(d *editor.DiffState, lines *editor.DiffLineRange) editor.DiffLineR
 // startNote opens the input for a note; with check, it can be saved once
 // Git told whether the file is committed.
 func (a *app) startNote(v *layout.View, source string, anchor review.Anchor, check bool, s repo.Source) {
-	if a.composer != nil && strings.TrimSpace(a.composer.text) != "" {
-		a.composer.focus = true // what is written stays until saved or cancelled
-		return
-	}
 	d := &noteDraft{view: v.ID, project: v.ProjectName, source: source, anchor: anchor, checked: !check, focus: true}
-	a.composer = d
-	if !check {
+	if !a.openDraft(d) || !check {
 		return
 	}
 	path := anchor.Path
 	var uncommitted bool
 	var err error
 	a.background(func() { uncommitted, err = repo.Uncommitted(s, path) }, func() {
-		if a.composer != d {
+		if a.drafts[d.view] != d {
 			return
 		}
 		if err != nil {
-			a.composer = nil
+			delete(a.drafts, d.view)
 			a.report(err)
 			return
 		}
@@ -132,14 +128,24 @@ func (a *app) startNote(v *layout.View, source string, anchor review.Anchor, che
 
 // editNote opens the input on a note of a review's tab.
 func (a *app) editNote(v *layout.View, r review.Review, n review.Note) {
-	a.composer = &noteDraft{view: v.ID, project: v.ProjectName, source: r.Source, anchor: n.Anchor, text: n.Text,
-		checked: true, focus: true, review: r.ID, edit: n.ID}
+	a.openDraft(&noteDraft{view: v.ID, project: v.ProjectName, source: r.Source, anchor: n.Anchor, text: n.Text,
+		checked: true, focus: true, review: r.ID, edit: n.ID})
+}
+
+// openDraft makes d the view's draft, unless what is written there stays
+// until saved or cancelled: it then reports false, and goes back to that.
+func (a *app) openDraft(d *noteDraft) bool {
+	if written := a.drafts[d.view]; written != nil && strings.TrimSpace(written.text) != "" {
+		written.focus = true
+		return false
+	}
+	a.drafts[d.view] = d
+	return true
 }
 
 // saveNote adds the note to the source's open review, starting one when
 // there is none, or changes the note edited.
-func (a *app) saveNote() {
-	d := a.composer
+func (a *app) saveNote(d *noteDraft) {
 	project := a.project(d.project)
 	text := strings.TrimSpace(d.text)
 	if project == nil || text == "" || !d.checked {
@@ -153,7 +159,7 @@ func (a *app) saveNote() {
 	if d.edit != 0 {
 		r, ok := l.find(d.review)
 		if !ok || r.Done() {
-			a.closeComposer() // deleted or done while the note was being edited
+			a.closeDraft(d) // deleted or done while the note was being edited
 			return
 		}
 		next = review.EditNote(r, d.edit, text)
@@ -168,11 +174,11 @@ func (a *app) saveNote() {
 		a.report(err)
 		return
 	}
-	a.closeComposer()
+	a.closeDraft(d)
 }
 
-func (a *app) closeComposer() {
-	a.composer = nil
+func (a *app) closeDraft(d *noteDraft) {
+	delete(a.drafts, d.view)
 	if r := a.targetRegion(); r != nil {
 		a.focusRegion(r.ID)
 	}
@@ -182,8 +188,8 @@ func (a *app) closeComposer() {
 // content, with its way out on view; Esc is the input's here, as no
 // terminal shows.
 func (a *app) noteComposer(c *ui.Context, v *layout.View) {
-	d := a.composer
-	if d == nil || d.view != v.ID {
+	d := a.drafts[v.ID]
+	if d == nil {
 		return
 	}
 	ui.Box(c).FillWidth().Height(1).Shrink(0).Background(a.theme.Border)
@@ -195,14 +201,14 @@ func (a *app) noteComposer(c *ui.Context, v *layout.View) {
 			}
 			ui.Spacer(c)
 			if ui.Button(c, a.text("Cancel", "取消")+" (Esc)").Height(24).Clicked() {
-				a.closeComposer()
+				a.closeDraft(d)
 				return
 			}
 			if ui.PrimaryButton(c, a.text("Save", "保存")+" (⌘↩)").Height(24).Clicked() {
-				a.saveNote()
+				a.saveNote(d)
 			}
 		})
-		if a.composer != d {
+		if a.drafts[v.ID] != d {
 			return
 		}
 		input := ui.TextArea(c, &d.text).Label(a.text("Note", "标注")).FillWidth().Height(72)
@@ -211,9 +217,9 @@ func (a *app) noteComposer(c *ui.Context, v *layout.View) {
 			d.focus = false
 		}
 		if input.Shortcut(ui.Super, ui.KeyEnter) {
-			a.saveNote()
+			a.saveNote(d)
 		} else if input.Shortcut(0, ui.KeyEscape) {
-			a.closeComposer()
+			a.closeDraft(d)
 		}
 	})
 }

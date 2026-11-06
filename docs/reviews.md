@@ -8,9 +8,9 @@ A **review** keeps what you note while reading a branch's changes and files. Jun
 |---|---|---|
 | [Diff](diff.md) | **+** on a line number, or drag line numbers, then ⌘⇧M | the lines, of the old or the new side |
 | Source | a click on a line number, or select, then ⌘⇧M or **Add Note** in the context menu | the lines touched |
-| Reading a Markdown file | select, then ⌘⇧M or **+** in the header | the text selected, and the lines of its paragraphs |
 | Image | ⌘⇧M or **+** in the header | the whole file |
 
+- **Markdown** takes notes in its source: switch the tab from Reading to Source.
 - The note is written under the view. ⌘↩ saves it, Esc cancels.
 - **One review a branch**: notes on a branch, from its Diff and its files alike, go to its review in progress. A new one starts with the first note after the last is done.
 - A note keeps the file, the lines and their text, what the view compared, and the branch's commit.

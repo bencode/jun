@@ -1,7 +1,6 @@
 package review
 
 import (
-	"cmp"
 	"slices"
 	"strings"
 )
@@ -27,7 +26,7 @@ func Locate(text string, a Anchor) Place {
 	if a.Lines == nil {
 		return Place{}
 	}
-	hay, needle := textLines(text), textLines(cmp.Or(a.Match, a.Quote))
+	hay, needle := textLines(text), textLines(a.Quote)
 	best := -1
 	for i := 0; i+len(needle) <= len(hay); i++ {
 		if slices.Equal(hay[i:i+len(needle)], needle) && (best < 0 || distance(i, a.Lines.First) < distance(best, a.Lines.First)) {

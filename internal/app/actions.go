@@ -223,9 +223,7 @@ func (a *app) dropViews(views []*layout.View) []terminal.ID {
 		delete(a.diffs, v.ID)
 		delete(a.reviewViews, v.ID)
 		delete(a.jumps, v.ID)
-		if a.composer != nil && a.composer.view == v.ID {
-			a.composer = nil
-		}
+		delete(a.drafts, v.ID)
 		maps.DeleteFunc(a.previewTabs, func(_ layout.RegionID, id layout.ViewID) bool { return id == v.ID })
 	}
 	return sessions

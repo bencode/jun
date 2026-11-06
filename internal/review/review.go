@@ -35,8 +35,7 @@ type Anchor struct {
 	Side        Side            `json:"side"`
 	Lines       *Lines          `json:"lines,omitempty"` // nil for the whole file
 	Quote       string          `json:"quote,omitempty"`
-	Match       string          `json:"match,omitempty"` // the source of a quote read from a rendered page
-	Head        string          `json:"head,omitempty"`  // the source's commit then
+	Head        string          `json:"head,omitempty"` // the source's commit then
 	Uncommitted bool            `json:"uncommitted,omitempty"`
 }
 

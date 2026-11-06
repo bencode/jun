@@ -78,24 +78,3 @@ func (a *app) deleteReview(r review.Review) {
 	a.reviewsChanged++
 	a.report(a.closeTabs(func(v *layout.View) bool { return v.Review == r.ID }, nil))
 }
-
-// noteMark is a note and where it is in the text showing.
-type noteMark struct {
-	note  review.Note
-	lines review.Lines
-}
-
-// noteMarks places the notes on a side of the file in its text, leaving
-// out those with no line and those whose text is gone.
-func noteMarks(notes []review.Note, path string, side review.Side, text string) []noteMark {
-	var marks []noteMark
-	for _, n := range notes {
-		if n.Anchor.Path != path || n.Anchor.Side != side || n.Anchor.Lines == nil {
-			continue
-		}
-		if place := review.Locate(text, n.Anchor); place.Status != review.Lost {
-			marks = append(marks, noteMark{n, place.Lines})
-		}
-	}
-	return marks
-}
