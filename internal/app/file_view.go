@@ -7,7 +7,6 @@ import (
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
-	"github.com/bencode/jun/internal/review"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -82,7 +81,13 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 				ui.Spacer(c)
 			}
 			if found || filepath.IsAbs(v.File.Source) {
-				a.noteActions(c, v, v.File.Source, func() { a.noteInFile(v) })
+				var add func()
+				if len(st.renders) > 0 {
+					if _, ok := st.renders[st.shown].(notedRender); ok {
+						add = func() { a.noteInFile(v) }
+					}
+				}
+				a.noteActions(c, v, v.File.Source, add)
 			}
 		})
 		if !found && r.sources != nil {
@@ -102,21 +107,6 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 			a.fileProblem(c, r, project.CWD, st, nil, s)
 		}
 	})
-}
-
-// showFileMarks places the open review's notes in the file, again as the
-// review or the file changes.
-func (a *app) showFileMarks(v *layout.View, project *layout.Project, st *fileViewState) {
-	key := markKey{a.reviewsChanged, st.reads}
-	if st.marked == key {
-		return
-	}
-	st.marked = key
-	r, _ := a.reviewsFor(project).open(v.File.Source)
-	marks := noteMarks(r.Notes, v.File.Path, review.SideNew, st.text)
-	for _, render := range st.renders {
-		render.showMarks(marks)
-	}
 }
 
 // readFile reads the file in the background, then gives its content to

@@ -15,12 +15,11 @@ var sourceKind = renderKind{
 	name:    "source",
 	label:   func(a *app) string { return a.text("Source", "源码") },
 	accepts: func(_ string, data []byte) bool { return isText(data) },
-	make:    func(f fileEnv) fileRender { return &sourceRender{f: f, name: f.ref.Path} },
+	make:    func(f fileEnv) fileRender { return &sourceRender{f: f} },
 }
 
 type sourceRender struct {
 	f      fileEnv
-	name   string
 	editor *editor.State
 	noted  []noteMark
 }
@@ -30,8 +29,8 @@ func (s *sourceRender) update(data []byte) {
 	text := string(data)
 	if s.editor == nil {
 		buffer := editor.NewBuffer(text)
-		buffer.SetLanguage(editor.LanguageFor(path.Base(s.name)))
-		s.editor = &editor.State{Buffer: buffer, ReadOnly: true, Label: s.name, OnGutterClick: s.gutterClick, ContextMenu: s.contextMenu}
+		buffer.SetLanguage(editor.LanguageFor(path.Base(s.f.ref.Path)))
+		s.editor = &editor.State{Buffer: buffer, ReadOnly: true, Label: s.f.ref.Path, OnGutterClick: s.gutterClick, ContextMenu: s.contextMenu}
 	} else if s.editor.Buffer.String() != text {
 		s.editor.Buffer.Reset(text)
 	}

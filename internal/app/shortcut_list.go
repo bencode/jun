@@ -79,7 +79,7 @@ func shortcutGroups() []shortcutGroup {
 		}},
 		{bilingual{"Reviews", "Reviews"}, []shortcutRow{
 			{bilingual{"Add a note", "添加标注"}, keys(noteKeys.String()), bilingual{
-				"On the lines or text selected in a Diff or file tab; on an image, the whole file", "标注 Diff 或文件标签中选中的行或文字；图片标注整个文件"}},
+				"On the lines selected in a Diff or source; on an image, the whole file", "标注 Diff 或源码中选中的行；图片标注整个文件"}},
 			{bilingual{"Save the note", "保存标注"}, keys("⌘↩"), bilingual{"While writing a note; Esc cancels", "写标注时；Esc 取消"}},
 		}},
 		{bilingual{"Agents", "Agents"}, []shortcutRow{

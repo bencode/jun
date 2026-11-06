@@ -77,7 +77,7 @@ Closing a tab is no step: back and forward skip closed tabs, and the steps ahead
 
 | Action | Shortcut |
 |---|---|
-| Add a note on what a Diff or file tab holds selected | ⌘⇧M |
+| Add a note on the lines selected in a Diff or source | ⌘⇧M |
 | While writing a note: save it | ⌘↩ |
 | While writing a note: cancel | Esc |
 

@@ -41,7 +41,7 @@ A file in one of the project's worktrees shows as if opened in Files. Any other 
 
 ## Notes
 
-**+** in a file tab's header, or ⌘⇧M, adds a note to a [review](reviews.md) on the lines or text selected; in the source, clicking a line number does too. An image is noted as a whole.
+**+** in a file tab's header, or ⌘⇧M, adds a note to a [review](reviews.md) on the lines selected; clicking a line number does too. An image is noted as a whole. Reading a Markdown file takes no notes: switch to Source.
 
 ## How files show
 

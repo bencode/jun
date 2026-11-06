@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -15,7 +16,7 @@ import (
 )
 
 // reviewRepo is a project on a repository with main.go and notes.md
-// committed, its view shown in the first column of a side bar with Reviews.
+// committed, shown at the size the tests click at.
 func reviewRepo(t *testing.T) (*app, *ui.Tester, string) {
 	t.Helper()
 	dir, err := filepath.EvalSymlinks(t.TempDir())
@@ -73,11 +74,12 @@ func openTestFile(t *testing.T, a *app, tt *ui.Tester, name string) *layout.View
 
 func saveTestNote(t *testing.T, a *app, tt *ui.Tester, text string) {
 	t.Helper()
-	frameUntil(t, tt, func() bool { return a.composer != nil && a.composer.checked })
-	a.composer.text = text
-	a.saveNote()
+	v := activeView(a.tabsTarget())
+	frameUntil(t, tt, func() bool { d := a.drafts[v.ID]; return d != nil && d.checked })
+	a.drafts[v.ID].text = text
+	a.saveNote(a.drafts[v.ID])
 	tt.Frame()
-	if a.composer != nil {
+	if a.drafts[v.ID] != nil {
 		t.Fatal("the note was not saved")
 	}
 }
@@ -241,17 +243,17 @@ func TestEditingANoteOfAReviewGoneOrDoneChangesNothing(t *testing.T) {
 	l := a.reviewLists[dir]
 	r := l.items[0]
 	a.editNote(v, r, r.Notes[0])
-	a.composer.text = "edited"
+	a.drafts[v.ID].text = "edited"
 	a.finishReview(r)
-	a.saveNote()
-	if got := l.items[0]; got.Notes[0].Text != "first" || a.composer != nil {
+	a.saveNote(a.drafts[v.ID])
+	if got := l.items[0]; got.Notes[0].Text != "first" || a.drafts[v.ID] != nil {
 		t.Fatalf("a done review changed: %+v", got)
 	}
 	a.editNote(v, l.items[0], l.items[0].Notes[0])
-	a.composer.text = "edited"
+	a.drafts[v.ID].text = "edited"
 	a.deleteReview(l.items[0])
-	a.saveNote()
-	if len(l.items) != 0 || a.composer != nil {
+	a.saveNote(a.drafts[v.ID])
+	if len(l.items) != 0 || a.drafts[v.ID] != nil {
 		t.Fatalf("a deleted review came back: %+v", l.items)
 	}
 }
@@ -293,22 +295,9 @@ func TestJumpOpensTheFileOnceTheComparisonShowsNoChanges(t *testing.T) {
 	}
 }
 
-func TestMarkdownSelectionFindsItsLinesAndTheKeysSaveIt(t *testing.T) {
+func TestTheKeysWriteANoteAndADraftStaysWithItsView(t *testing.T) {
 	a, tt, dir := reviewRepo(t)
-	openTestFile(t, a, tt, "notes.md")
-	tt.Frame()
-	r, ok := tt.Find("A bold word here.")
-	if !ok {
-		t.Fatalf("the page shows %v", tt.Texts())
-	}
-	tt.Press(r.X+1, r.Y+r.H/2)
-	tt.Frame()
-	tt.Move(r.X+r.W-2, r.Y+r.H/2)
-	tt.Frame()
-	tt.Release(r.X+r.W-2, r.Y+r.H/2)
-	tt.Frame()
-	tt.Frame()
-
+	v := openTestFile(t, a, tt, "main.go")
 	tt.Key(noteKeys.mods, noteKeys.key)
 	tt.Frame()
 	tt.Frame()
@@ -316,16 +305,10 @@ func TestMarkdownSelectionFindsItsLinesAndTheKeysSaveIt(t *testing.T) {
 	tt.Frame()
 	tt.Key(ui.Super, ui.KeyEnter)
 	tt.Frame()
-	if a.composer != nil {
-		t.Fatal("⌘↩ left the input open")
-	}
-	n := a.reviewLists[dir].items[0].Notes[0]
-	if n.Text != "clearer" || n.Anchor.Render != "reading" || n.Anchor.Quote != "A bold word here." ||
-		n.Anchor.Lines == nil || *n.Anchor.Lines != (review.Lines{First: 3, Last: 3}) || n.Anchor.Match != "A **bold** word here." {
-		t.Fatalf("note: %+v", n)
+	if a.drafts[v.ID] != nil || a.reviewLists[dir].items[0].Notes[0].Text != "clearer" {
+		t.Fatalf("⌘↩: %+v", a.drafts[v.ID])
 	}
 
-	// A second start keeps what is being written.
 	tt.Key(noteKeys.mods, noteKeys.key)
 	tt.Frame()
 	tt.Frame()
@@ -333,13 +316,113 @@ func TestMarkdownSelectionFindsItsLinesAndTheKeysSaveIt(t *testing.T) {
 	tt.Frame()
 	tt.Key(noteKeys.mods, noteKeys.key)
 	tt.Frame()
-	if a.composer == nil || a.composer.text != "half" {
-		t.Fatalf("composer: %+v", a.composer)
+	if d := a.drafts[v.ID]; d == nil || d.text != "half" {
+		t.Fatalf("a second start took the draft: %+v", d)
 	}
+
+	// Another view's note leaves it as it is.
+	r := a.reviewLists[dir].items[0]
+	a.openReview("Web", r.ID, true)
+	tt.Frame()
+	tt.Frame()
+	tt.Click("Edit")
+	tt.Frame()
+	if d := a.drafts[activeView(a.tabsTarget()).ID]; d == nil || d.text != "clearer" {
+		t.Fatalf("the edit shows %+v", d)
+	}
+	if d := a.drafts[v.ID]; d == nil || d.text != "half" {
+		t.Fatalf("editing took the draft: %+v", d)
+	}
+
+	// Back on its tab, the keys that start a note lead to the draft.
+	a.state.SelectView(a.tabsTarget().ID, v.ID)
+	tt.Frame()
+	tt.Frame()
+	tt.Key(noteKeys.mods, noteKeys.key)
+	tt.Frame()
+	tt.Frame()
 	tt.Key(0, ui.KeyEscape)
 	tt.Frame()
-	if a.composer != nil {
+	if a.drafts[v.ID] != nil {
 		t.Fatal("Esc left the input open")
+	}
+}
+
+func TestMarkdownTakesNotesInItsSource(t *testing.T) {
+	a, tt, dir := reviewRepo(t)
+	v := openTestFile(t, a, tt, "notes.md")
+	st := a.fileViews[v.ID]
+	if _, reading := st.renders[st.shown].(*markdownRender); !reading {
+		t.Fatalf("notes.md shows as %T", st.renders[st.shown])
+	}
+	tt.Frame()
+	tt.Key(noteKeys.mods, noteKeys.key)
+	tt.Frame()
+	if _, found := tt.Find("Add Note"); found || a.drafts[v.ID] != nil {
+		t.Fatalf("Reading takes a note: %v", a.drafts[v.ID])
+	}
+
+	st.shown = slices.IndexFunc(st.kinds, func(k int) bool { return renderKinds[k].name == sourceKind.name })
+	tt.Frame()
+	tt.Frame()
+	source := st.renders[st.shown].(*sourceRender)
+	buffer := source.editor.Buffer
+	source.editor.Select(buffer.Offset(editorPos(2, 0)), buffer.Offset(editorPos(2, 4)))
+	a.noteHere()
+	saveTestNote(t, a, tt, "clearer")
+	r := a.reviewLists[dir].items[0]
+	if n := r.Notes[0].Anchor; n.Render != "source" || *n.Lines != (review.Lines{First: 3, Last: 3}) {
+		t.Fatalf("anchor: %+v", n)
+	}
+
+	// Back in Reading, a jump goes to the source to show its place.
+	st.shown = 0
+	tt.Frame()
+	a.jumpNote(a.project("Web"), r, r.Notes[0])
+	frameUntil(t, tt, func() bool { return len(a.jumps) == 0 })
+	if _, inSource := st.renders[st.shown].(*sourceRender); !inSource || source.editor.CursorPos().Line != 2 {
+		t.Fatalf("the jump shows %T, line %d", st.renders[st.shown], source.editor.CursorPos().Line)
+	}
+}
+
+func TestAJumpToAFileADiffCannotShowEnds(t *testing.T) {
+	a, tt, dir := reviewRepo(t)
+	writeText(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {\n\tprintln(9)\n}\n")
+	writeText(t, filepath.Join(dir, "other.txt"), "x\n")
+	a.refreshRepo(a.repoFor(dir), dir)
+	frameUntil(t, tt, func() bool { return a.repoFor(dir).sources != nil })
+	if _, err := a.state.OpenDiff(a.tabsTarget().ID, "Web", layout.DiffRef{Source: "main", Uncommitted: true}); err != nil {
+		t.Fatal(err)
+	}
+	v := activeView(a.tabsTarget())
+	frameUntil(t, tt, func() bool {
+		st := a.diffs[v.ID]
+		return st != nil && st.done && !st.file.loading && st.file.state != nil
+	})
+	st := a.diffs[v.ID]
+	lines := diffLines(3)
+	a.noteInDiff(v, &lines)
+	saveTestNote(t, a, tt, "why 9")
+	r := a.reviewLists[dir].items[0]
+
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte{0, 1, 2, 0, 3}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	st.version = -1
+	st.file = diffFile{}
+	frameUntil(t, tt, func() bool { return !st.loading })
+	a.jumpNote(a.project("Web"), r, r.Notes[0])
+	frameUntil(t, tt, func() bool { return len(a.jumps) == 0 })
+	if notice := a.reviewNotices[noteKey(r.ID, 1)]; notice != st.file.note || notice == "" {
+		t.Fatalf("notice %q, file %q", notice, st.file.note)
+	}
+
+	other := slices.IndexFunc(st.rows, func(row diffRow) bool { return row.dir == "" && row.change.Path == "other.txt" })
+	st.selected = other
+	tt.Frame()
+	tt.Frame()
+	if st.selected != other {
+		t.Fatal("the Diff went back to the note's file")
 	}
 }
 

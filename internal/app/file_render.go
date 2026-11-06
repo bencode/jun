@@ -19,8 +19,13 @@ type fileRender interface {
 	update(data []byte)               // the content, read (again); on the UI thread
 	view(c *ui.Context, size float32) // size: the text size in DIPs
 	detail() string                   // what the header adds, as an image's size; "" for nothing
-	spot() noteSpot                   // what is selected, to note
-	showMarks(marks []noteMark)       // the notes on the file, to show
+}
+
+// notedRender is a render notes can be made on: reading Markdown is not, as
+// what it shows does not lead back to its source's lines.
+type notedRender interface {
+	spot() noteSpot             // what is selected, to note
+	showMarks(marks []noteMark) // the notes on the file, to show
 	// goToPlace goes to the place, when it has lines, and reports whether it
 	// could yet: not before it laid out.
 	goToPlace(place review.Place, lines bool) bool

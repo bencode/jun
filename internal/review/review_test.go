@@ -29,7 +29,6 @@ func TestLocate(t *testing.T) {
 		{"lost stays", at(3, 4, "gone"), Place{Lines{3, 4}, Lost}},
 		{"lost past the end", at(40, 45, "gone"), Place{Lines{7, 7}, Lost}},
 		{"whole file", Anchor{}, Place{}},
-		{"match over quote", Anchor{Lines: &Lines{1, 1}, Quote: "plain", Match: "end"}, Place{Lines{7, 7}, Moved}},
 	}
 	for _, tt := range tests {
 		if got := Locate(text, tt.a); got != tt.want {
