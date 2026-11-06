@@ -63,12 +63,13 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"arrange":       func(s *State) { s.GlobalArrange = "diagonal" },
 		"all hidden": func(s *State) {
 			for _, v := range s.Global.Views {
-				v.Hidden = true
+				v.Show = false
 			}
 		},
 		"share":             func(s *State) { s.Global.Views[0].Share = -1 },
 		"huge share":        func(s *State) { s.Global.Views[0].Share = 3e38 },
-		"hidden tab":        func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Hidden = true },
+		"shown tab":         func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Show = true },
+		"hidden Sessions":   func(s *State) { s.CurrentPerspective().Side.Views[0].Show = false },
 		"invalid splits":    func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
 		"unknown kind":      func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
 		"agents layout":     func(s *State) { s.CurrentPerspective().Columns[0].Views[0].AgentsLayout = AgentsList },
@@ -141,7 +142,7 @@ func TestRestoreMovesWhatEarlierVersionsKept(t *testing.T) {
 		t.Fatal(err)
 	}
 	agents, messages := s.Global.Views[0], s.Global.Views[1]
-	if agents.Share != 70 || messages.Share != 30 || agents.Hidden || !messages.Hidden {
+	if agents.Share != 70 || messages.Share != 30 || !agents.Show || messages.Show {
 		t.Fatalf("agents %+v, messages %+v", agents, messages)
 	}
 	if s.AgentsPercent != 0 || s.MessagesHidden {
@@ -152,8 +153,8 @@ func TestRestoreMovesWhatEarlierVersionsKept(t *testing.T) {
 func TestRestoreLeavesAViewShown(t *testing.T) {
 	s := decodedLayout(t)
 	s.Global.Views = s.Global.Views[:1]
-	s.Global.Views[0].Hidden = true // by hand: no Jun writes this
-	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewMessages})
+	s.Global.Views[0].Show = false // by hand: no Jun writes this
+	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewMessages, Show: true})
 	s.MessagesHidden = true
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
@@ -166,9 +167,9 @@ func TestRestoreLeavesAViewShown(t *testing.T) {
 func TestRestoreLeavesAViewShownWhenThePresetDropsTheOnlyOne(t *testing.T) {
 	s := decodedLayout(t)
 	for _, v := range s.Global.Views {
-		v.Hidden = true
+		v.Show = false
 	}
-	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewSkills})
+	s.Global.Views = append(s.Global.Views, &View{ID: 9000, Kind: ViewSkills, Show: true})
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +185,7 @@ func TestRestoreGivesALayoutWithoutSharesTheDefaults(t *testing.T) {
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
 	}
-	if s.Global.Views[0].Share != 60 || s.Global.Views[1].Share != 40 || s.Global.Views[1].Hidden {
+	if s.Global.Views[0].Share != 60 || s.Global.Views[1].Share != 40 || !s.Global.Views[1].Show {
 		t.Fatalf("Global restored as %+v, %+v", s.Global.Views[0], s.Global.Views[1])
 	}
 }
@@ -231,7 +232,7 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	side := s.CurrentPerspective().Side
 	sessions := side.Views[0]
 	// Files before Sessions, and a placeholder an earlier preset had, selected.
-	files := &View{ID: 900, Kind: ViewTree, ProjectName: "Jun"}
+	files := &View{ID: 900, Kind: ViewTree, ProjectName: "Jun", Show: true}
 	skills := &View{ID: 901, Kind: ViewSkills, ProjectName: "Jun"}
 	side.Views, side.Active = []*View{files, sessions, skills}, skills.ID
 	s.Global.Views, s.Global.Active = nil, 0

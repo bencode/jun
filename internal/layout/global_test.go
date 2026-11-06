@@ -20,7 +20,7 @@ func TestToggleGlobalView(t *testing.T) {
 	if err := s.ToggleGlobalView(agents.ID); err != nil {
 		t.Fatal(err)
 	}
-	if !agents.Hidden || s.Global.Active != messages.ID {
+	if agents.Show || s.Global.Active != messages.ID {
 		t.Fatalf("hiding the active view left %+v, active %d", agents, s.Global.Active)
 	}
 
@@ -28,7 +28,7 @@ func TestToggleGlobalView(t *testing.T) {
 	if err := s.ToggleGlobalView(messages.ID); err != nil {
 		t.Fatal(err)
 	}
-	if s.GlobalVisible || messages.Hidden {
+	if s.GlobalVisible || !messages.Show {
 		t.Fatalf("Global visible %v, messages %+v", s.GlobalVisible, messages)
 	}
 
@@ -36,7 +36,7 @@ func TestToggleGlobalView(t *testing.T) {
 	if err := s.ToggleGlobalView(agents.ID); err != nil {
 		t.Fatal(err)
 	}
-	if !s.GlobalVisible || agents.Hidden || messages.Hidden {
+	if !s.GlobalVisible || !agents.Show || !messages.Show {
 		t.Fatalf("Global visible %v, %+v, %+v", s.GlobalVisible, agents, messages)
 	}
 	if s.ToggleGlobalView(999) == nil {
@@ -74,7 +74,7 @@ func TestReviewsStartHiddenAndKeepTheirChoice(t *testing.T) {
 	}
 	p := s.CurrentPerspective()
 	reviews := p.Side.Views[len(p.Side.Views)-1]
-	if reviews.Kind != ViewReviews || !reviews.Hidden {
+	if reviews.Kind != ViewReviews || reviews.Show {
 		t.Fatalf("a new side region's last view: %+v", reviews)
 	}
 	if err := s.Validate(); err != nil {
@@ -83,20 +83,20 @@ func TestReviewsStartHiddenAndKeepTheirChoice(t *testing.T) {
 	if err := s.ToggleSideView(reviews.ID); err != nil {
 		t.Fatal(err)
 	}
-	if reviews.Hidden || p.Side.Active != reviews.ID {
+	if !reviews.Show || p.Side.Active != reviews.ID {
 		t.Fatalf("shown Reviews: %+v, active %d", reviews, p.Side.Active)
 	}
 	if err := s.ToggleSideView(reviews.ID); err != nil {
 		t.Fatal(err)
 	}
-	if !reviews.Hidden || p.Side.Active != p.Side.Views[0].ID {
+	if reviews.Show || p.Side.Active != p.Side.Views[0].ID {
 		t.Fatalf("hidden Reviews: %+v, active %d", reviews, p.Side.Active)
 	}
 	p.SideVisible = false
 	if err := s.RevealSideView(reviews.ID); err != nil {
 		t.Fatal(err)
 	}
-	if reviews.Hidden || !p.SideVisible || p.Side.Active != reviews.ID {
+	if !reviews.Show || !p.SideVisible || p.Side.Active != reviews.ID {
 		t.Fatalf("revealed Reviews: %+v, side %v", reviews, p.SideVisible)
 	}
 }
@@ -112,7 +112,7 @@ func TestRestoreHidesReviewsAddedToAnEarlierLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	reviews := p.Side.Views[2]
-	if reviews.Kind != ViewReviews || !reviews.Hidden || p.Side.Active == reviews.ID {
+	if reviews.Kind != ViewReviews || reviews.Show || p.Side.Active == reviews.ID {
 		t.Fatalf("restored side region: %+v, active %d", reviews, p.Side.Active)
 	}
 }

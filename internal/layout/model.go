@@ -39,7 +39,7 @@ type View struct {
 	Transcript   *SessionRef  `json:"transcript,omitempty"` // a transcript view's session
 	Diff         *DiffRef     `json:"diff,omitempty"`       // what a Diff view compares
 	Review       string       `json:"review,omitempty"`     // a review view's review, by its ID
-	Hidden       bool         `json:"hidden,omitempty"`     // its fixed region does not show it
+	Show         bool         `json:"show,omitempty"`       // its fixed region shows it; tabs always show
 	Share        float32      `json:"share,omitempty"`      // its weight among the views Global shows
 }
 

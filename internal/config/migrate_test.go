@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -47,7 +48,7 @@ func legacyDocument(t *testing.T, old *legacyState) []byte {
 	return data
 }
 
-func TestLoadV1PreservesStateAndSavesV3(t *testing.T) {
+func TestLoadV1PreservesStateAndSavesV4(t *testing.T) {
 	old := legacyFixture()
 	// Global's terminal moves to the first column of Jun's current
 	// perspective, Review, whose placeholder file and Diff views go.
@@ -101,12 +102,12 @@ func TestLoadV1PreservesStateAndSavesV3(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc document
-	if err := json.Unmarshal(data, &doc); err != nil || doc.Version != 3 {
-		t.Fatal("next save did not write v3", err)
+	if err := json.Unmarshal(data, &doc); err != nil || doc.Version != 4 {
+		t.Fatal("next save did not write v4", err)
 	}
 	restored, err := Load(path)
 	if err != nil || !reflect.DeepEqual(restored.Projects, s.Projects) || !reflect.DeepEqual(restored.Global, s.Global) {
-		t.Fatal("v3 round trip changed migrated state", err)
+		t.Fatal("v4 round trip changed migrated state", err)
 	}
 }
 
@@ -225,7 +226,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 	}
 	restored, err := Load(path)
 	if err != nil || !reflect.DeepEqual(restored.Projects, s.Projects) || !reflect.DeepEqual(restored.Global, s.Global) {
-		t.Fatal("v3 round trip changed migrated state", err)
+		t.Fatal("v4 round trip changed migrated state", err)
 	}
 }
 
@@ -253,5 +254,68 @@ func TestInvalidV2IsNotRepairedOrRewritten(t *testing.T) {
 				t.Fatal("invalid v2 was overwritten", err)
 			}
 		})
+	}
+}
+
+func TestLoadV3TurnsWhatItHidIntoWhatItShows(t *testing.T) {
+	const id = 9007199254740993 // past what a float64 holds
+	document := fmt.Sprintf(`{"version":3,"layout":{
+		"projects":[{"name":"Jun","cwd":"/tmp","activePerspective":3,"perspectives":[{
+			"id":3,"name":"Work",
+			"columns":[{"id":4,"views":[{"id":%d,"kind":"terminal","projectName":"Jun"}],"activeView":%d}],
+			"bottom":{"id":6,"views":[],"activeView":0},
+			"side":{"id":7,"views":[
+				{"id":8,"kind":"sessions","projectName":"Jun"},
+				{"id":9,"kind":"tree","projectName":"Jun"},
+				{"id":10,"kind":"reviews","projectName":"Jun","hidden":true}],"activeView":8},
+			"sideWidth":260,"columnSplits":[],"topPercent":70}]}],
+		"activeProject":"Jun",
+		"global":{"id":1,"views":[
+			{"id":2,"kind":"agents","projectName":""},
+			{"id":11,"kind":"messages","projectName":"","hidden":true,"share":40}],"activeView":2},
+		"centerPercent":70}}`, id, id)
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(document), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := s.CurrentPerspective()
+	shows := func(views []*layout.View) []bool {
+		result := []bool{}
+		for _, v := range views {
+			result = append(result, v.Show)
+		}
+		return result
+	}
+	if got := shows(p.Side.Views); !reflect.DeepEqual(got, []bool{true, true, false}) {
+		t.Fatalf("side shows %v", got)
+	}
+	if got := shows(s.Global.Views); !reflect.DeepEqual(got, []bool{true, false}) {
+		t.Fatalf("Global shows %v", got)
+	}
+	tab := p.Columns[0].Views[0]
+	if tab.Show || uint64(tab.ID) != id || len(s.Shown(p.Columns[0])) != 1 {
+		t.Fatalf("tab %+v, shown %d", tab, len(s.Shown(p.Columns[0])))
+	}
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := Load(path)
+	if err != nil || !reflect.DeepEqual(restored.Projects, s.Projects) || !reflect.DeepEqual(restored.Global, s.Global) {
+		t.Fatal("v4 round trip changed migrated state", err)
+	}
+}
+
+func TestV3WithAnInvalidHiddenIsReported(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	data := `{"version":3,"layout":{"projects":[],"global":{"id":1,"views":[{"id":2,"kind":"agents","projectName":"","hidden":"yes"}],"activeView":2}}}`
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("loaded a view hidden by a string")
 	}
 }

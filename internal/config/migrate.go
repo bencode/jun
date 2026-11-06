@@ -27,15 +27,17 @@ func decodeJSON(data []byte, target any) error {
 	return nil
 }
 
-// decodeLayout converts versions 1 and 2 in memory, through each later
+// decodeLayout converts earlier versions in memory, through each later
 // version, then restores the layout.
 func decodeLayout(version int, data json.RawMessage) (*layout.State, error) {
 	var state *layout.State
 	var err error
 	if version == 1 {
 		state, err = migrateV1(data)
-	} else if version == 2 || version == 3 {
+	} else if version == 2 || version == 4 {
 		err = decodeJSON(data, &state)
+	} else if version == 3 {
+		state, err = migrateV3(data)
 	} else {
 		return nil, fmt.Errorf("unsupported version %d", version)
 	}
