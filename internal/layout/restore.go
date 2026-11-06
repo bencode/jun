@@ -213,6 +213,12 @@ func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed
 				return fmt.Errorf("view %d: %w", v.ID, err)
 			}
 		}
+		if (v.Kind == ViewReview) != (v.Review != "") {
+			return fmt.Errorf("view %d: only a review view has a review, and it must", v.ID)
+		}
+		if v.Review != "" && !ValidReviewID(v.Review) {
+			return fmt.Errorf("view %d: invalid review %q", v.ID, v.Review)
+		}
 		// A Diff view with no source is an earlier version's placeholder,
 		// which restoring drops.
 		if v.Diff != nil && v.Kind != ViewDiff {

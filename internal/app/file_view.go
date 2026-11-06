@@ -7,6 +7,7 @@ import (
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
+	"github.com/bencode/jun/internal/review"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -28,6 +29,9 @@ type fileViewState struct {
 	kinds   []int        // the renderKinds that can show the file
 	renders []fileRender // one for each of kinds
 	shown   int          // the index in renders of the one showing
+	text    string       // the file's, for notes to find their places
+	reads   uint64       // counts reads, for marks to be placed again
+	marked  markKey
 }
 
 // fileView shows a file of a source of the project's repository, read
@@ -49,8 +53,10 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 		s, found = repo.Source{Worktree: v.File.Source}, true
 	}
 	if found && !st.loading && (!st.read || st.source != s || s.Worktree != "" && st.version != r.version) {
-		a.readFile(fileEnv{a, r, s, *v.File, v.ProjectName}, st)
+		a.readFile(fileEnv{a, r, s, *v.File, v.ProjectName, v}, st)
 	}
+	a.fileJump(c, v, st)
+	a.showFileMarks(v, project, st)
 	ui.Column(c.Key(v.ID)).Fill().Gap(0).Children(func() {
 		ui.Row(c).FillWidth().Height(28).Padding(0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, v.File.Path).FontSize(theme.Caption).MinWidth(0).SingleLine().Ellipsis("…").Shrink(1)
@@ -72,6 +78,11 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 					labels[i] = renderKinds[k].label(a)
 				}
 				ui.Segmented(c, &st.shown, labels...).Label(a.text("Show as", "显示方式")).Height(22).FontSize(theme.Caption)
+			} else {
+				ui.Spacer(c)
+			}
+			if found || filepath.IsAbs(v.File.Source) {
+				a.noteActions(c, v, v.File.Source, func() { a.noteInFile(v) })
 			}
 		})
 		if !found && r.sources != nil {
@@ -84,12 +95,28 @@ func (a *app) fileView(c *ui.Context, v *layout.View) {
 		}
 		if len(st.renders) > 0 {
 			st.renders[st.shown].view(c, a.textSize())
+			a.noteComposer(c, v)
 			return
 		}
 		if st.read {
 			a.fileProblem(c, r, project.CWD, st, nil, s)
 		}
 	})
+}
+
+// showFileMarks places the open review's notes in the file, again as the
+// review or the file changes.
+func (a *app) showFileMarks(v *layout.View, project *layout.Project, st *fileViewState) {
+	key := markKey{a.reviewsChanged, st.reads}
+	if st.marked == key {
+		return
+	}
+	st.marked = key
+	r, _ := a.reviewsFor(project).open(v.File.Source)
+	marks := noteMarks(r.Notes, v.File.Path, review.SideNew, st.text)
+	for _, render := range st.renders {
+		render.showMarks(marks)
+	}
 }
 
 // readFile reads the file in the background, then gives its content to
@@ -104,6 +131,7 @@ func (a *app) readFile(f fileEnv, st *fileViewState) {
 	a.background(func() { data, size, err = repo.Read(top, f.s, f.ref.Path, fileLimit) }, func() {
 		moved := st.source != f.s
 		st.loading, st.read, st.source, st.version, st.size, st.err = false, true, f.s, version, size, err
+		st.text, st.reads = string(data), st.reads+1
 		kinds := []int{}
 		if err == nil && size <= fileLimit {
 			kinds = kindsFor(f.ref.Path, data)

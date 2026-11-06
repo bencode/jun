@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/bencode/jun/internal/repo"
+	"github.com/bencode/jun/internal/review"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
@@ -19,6 +20,7 @@ import (
 // markdownKind shows Markdown as a page to read: its images read from the
 // same source, its links to the repository's files opening them in Jun.
 var markdownKind = renderKind{
+	name:  "reading",
 	label: func(a *app) string { return a.text("Reading", "阅读") },
 	accepts: func(name string, data []byte) bool {
 		return hasExtension(name, ".md", ".markdown") && isText(data)
@@ -42,6 +44,12 @@ type markdownRender struct {
 	scroll   ui.ScrollState
 	scroller ui.Handle
 	jump     int // the heading to scroll to the top in the next frame, -1 for none
+
+	doc       *parser.Document  // as the last frame built it
+	selected  []ui.SelectedText // as of the last frame
+	jumpLine  int               // the line to go to, from 1; 0 for none
+	lineMark  ui.Handle         // the place of its block
+	lineBuilt bool              // lineMark is in the page
 }
 
 // heading is a heading of the document, as the outline lists it.
@@ -57,6 +65,11 @@ func (m *markdownRender) update(data []byte) { m.text = string(data) }
 
 func (m *markdownRender) view(c *ui.Context, size float32) {
 	m.theme.FontSize = size
+	if m.lineBuilt {
+		mark, top := m.lineMark.Bounds(c), m.scroller.Bounds(c)
+		m.scroll.ScrollTo(0, max(m.scroll.Y+mark.Y-top.Y-headingGap, 0), ui.Smooth)
+		m.jumpLine, m.lineBuilt = 0, false
+	}
 	if m.jump >= 0 && m.jump < len(m.marks) {
 		mark, top := m.marks[m.jump].Bounds(c), m.scroller.Bounds(c)
 		m.scroll.ScrollTo(0, max(m.scroll.Y+mark.Y-top.Y-headingGap, 0), ui.Smooth)
@@ -66,6 +79,10 @@ func (m *markdownRender) view(c *ui.Context, size float32) {
 	ui.Scroll(c).Grow(1).FillWidth().TrackScroll(&m.scroll).Bind(&m.scroller).Children(func() {
 		ui.Column(c).FillWidth().Padding(28, 32).AlignItems(ui.Center).Children(func() {
 			page := markdown.View(c, m.text, &m.options).FillWidth()
+			m.selected = page.SelectedTexts()
+			if !m.lineBuilt {
+				m.jumpLine = 0 // no block holds it
+			}
 			if w := markdownMaxWidths[m.f.a.markdownWidth()]; w > 0 {
 				page.MaxWidth(w)
 			}
@@ -80,6 +97,12 @@ func (m *markdownRender) view(c *ui.Context, size float32) {
 // break is drawn here as it is without the column.
 func (m *markdownRender) noteBlock(c *ui.Context, d *parser.Document, i int) bool {
 	b := d.Block(i)
+	m.doc = d
+	if m.jumpLine > 0 && !m.lineBuilt && b.Next == i+1 && blockHolds(d.Source(), b, m.jumpLine) {
+		ui.Box(c).Height(0).Bind(&m.lineMark)
+		m.lineBuilt = true
+		c.Invalidate()
+	}
 	if b.Kind == parser.ThematicBreak {
 		th := markdown.DefaultTheme(c.Theme())
 		rule := ui.Box(c).Height(1).Background(th.Rule).AlignSelf(ui.Stretch)
@@ -165,4 +188,63 @@ func repoPath(file, dest string) (string, bool) {
 		name = path.Clean(strings.TrimPrefix(dest, "/"))
 	}
 	return name, repo.Valid(name)
+}
+
+// blockHolds reports whether the block is on the line, from 1.
+func blockHolds(src string, b *parser.Block, line int) bool {
+	first, last := blockLines(src, b.Start, b.End)
+	return first <= line && line <= last
+}
+
+// blockLines are the lines, from 1, of the bytes start to end of src.
+func blockLines(src string, start, end int) (first, last int) {
+	first = strings.Count(src[:start], "\n") + 1
+	return first, first + strings.Count(strings.TrimRight(src[start:end], "\n"), "\n")
+}
+
+// spot is the text selected, with the blocks it is in, by their text as
+// the parser reads it; a selection found in none, or none, has no lines.
+func (m *markdownRender) spot() noteSpot {
+	var quote []string
+	start, end := -1, -1
+	for _, part := range m.selected {
+		runes := []rune(part.Text)
+		quote = append(quote, string(runes[part.Start:part.End]))
+		if b := m.blockOf(part.Text); b != nil {
+			end = b.End
+			if start < 0 {
+				start = b.Start
+			}
+		}
+	}
+	spot := noteSpot{quote: strings.Join(quote, "\n")}
+	if start >= 0 {
+		first, last := blockLines(m.doc.Source(), start, end)
+		spot.lines = &review.Lines{First: first, Last: last}
+		spot.match = strings.TrimRight(m.doc.Source()[start:end], "\n")
+	}
+	return spot
+}
+
+// blockOf is the paragraph or heading that reads as text.
+func (m *markdownRender) blockOf(text string) *parser.Block {
+	if m.doc == nil {
+		return nil
+	}
+	for i := range m.doc.Len() {
+		b := m.doc.Block(i)
+		if (b.Kind == parser.Paragraph || b.Kind == parser.Heading) && parser.PlainText(m.doc.Inlines(i)) == text {
+			return b
+		}
+	}
+	return nil
+}
+
+func (m *markdownRender) showMarks([]noteMark) {}
+
+func (m *markdownRender) goToPlace(place review.Place, lines bool) bool {
+	if lines {
+		m.jumpLine = place.Lines.First
+	}
+	return true
 }

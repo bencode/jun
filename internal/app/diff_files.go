@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/repo"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
@@ -28,6 +29,8 @@ type diffFile struct {
 	err     error
 	note    string            // why the file shows no lines: binary, or too large
 	state   *editor.DiffState // kept as the file is read again, so that it keeps its place
+	marks   []noteMark
+	marked  markKey
 }
 
 // diffRows lists the files changed under their directories' headings,
@@ -178,7 +181,7 @@ func (a *app) loadDiffFile(st *diffViewState, r *repoState, s repo.Source, ch re
 }
 
 // diffFileView shows the chosen file's changes, side by side or unified.
-func (a *app) diffFileView(c *ui.Context, st *diffViewState, unified bool) {
+func (a *app) diffFileView(c *ui.Context, v *layout.View, st *diffViewState, unified bool) {
 	f := &st.file
 	ui.Column(c).Grow(1).MinWidth(0).FillHeight().Gap(0).Children(func() {
 		if st.selected < 0 || st.selected >= len(st.rows) || st.rows[st.selected].dir != "" {
@@ -215,6 +218,10 @@ func (a *app) diffFileView(c *ui.Context, st *diffViewState, unified bool) {
 			f.state.Layout = editor.DiffUnified
 		}
 		f.state.Font.Size = a.textSize() // in the system's monospaced font, as Family is empty
+		f.state.LineSelection = true
+		f.state.OnGutterButton = func(lines editor.DiffLineRange) { a.noteInDiff(v, &lines) }
+		a.showDiffMarks(v, f)
 		editor.DiffView(c, f.state).Grow(1).FillWidth()
+		a.diffJump(c, v, st)
 	})
 }

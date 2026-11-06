@@ -39,6 +39,10 @@ A file in one of the project's worktrees shows as if opened in Files. Any other 
 | Copy Path, Reveal in Finder | a worktree's branch, files and folders |
 | Open with Default App | a worktree's files and folders |
 
+## Notes
+
+**+** in a file tab's header, or ⌘⇧M, adds a note to a [review](reviews.md) on the lines or text selected; in the source, clicking a line number does too. An image is noted as a whole.
+
 ## How files show
 
 | File | Shows as |

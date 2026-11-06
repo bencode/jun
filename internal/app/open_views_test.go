@@ -89,7 +89,7 @@ func TestFixedRegionsKeepTheirViews(t *testing.T) {
 			t.Fatalf("fixed tab %s can be closed", label)
 		}
 	}
-	for r, want := range map[*layout.Region][]string{p.Side: {"Hide Side Bar"}, a.state.Global: {"Agents", "Messages", "-", "Side by Side", "Stacked", "-", "Hide Global"}} {
+	for r, want := range map[*layout.Region][]string{p.Side: {"Reviews", "-", "Hide Side Bar"}, a.state.Global: {"Agents", "Messages", "-", "Side by Side", "Stacked", "-", "Hide Global"}} {
 		click(t, tt, fmt.Sprintf("Region menu %d", r.ID))
 		if items := tt.Menu(); !slices.Equal(items, want) {
 			t.Fatalf("region %d menu offers %v", r.ID, items)

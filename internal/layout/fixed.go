@@ -1,6 +1,9 @@
 package layout
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
 
 // DefaultSideWidth is the width, in DIPs, a side region starts with.
 const DefaultSideWidth float32 = 260
@@ -9,8 +12,8 @@ const DefaultSideWidth float32 = 260
 // moved and closed. Fixed regions (Global and the side regions) hold their
 // preset's views, in its order.
 var (
-	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript, ViewSettings}
-	sidePreset   = []ViewKind{ViewSessions, ViewTree}
+	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript, ViewSettings, ViewReview}
+	sidePreset   = []ViewKind{ViewSessions, ViewTree, ViewReviews}
 	globalPreset = []ViewKind{ViewAgents, ViewMessages}
 	fixedKinds   = slices.Concat(sidePreset, globalPreset, []ViewKind{ViewSkills})
 )
@@ -41,12 +44,50 @@ func (s *State) fill(r *Region, preset []ViewKind, project string) {
 			continue
 		}
 		s.nextID++
-		views = append(views, &View{ID: ViewID(s.nextID), Kind: kind, ProjectName: project})
+		views = append(views, &View{ID: ViewID(s.nextID), Kind: kind, ProjectName: project, Hidden: kind == ViewReviews})
 	}
 	r.Views = views
 	if !slices.ContainsFunc(views, func(v *View) bool { return v.ID == r.Active }) {
 		r.Active = views[0].ID
 	}
+}
+
+// sideOf is the perspective whose side region holds the view.
+func (s *State) sideOf(view ViewID) (*Perspective, *View, error) {
+	for _, p := range s.Projects {
+		for _, perspective := range p.Perspectives {
+			if i := slices.IndexFunc(perspective.Side.Views, func(v *View) bool { return v.ID == view }); i >= 0 {
+				return perspective, perspective.Side.Views[i], nil
+			}
+		}
+	}
+	return nil, nil, fmt.Errorf("view %d is not in a side region", view)
+}
+
+// ToggleSideView shows or hides a view of a side region, choosing it as it
+// shows, and the first shown as the one chosen hides.
+func (s *State) ToggleSideView(view ViewID) error {
+	p, v, err := s.sideOf(view)
+	if err != nil {
+		return err
+	}
+	v.Hidden = !v.Hidden
+	if !v.Hidden {
+		p.Side.Active = v.ID
+	} else if p.Side.Active == v.ID {
+		p.Side.Active = Shown(p.Side.Views)[0].ID
+	}
+	return nil
+}
+
+// RevealSideView shows the side region with the view chosen.
+func (s *State) RevealSideView(view ViewID) error {
+	p, v, err := s.sideOf(view)
+	if err != nil {
+		return err
+	}
+	v.Hidden, p.SideVisible, p.Side.Active = false, true, v.ID
+	return nil
 }
 
 func (s *State) fillPresets() {

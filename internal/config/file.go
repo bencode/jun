@@ -46,7 +46,7 @@ func Load(path string) (*layout.State, error) {
 }
 
 // Save replaces the file only after a complete snapshot is written and synced.
-func Save(path string, state *layout.State) (err error) {
+func Save(path string, state *layout.State) error {
 	if err := state.Validate(); err != nil {
 		return fmt.Errorf("save config %q: %w", path, err)
 	}
@@ -54,29 +54,38 @@ func Save(path string, state *layout.State) (err error) {
 	if err != nil {
 		return fmt.Errorf("encode config %q: %w", path, err)
 	}
+	if err := WriteFile(path, append(data, '\n')); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
+}
+
+// WriteFile replaces the file only after a complete copy is written and
+// synced, making its directory as needed.
+func WriteFile(path string, data []byte) (err error) {
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0700); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
+		return fmt.Errorf("create directory: %w", err)
 	}
 	file, err := os.CreateTemp(directory, ".config-*.tmp")
 	if err != nil {
-		return fmt.Errorf("create config temporary file: %w", err)
+		return fmt.Errorf("create temporary file: %w", err)
 	}
 	defer func() {
 		if cleanup := os.Remove(file.Name()); cleanup != nil && !errors.Is(cleanup, os.ErrNotExist) {
-			err = errors.Join(err, fmt.Errorf("remove config temporary file: %w", cleanup))
+			err = errors.Join(err, fmt.Errorf("remove temporary file: %w", cleanup))
 		}
 	}()
-	_, writeErr := file.Write(append(data, '\n'))
+	_, writeErr := file.Write(data)
 	var syncErr error
 	if writeErr == nil {
 		syncErr = file.Sync()
 	}
 	if err := errors.Join(writeErr, syncErr, file.Close()); err != nil {
-		return fmt.Errorf("write config %q: %w", path, err)
+		return fmt.Errorf("write %q: %w", path, err)
 	}
 	if err := os.Rename(file.Name(), path); err != nil {
-		return fmt.Errorf("replace config %q: %w", path, err)
+		return fmt.Errorf("replace %q: %w", path, err)
 	}
 	return nil
 }

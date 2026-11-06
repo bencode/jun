@@ -77,6 +77,11 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"Preview the first match", "预览首个匹配文件"}, keys("↓"), inSearch},
 			{bilingual{"Open the first match in a tab", "在标签中打开首个匹配文件"}, keys("Enter"), inSearch},
 		}},
+		{bilingual{"Reviews", "Reviews"}, []shortcutRow{
+			{bilingual{"Add a note", "添加标注"}, keys(noteKeys.String()), bilingual{
+				"On the lines or text selected in a Diff or file tab; on an image, the whole file", "标注 Diff 或文件标签中选中的行或文字；图片标注整个文件"}},
+			{bilingual{"Save the note", "保存标注"}, keys("⌘↩"), bilingual{"While writing a note; Esc cancels", "写标注时；Esc 取消"}},
+		}},
 		{bilingual{"Agents", "Agents"}, []shortcutRow{
 			{bilingual{"Peek the next waiting agent", "Peek 下一个等待的 agent"}, keys(peekKeys.String()), bilingual{
 				"In a drawer beside Global; with none waiting, the current agent. Again goes on, and closes once no other waits",

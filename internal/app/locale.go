@@ -24,6 +24,7 @@ func (a *app) kindName(kind layout.ViewKind) string {
 		layout.ViewDiff: {"Diff", "差异"}, layout.ViewFile: {"File", "文件"},
 		layout.ViewAgents: {"Agents", "Agents"}, layout.ViewMessages: {"Messages", "消息"}, layout.ViewSessions: {"Sessions", "会话"},
 		layout.ViewTranscript: {"Session", "会话"}, layout.ViewSettings: {"Settings", "设置"},
+		layout.ViewReviews: {"Reviews", "Reviews"}, layout.ViewReview: {"Review", "Review"},
 	}
 	pair := names[kind]
 	return a.text(pair[0], pair[1])
@@ -44,7 +45,15 @@ func (a *app) title(v *layout.View) string {
 			return transcriptTitle(a, a.sessionOf(project, *v.Transcript))
 		}
 	}
-	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewMessages, layout.ViewTree, layout.ViewSessions}, v.Kind) {
+	if v.Review != "" {
+		if project := a.project(v.ProjectName); project != nil {
+			if r, ok := a.reviewsFor(project).find(v.Review); ok {
+				return "Review · " + diffSourceName(r.Source)
+			}
+		}
+		return a.kindName(v.Kind)
+	}
+	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewMessages, layout.ViewTree, layout.ViewSessions, layout.ViewReviews}, v.Kind) {
 		return a.kindName(v.Kind)
 	}
 	return fmt.Sprintf("%s %d", a.kindName(v.Kind), v.ID)

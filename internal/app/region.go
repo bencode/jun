@@ -9,7 +9,7 @@ import (
 )
 
 func (a *app) region(c *ui.Context, r *layout.Region) {
-	views := slices.Clone(r.Views)
+	views := layout.Shown(r.Views)
 	p := a.state.CurrentPerspective()
 	count, bottom, side := len(p.Columns), p.BottomVisible, p.SideVisible
 	fixed := a.state.Fixed(r.ID)

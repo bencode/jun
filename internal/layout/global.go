@@ -126,7 +126,7 @@ func (s *State) validGlobal() error {
 	}
 	for _, r := range s.regions() {
 		for _, v := range r.Views {
-			if r != s.Global && (v.Hidden || v.Share != 0) {
+			if r != s.Global && (v.Share != 0 || v.Hidden && v.Kind != ViewReviews) {
 				return fmt.Errorf("view %d is not in Global but has its fields", v.ID)
 			}
 			if v.Share < 0 || v.Share > maximumShare {

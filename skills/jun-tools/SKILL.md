@@ -1,6 +1,6 @@
 ---
 name: jun-tools
-description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; tell the user something; show the user a terminal, a file or a branch's changes; run a command in a new terminal; run one on a schedule. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
+description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; tell the user something; show the user a terminal, a file or a branch's changes; run a command in a new terminal; run one on a schedule; read a review the user points to. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
 ---
 
 # Jun tools
@@ -104,6 +104,14 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" 
 "$JUN_BIN" tool message update 12 'PR #53 is open, the tests pass.'
 "$JUN_BIN" tool message | jq -c '.[] | select(.kind == "ask")'    # what still waits for the user
 ```
+
+**Read a review.** The user may give you the path of a review: a JSON file of what they noted on a branch's changes and files. Read it as context for what they ask: a review alone asks for nothing, and they say what to do with it.
+
+- `source` is the branch, `head` its commit, and `doneAt` is set once the user finished the review.
+- Each of `notes` has the user's `text`, and in `anchor` where it was made: `path`, from the repository's top level, or from `source` when that is a directory; `lines` as `first` and `last`, from 1; `quote`, the text there; `head`.
+- `side` `old` is on what the comparison in `diff` removed: those lines are of the base, not the file now.
+- `uncommitted` says the text was not committed, so `head` does not hold it.
+- Lines move: look for `quote`, and trust it over `lines`.
 
 **Start another agent or a job.**
 
