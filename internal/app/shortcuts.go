@@ -143,7 +143,7 @@ func (a *app) selectTabAt(index int) {
 	if r == nil || len(r.Views) == 0 {
 		return
 	}
-	views := layout.Shown(r.Views)
+	views := a.state.Shown(r)
 	if index == lastTab {
 		index = len(views) - 1
 	}

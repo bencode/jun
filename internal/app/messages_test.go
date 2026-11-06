@@ -510,7 +510,7 @@ func TestHiddenMessagesKeepComing(t *testing.T) {
 	if err := config.Save(path, a.state); err != nil {
 		t.Fatal(err)
 	}
-	if s, err := config.Load(path); err != nil || !s.Global.Views[1].Hidden {
+	if s, err := config.Load(path); err != nil || s.Global.Views[1].Show {
 		t.Fatalf("restored %v: %v", s, err)
 	}
 

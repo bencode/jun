@@ -79,7 +79,7 @@ func (a *app) cycleTab(delta int) {
 	if r == nil || len(r.Views) == 0 {
 		return
 	}
-	views := layout.Shown(r.Views)
+	views := a.state.Shown(r)
 	index := slices.IndexFunc(views, func(v *layout.View) bool { return v.ID == r.Active })
 	a.selectTab(r, views[(index+delta+len(views))%len(views)].ID)
 }

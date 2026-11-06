@@ -16,6 +16,9 @@ var (
 	sidePreset   = []ViewKind{ViewSessions, ViewTree, ViewReviews}
 	globalPreset = []ViewKind{ViewAgents, ViewMessages}
 	fixedKinds   = slices.Concat(sidePreset, globalPreset, []ViewKind{ViewSkills})
+	// shownKinds are the fixed views a region starts showing; any other
+	// waits to be shown. A side region always shows its own.
+	shownKinds = []ViewKind{ViewSessions, ViewTree, ViewAgents, ViewMessages}
 )
 
 // Fixed reports whether the region is Global or a side region.
@@ -44,7 +47,7 @@ func (s *State) fill(r *Region, preset []ViewKind, project string) {
 			continue
 		}
 		s.nextID++
-		views = append(views, &View{ID: ViewID(s.nextID), Kind: kind, ProjectName: project, Hidden: kind == ViewReviews})
+		views = append(views, &View{ID: ViewID(s.nextID), Kind: kind, ProjectName: project, Show: slices.Contains(shownKinds, kind)})
 	}
 	r.Views = views
 	if !slices.ContainsFunc(views, func(v *View) bool { return v.ID == r.Active }) {
@@ -71,11 +74,11 @@ func (s *State) ToggleSideView(view ViewID) error {
 	if err != nil {
 		return err
 	}
-	v.Hidden = !v.Hidden
-	if !v.Hidden {
+	v.Show = !v.Show
+	if v.Show {
 		p.Side.Active = v.ID
 	} else if p.Side.Active == v.ID {
-		p.Side.Active = Shown(p.Side.Views)[0].ID
+		p.Side.Active = shown(p.Side.Views)[0].ID
 	}
 	return nil
 }
@@ -86,7 +89,7 @@ func (s *State) RevealSideView(view ViewID) error {
 	if err != nil {
 		return err
 	}
-	v.Hidden, p.SideVisible, p.Side.Active = false, true, v.ID
+	v.Show, p.SideVisible, p.Side.Active = true, true, v.ID
 	return nil
 }
 

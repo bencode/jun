@@ -8,11 +8,12 @@ import (
 	"github.com/bencode/jun/internal/layout"
 )
 
-// migrateV2 gives a version 2 layout what version 3 adds: a hidden side
-// region in each perspective, and Global showing only Agents. Global's
-// other views move to the first column of their project's current
-// perspective; Agents and Files views in columns and bottom regions go.
-// Whatever is missing or invalid is left for Restore to report.
+// migrateV2 gives a version 2 layout what later versions add: a hidden side
+// region in each perspective, and Global showing only Agents, said on the
+// view as version 4 does. Global's other views move to the first column of
+// their project's current perspective; Agents and Files views in columns and
+// bottom regions go. Whatever is missing or invalid is left for Restore to
+// report.
 func migrateV2(s *layout.State) error {
 	if s == nil {
 		return fmt.Errorf("layout is missing")
@@ -69,6 +70,11 @@ func migrateGlobal(s *layout.State) {
 		}
 	}
 	removeViews(s.Global, func(v *layout.View) bool { return v.Kind == layout.ViewTree || gone[v] })
+	for _, v := range s.Global.Views {
+		if v != nil {
+			v.Show = true
+		}
+	}
 }
 
 // currentColumn finds the first column of the project's current perspective.

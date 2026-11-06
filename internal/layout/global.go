@@ -22,13 +22,21 @@ const maximumShare float32 = 1e6
 // minimumShare is the part of two neighbors a drag leaves the smaller one.
 const minimumShare float32 = 0.01
 
-// Shown is the views that are not hidden, in order.
-func Shown(views []*View) []*View {
-	return slices.DeleteFunc(slices.Clone(views), func(v *View) bool { return v.Hidden })
+// shown is the views of a fixed region it shows, in order.
+func shown(views []*View) []*View {
+	return slices.DeleteFunc(slices.Clone(views), func(v *View) bool { return !v.Show })
+}
+
+// Shown is what the region shows: a fixed region those chosen, tabs all.
+func (s *State) Shown(r *Region) []*View {
+	if s.Fixed(r.ID) {
+		return shown(r.Views)
+	}
+	return slices.Clone(r.Views)
 }
 
 // GlobalViews is what Global shows, in order.
-func (s *State) GlobalViews() []*View { return Shown(s.Global.Views) }
+func (s *State) GlobalViews() []*View { return shown(s.Global.Views) }
 
 // ToggleGlobalView shows or hides a view of Global. With Global hidden, it
 // shows Global with the view. The last view shown hides Global instead, and
@@ -40,14 +48,14 @@ func (s *State) ToggleGlobalView(id ViewID) error {
 	}
 	v := s.Global.Views[i]
 	if !s.GlobalVisible {
-		s.GlobalVisible, v.Hidden = true, false
+		s.GlobalVisible, v.Show = true, true
 		return nil
 	}
-	if shown := s.GlobalViews(); len(shown) == 1 && shown[0] == v {
+	if views := s.GlobalViews(); len(views) == 1 && views[0] == v {
 		s.GlobalVisible = false
 		return nil
 	}
-	v.Hidden = !v.Hidden
+	v.Show = !v.Show
 	s.settleGlobal()
 	return nil
 }
@@ -85,11 +93,11 @@ func (s *State) settleGlobal() {
 		return
 	}
 	if len(s.GlobalViews()) == 0 {
-		s.Global.Views[0].Hidden = false
+		s.Global.Views[0].Show = true
 	}
-	shown := s.GlobalViews()
-	if !slices.ContainsFunc(shown, func(v *View) bool { return v.ID == s.Global.Active }) {
-		s.Global.Active = shown[0].ID
+	views := s.GlobalViews()
+	if !slices.ContainsFunc(views, func(v *View) bool { return v.ID == s.Global.Active }) {
+		s.Global.Active = views[0].ID
 	}
 }
 
@@ -110,7 +118,7 @@ func (s *State) moveMessagesFields() {
 			v.Share = s.AgentsPercent
 		}
 		if v.Kind == ViewMessages {
-			v.Hidden = v.Hidden || s.MessagesHidden && len(s.GlobalViews()) > 1
+			v.Show = v.Show && !(s.MessagesHidden && len(s.GlobalViews()) > 1)
 			if s.AgentsPercent != 0 {
 				v.Share = 100 - s.AgentsPercent
 			}
@@ -119,15 +127,21 @@ func (s *State) moveMessagesFields() {
 	s.AgentsPercent, s.MessagesHidden = 0, false
 }
 
-// validGlobal checks what only Global's views have.
+// validGlobal checks what only fixed regions' views have.
 func (s *State) validGlobal() error {
 	if !slices.Contains([]GlobalArrange{GlobalSide, GlobalStacked}, s.GlobalArrange) {
 		return fmt.Errorf("unknown globalArrange %q", s.GlobalArrange)
 	}
 	for _, r := range s.regions() {
+		fixed := s.Fixed(r.ID)
 		for _, v := range r.Views {
-			if r != s.Global && (v.Share != 0 || v.Hidden && v.Kind != ViewReviews) {
-				return fmt.Errorf("view %d is not in Global but has its fields", v.ID)
+			if r != s.Global && v.Share != 0 {
+				return fmt.Errorf("view %d is not in Global but has its share", v.ID)
+			}
+			if !fixed && v.Show {
+				return fmt.Errorf("view %d is a tab, which always shows", v.ID)
+			} else if fixed && r != s.Global && !v.Show && slices.Contains(shownKinds, v.Kind) {
+				return fmt.Errorf("view %d of a side region must show", v.ID)
 			}
 			if v.Share < 0 || v.Share > maximumShare {
 				return fmt.Errorf("view %d: share must be between 0 and %g", v.ID, maximumShare)
@@ -135,7 +149,7 @@ func (s *State) validGlobal() error {
 		}
 	}
 	if len(s.Global.Views) > 0 && len(s.GlobalViews()) == 0 {
-		return fmt.Errorf("every view of Global is hidden")
+		return fmt.Errorf("Global shows no view")
 	}
 	return nil
 }

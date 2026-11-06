@@ -218,7 +218,7 @@ func TestEveryViewOfGlobalHasACommand(t *testing.T) {
 	i := slices.IndexFunc(commands, func(p paletteItem) bool { return p.title == "Toggle Messages" })
 	commands[i].run()
 	tt.Frame()
-	if !a.state.Global.Views[1].Hidden {
+	if a.state.Global.Views[1].Show {
 		t.Fatal("the command did not hide Messages")
 	}
 }

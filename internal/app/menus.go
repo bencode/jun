@@ -82,7 +82,7 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 	button.Menu(func(m *ui.Menu) {
 		if r == a.state.Global {
 			for _, v := range r.Views {
-				if m.Item(a.title(v)).Checked(!v.Hidden).Chosen() {
+				if m.Item(a.title(v)).Checked(v.Show).Chosen() {
 					a.toggleGlobalView(v.ID)
 				}
 			}
@@ -100,7 +100,7 @@ func (a *app) regionMenu(c *ui.Context, r *layout.Region) {
 		}
 		if p := a.state.CurrentPerspective(); p != nil && r == p.Side {
 			for _, v := range r.Views {
-				if v.Kind == layout.ViewReviews && m.Item(a.title(v)).Checked(!v.Hidden).Chosen() {
+				if v.Kind == layout.ViewReviews && m.Item(a.title(v)).Checked(v.Show).Chosen() {
 					a.toggleSideView(v.ID)
 				}
 			}

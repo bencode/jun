@@ -54,10 +54,11 @@ Jun keeps two files. **Preferences** live in the settings file, which you edit. 
 
 ## Versions
 
-- The layout file is `{"version": 3, "layout": …}`.
-- Older files are converted in memory when loaded, and the next save writes version 3:
+- The layout file is `{"version": 4, "layout": …}`.
+- Older files are converted in memory when loaded, and the next save writes version 4:
   - **Version 1 → 2** keeps the Work and Review perspectives, every tab and region ID, the selections, each tab's project, and hidden layouts.
   - **Version 2 → 3** gives each perspective a hidden side bar. Terminals in Global move to the end of the first column of their project's current perspective. Agents and Files tabs in columns and bottom regions are dropped, as are version 1's placeholder file tabs.
-- Older versions of Jun cannot load version 3. Quit the previous Jun before running the upgraded app with the same file.
+  - **Version 3 → 4** says on each view of Global and the side bar whether it shows, rather than whether it is hidden: a view Jun adds later starts hidden. What shows stays the same.
+- Older versions of Jun cannot load version 4. Quit the previous Jun before running the upgraded app with the same file.
 - Preferences that earlier versions kept in the layout file (`chinese`, `theme`, `textSize`) move into the settings file on the first start.
 - Even older files, `state.json`, `settings.json` and `window-state.json`, are left untouched.
