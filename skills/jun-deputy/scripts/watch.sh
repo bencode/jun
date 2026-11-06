@@ -1,10 +1,10 @@
 #!/bin/bash
 # Passes what needs a look on to the deputy in terminal $1: agents that wait
-# for the user or finished, each once the deputy is idle. Run from a loop,
-# which starts it again when the watch ends.
+# for the user, finished or went while working, each once the deputy is idle.
+# Run from a loop, which starts it again when the watch ends.
 self=$1
-events='select(.id != $self and (.to == "waiting" or (.from == "working" and .to == "idle")))
-  | "\(.id) \(.project) \(.agent) \(.to)"'
+events='select(.id != $self and (.to == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))
+  | "\(.id) \(.project) \(.agent) \(if .to == "" then "gone" else .to end)"'
 
 deputy_status() {
   "$JUN_BIN" tool terminals | jq -r --argjson self "$self" '.[] | select(.id == $self) | .status // empty'

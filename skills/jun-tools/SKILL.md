@@ -30,7 +30,7 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 | `close terminal:<id>` / `close diff:<id>` / `close file:<path>` / `close peek` | Closes what `open` opened; a terminal's shell keeps running |
 | `close perspective:<name>` | Deletes the perspective; with terminals in it, Jun asks the user to confirm |
 | `back` / `forward` | Steps through where the user has been |
-| `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` | Tells the user, in Messages in Global, without disturbing them |
+| `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` / `… -` | Tells the user, in Messages in Global, without disturbing them; `-` reads standard input, and with a title the text may go |
 | `run [--dir <path>] [--open] <command…>` | Starts a terminal running the command; prints its id |
 | `loop <every> [--dir <path>] <command…>` | Runs the command every interval (at least `1m`) in a terminal of its own; prints the loop's id |
 | `loop` / `loop cancel <id>` | Lists the loops as JSON / ends one |
@@ -44,6 +44,15 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 - `waiting`: the agent asks the user something, such as a permission or a choice, or Claude Code shows a notice that waits for Enter.
 - `working`: it is busy.
 - `idle`: nothing runs. Idle does not tell done from stuck or from a question asked in its reply: read its `screen`.
+
+## Reaching someone
+
+| To | Use |
+|---|---|
+| Answer the user you are talking with | Your reply: no `message` as well |
+| Tell the user something they are not here to read | `message` |
+| Show the user something they asked to see | `open`, which works only while they are with you |
+| Have another agent do something | `send` |
 
 ## Common work
 
@@ -67,18 +76,24 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 ```sh
 "$JUN_BIN" tool open diff:7            # the changes on terminal 7's branch
 "$JUN_BIN" tool open file:report.md    # a file, from your directory or any other
-"$JUN_BIN" tool open terminal:7 --peek # an agent waiting for the user's answer
+"$JUN_BIN" tool open terminal:7 --peek # a terminal, in the peek drawer
 ```
 
-**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. `--link` names what it is about, as `open` does: `terminal:<id>`, `diff:<id>` with the same id from `terminals`, `file:<path>` or `project:<name>`. Jun tells the project from it, and a click takes the user there, peeking an agent. Reporting on another agent, always give it: without it the message is plain news, which takes the user nowhere. A resource that does not exist is an error and shows nothing. `--kind` gives it its icon: `ask` when the user has something to do, `warn`, `done`, or `info`, the default. Messages last until Jun quits.
+**Tell the user something.** `message` shows it in Messages in Global, for the user to read when they look. Any terminal may send one at any time. Messages last until Jun quits, and cannot be read back.
+
+- `--title`: what happened, in one line of at most 200 bytes.
+- The text: what the user needs beyond that, at most 4 KiB.
+- `--kind` gives it its icon: `ask` when the user has something to do, `warn`, `done`, or `info`, the default.
+- `--link` names what it is about, as `open` does: `terminal:<id>`, `diff:<id>` with the same id from `terminals`, `file:<path>` or `project:<name>`. Jun tells the project from it, and a click takes the user there, peeking an agent. A resource that does not exist is an error and shows nothing.
+
+Give `--link` whenever the message is about something: without it, the message is plain news, which takes the user nowhere. That holds for your own work too: `$JUN_TERMINAL` is your terminal's id.
 
 ```sh
-"$JUN_BIN" tool message 'The nightly run failed: 2 tests, both in the parser.'
 "$JUN_BIN" tool message --title 'Asks to open a PR' --kind ask --link terminal:7 'I suggest yes.'
-printf '%s\n' "$long_message" | "$JUN_BIN" tool message -
+"$JUN_BIN" tool message --title 'Parser fix ready to review' --kind done --link "diff:$JUN_TERMINAL"
+"$JUN_BIN" tool message 'The nightly run failed: 2 tests, both in the parser.'
+printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" -
 ```
-
-Keep it to what the user needs, at most 4 KiB. When another agent needs an answer now and the user is with you, also show it with `open terminal:<id> --peek`.
 
 **Start another agent or a job.**
 
@@ -108,14 +123,20 @@ tick='[ "$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==7) | .status")" 
 
 The command checks that the agent is `idle` first, since `send` does not look: see the pitfalls. It needs `jq`.
 
+A check a script can make needs no agent: have the loop tell the user itself, which spends no tokens. Here the link leads to the loop's terminal, which shows each run:
+
+```sh
+"$JUN_BIN" tool loop 1h --dir ~/work/api 'make test || "$JUN_BIN" tool message --title "Tests fail in api" --kind warn --link "terminal:$JUN_TERMINAL"'
+```
+
 ## Pitfalls
 
 - **Quoting.** The words of a command are joined by spaces into one command line, as `ssh` joins them. To keep quotes inside it, quote the whole command, as the loop above does.
 - **Loops run as scripts.** A loop runs its command with `$SHELL -l -c`: login files apply, `.zshrc` does not. Write absolute paths, or `"$JUN_BIN"`. A run waits for the one before to end.
-- **Loops cost.** Each run that sends wakes an agent and spends its tokens. Choose the interval for the task, and cancel loops you no longer need: they last until cancelled or Jun quits.
+- **Loops cost.** Each run that sends wakes an agent and spends its tokens. Send only what needs an agent's judgement, choose the interval for the task, and cancel loops you no longer need: they last until cancelled or Jun quits.
 - **Only agents take `send`.** A terminal running no agent refuses it, since the text would run as a command.
 - **`send` does not look.** It pastes and presses Enter whatever the agent shows: on a `waiting` question, that Enter can answer it. Read the `screen` before you send, and have a scheduled send check the status.
 - **Drafts.** `send` goes into the agent's input box as is. Text already there, such as the user's draft or a prompt Claude Code put back after Esc, comes first in the message. When that matters, read the input box on `screen` before sending.
-- **Questions are the user's.** A `waiting` agent asks the user; do not answer its permissions or choices with `send`. Show it to the user with `open terminal:<id> --peek`.
+- **Questions are the user's.** A `waiting` agent asks the user; do not answer its permissions or choices with `send`. Tell the user with `message --kind ask --link terminal:<id>`: a click peeks it.
 - **A file shown outside the project does not follow its changes.** After writing to it, `open file:` again.
 - **Changing what the user sees.** `open`, `close`, `back`, `forward` and `run --open` work only for the terminal the user is with (shown in the peek drawer, or last focused), and not while a Jun dialog is open. Otherwise they are refused: tell the user what you would show.
