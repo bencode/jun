@@ -34,28 +34,19 @@ then "$JUN_BIN" tool send SELF "[jun-tick] Look over the agents, as the jun-depu
 
 The loop's first run comes at once and skips, as you are working.
 
-**2. The events.** Leave yourself out, or each of your own replies would wake you: write your id, printed above, in place of `<id>`, as each command runs in a shell of its own.
+**2. The events.** Run the script beside this file in a loop of its own, giving the folder of this skill and your id, printed above, in place of `<id>`: it leaves you out, or each of your own replies would wake you. It holds events until you are `idle`, then sends them, and the loop starts it again if the watch ends:
 
-- In **Claude Code**, start its Monitor tool with the longest timeout it allows, after stopping one you started earlier, and start it again whenever it ends. Each line then reaches you as a notification, without touching your input box:
+```sh
+"$JUN_BIN" tool loop 1m "bash '<this skill's folder>/scripts/watch.sh' <id>"
+```
 
-  ```sh
-  "$JUN_BIN" tool watch | jq --unbuffered -c --argjson self <id> \
-    'select(.id != $self and (.to == "waiting" or .from == "waiting" or (.from == "working" and (.to == "idle" or .to == ""))))'
-  ```
-
-- In **Codex or Pi**, run the script beside this file in a loop of its own, giving the folder of this skill. It holds events until you are `idle`, then sends them, and the loop starts it again if the watch ends:
-
-  ```sh
-  "$JUN_BIN" tool loop 1m "bash '<this skill's folder>/scripts/watch.sh' <id>"
-  ```
-
-**3. Tell the user** the loops' ids, what you started, and that reports appear in Messages in Global, which nothing else calls them to. Add that a tick, and in Codex or Pi an event, can join anything they left unsent in your input box.
+**3. Tell the user** the loops' ids, what you started, and that reports appear in Messages in Global, which nothing else calls them to. Add that a tick or an event can join anything they left unsent in your input box.
 
 Loops last until Jun quits. After Jun restarts, or in a new session, start again: ids change.
 
 ## On an event
 
-Read the `screen` of the agents it names, then report them as below. The watch starts by telling of those already waiting. An agent that stopped waiting was most likely answered: look for its `ask`. An event with `to` empty tells of an agent gone while it worked; `screen` refuses a terminal that closed.
+Read the `screen` of the agents it names, then report them as below. The watch starts by telling of those already waiting. An agent that stopped waiting was most likely answered: look for its `ask`. So was one `working, ask open`: it took up work while it had an `ask`, which the user most likely answered. An event with `to` empty tells of an agent gone while it worked; `screen` refuses a terminal that closed.
 
 ## On a tick
 
@@ -69,10 +60,10 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 
 ## Reporting
 
-1. List what you already told about the agent, the latest first, and sort what you read, comparing with your last look:
+1. List what the user was already told about the agent, by you or anyone, the latest first, and sort what you read, comparing with your last look:
 
    ```sh
-   "$JUN_BIN" tool message | jq -c --arg link terminal:<id> '.[] | select(.link == $link)'
+   "$JUN_BIN" tool message | jq -c --arg t terminal:<id> --arg d diff:<id> '.[] | select(.link == $t or .link == $d)'
    ```
 
    | What you see | Means | Kind |
@@ -124,4 +115,4 @@ Before any `send` the user approved, read that agent's `screen` for a notice or 
 
 ## Stop
 
-When the user says stop, end your loops with `loop cancel <id>`, stop the Monitor if you started one, and say so. Keep to this work until then: an event or a tick is not a reason to start other work.
+When the user says stop, end your loops with `loop cancel <id>` and say so. Keep to this work until then: an event or a tick is not a reason to start other work.
