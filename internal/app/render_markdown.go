@@ -26,17 +26,22 @@ var markdownKind = renderKind{
 	},
 	make: func(f fileEnv) fileRender {
 		m := &markdownRender{f: f, top: f.r.top, jump: -1}
-		m.options = markdown.Options{Theme: &m.theme, LoadImage: m.loadImage, OnLink: m.openLink, Block: m.noteBlock}
+		m.diagrams.a = f.a
+		m.options = markdown.Options{
+			Theme: &m.theme, LoadImage: m.loadImage, OnLink: m.openLink, Block: m.noteBlock,
+			Code: map[string]func(*ui.Context, *markdown.CodeBlockView){"mermaid": m.diagrams.block},
+		}
 		return m
 	},
 }
 
 type markdownRender struct {
-	f       fileEnv
-	top     string // the repository's, for images loading off the UI thread
-	text    string
-	theme   markdown.Theme // its text size; the window theme's for the rest
-	options markdown.Options
+	f        fileEnv
+	top      string // the repository's, for images loading off the UI thread
+	text     string
+	theme    markdown.Theme // its text size; the window theme's for the rest
+	options  markdown.Options
+	diagrams mermaidDiagrams
 
 	headings []heading    // as the last frame built them
 	marks    []*ui.Handle // the place of each heading, by its index in headings
@@ -54,7 +59,12 @@ type heading struct {
 // headingGap is the room left above a heading scrolled to the top.
 const headingGap = 12
 
-func (m *markdownRender) update(data []byte) { m.text = string(data) }
+func (m *markdownRender) update(data []byte) {
+	if text := string(data); text != m.text {
+		m.text = text
+		clear(m.diagrams.made)
+	}
+}
 
 func (m *markdownRender) view(c *ui.Context, size float32) {
 	m.theme.FontSize = size

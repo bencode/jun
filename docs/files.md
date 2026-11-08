@@ -54,6 +54,7 @@ A file in one of the project's worktrees shows as if opened in Files. Any other 
 
 - **Markdown**
   - Its images load from the same branch: relative to the file, or with a leading slash, relative to the repository.
+  - A `mermaid` code block shows as a diagram: sequence diagrams and flowcharts for now, the code and the reason for anything else.
   - Web links open in the browser. Links to the repository's files open in Jun, as a click in Files does.
   - Links to a heading within the page do nothing yet.
   - **Go to heading** (⌘⇧O, or View ▸ Go to Heading…): the command palette at `@` lists the headings of the active tab's page, indented by level. Typing filters them; Enter scrolls the heading to the top.
