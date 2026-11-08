@@ -141,10 +141,16 @@ tick='[ "$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==7) | .status")" 
 
 The command checks that the agent is `idle` first, since `send` does not look: see the pitfalls. It needs `jq`.
 
-A check a script can make needs no agent: have the loop tell the user itself, which spends no tokens. Here the link leads to the loop's terminal, which shows each run:
+A check a script can make needs no agent: have the loop tell the user itself, which spends no tokens. Keep to one message for the matter, as above: a failure the message already tells is no news, and once the check passes, the message is `done`. Here the link leads to the loop's terminal, which shows each run:
 
 ```sh
-"$JUN_BIN" tool loop 1h --dir ~/work/api 'make test || "$JUN_BIN" tool message --title "Tests fail in api" --kind warn --link "terminal:$JUN_TERMINAL"'
+check='open=$("$JUN_BIN" tool message | jq -r --arg l "terminal:$JUN_TERMINAL" "first(.[] | select(.link == \$l and .kind == \"warn\") | .id) // empty")
+if make test; then
+  [ -z "$open" ] || "$JUN_BIN" tool message update "$open" --kind done "They pass again."
+elif [ -z "$open" ]; then
+  "$JUN_BIN" tool message --title "Tests fail in api" --kind warn --link "terminal:$JUN_TERMINAL"
+fi'
+"$JUN_BIN" tool loop 1h --dir ~/work/api "$check"
 ```
 
 ## Pitfalls
