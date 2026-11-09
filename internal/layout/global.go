@@ -138,6 +138,9 @@ func (s *State) validGlobal() error {
 			if r != s.Global && v.Share != 0 {
 				return fmt.Errorf("view %d is not in Global but has its share", v.ID)
 			}
+			if v.Width < 0 || v.Width > maximumShare || (r != s.Global && v.Width != 0) {
+				return fmt.Errorf("view %d: width must be between 0 and %g and only set in Global", v.ID, maximumShare)
+			}
 			if !fixed && v.Show {
 				return fmt.Errorf("view %d is a tab, which always shows", v.ID)
 			} else if fixed && r != s.Global && !v.Show && slices.Contains(shownKinds, v.Kind) {
