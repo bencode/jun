@@ -19,8 +19,8 @@ func (a *app) globalPane(c *ui.Context, room float32) {
 }
 
 // globalTiles splits the room between the first view and the rest, as
-// columns splits a perspective's. The percentage lasts for this build: only
-// a drag changes the shares, so that a room too small for them leaves them.
+// columns splits a perspective's. A dragged column keeps its width as room
+// changes; temporary constraints leave the saved width and shares alone.
 func (a *app) globalTiles(c *ui.Context, views []*layout.View, room float32, tile func(*layout.View)) {
 	if len(views) == 1 {
 		tile(views[0])
@@ -28,6 +28,9 @@ func (a *app) globalTiles(c *ui.Context, views []*layout.View, room float32, til
 	}
 	rest := views[1:]
 	percent := layout.FirstShare(views)
+	if a.state.GlobalArrange == layout.GlobalSide && views[0].Width > 0 && room > 1 {
+		percent = 100 * views[0].Width / (room - 1)
+	}
 	commit := func() {
 		layout.ResizeGlobalView(views, percent)
 		a.layoutChanged()
@@ -44,6 +47,7 @@ func (a *app) globalTiles(c *ui.Context, views []*layout.View, room float32, til
 		a.globalTiles(c, rest, (room-1)*(1-percent/100), tile)
 	}, func() {}).OnChange(func() {
 		if room-1 > minimumRegionWidth+minimum {
+			views[0].Width = (room - 1) * percent / 100
 			commit()
 		}
 	})

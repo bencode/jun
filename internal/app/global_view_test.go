@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -137,17 +138,66 @@ func TestDraggingBetweenGlobalsViews(t *testing.T) {
 	tt.Release(messages.X-101, 300)
 	tt.Frame()
 	share := a.state.Global.Views[0].Share
+	width := a.state.Global.Views[0].Width
 	if share >= before {
 		t.Fatalf("Agents' share went from %v to %v", before, share)
 	}
-	if got := savedAndLoaded(t, a).Global.Views[0].Share; got != share {
-		t.Fatalf("saved %v, dragged to %v", got, share)
+	if got := savedAndLoaded(t, a).Global.Views[0]; got.Share != share || got.Width != width || width <= 0 {
+		t.Fatalf("saved %+v, dragged to share %v, width %v", got, share, width)
 	}
 	a.toggleGlobalArrange()
 	tt.Frame()
 	tt.Frame()
 	if a.state.Global.Views[0].Share != share {
 		t.Fatal("the other layout has another share")
+	}
+}
+
+func TestGlobalKeepsDraggedWidthAsItsRoomChanges(t *testing.T) {
+	a, tt := globalApp(t)
+	_, messages := titles(t, tt)
+	tt.Press(messages.X-1, 300)
+	tt.Move(messages.X-71, 300)
+	tt.Release(messages.X-71, 300)
+	tt.Frame()
+	agents, messages := titles(t, tt)
+	width, right := messages.X-agents.X, messages.W
+
+	// Moving Global's outer edge gives the extra room to Messages.
+	tt.Press(agents.X-1, 300)
+	tt.Move(agents.X-101, 300)
+	tt.Release(agents.X-101, 300)
+	tt.Frame()
+	agents, messages = titles(t, tt)
+	if math.Abs(float64(messages.X-agents.X-width)) > 1 || messages.W < right+90 {
+		t.Fatalf("outer drag: left width %v (was %v), right %v (was %v)", messages.X-agents.X, width, messages.W, right)
+	}
+
+	resize(tt, 1800, 900)
+	agents, messages = titles(t, tt)
+	if math.Abs(float64(messages.X-agents.X-width)) > 1 {
+		t.Fatalf("window resize: left width %v, want %v", messages.X-agents.X, width)
+	}
+	resize(tt, 1000, 640)
+	agents, messages = titles(t, tt)
+	if messages.X-agents.X >= width || messages.W < minimumRegionWidth {
+		t.Fatalf("narrow window: agents %+v, messages %+v", agents, messages)
+	}
+	resize(tt, 1800, 900)
+	agents, messages = titles(t, tt)
+	if math.Abs(float64(messages.X-agents.X-width)) > 1 {
+		t.Fatalf("restored room: left width %v, want %v", messages.X-agents.X, width)
+	}
+
+	a.toggleGlobalView(a.state.Global.Views[1].ID)
+	tt.Frame()
+	a.state = savedAndLoaded(t, a)
+	a.toggleGlobalView(a.state.Global.Views[1].ID)
+	tt.Frame()
+	tt.Frame()
+	agents, messages = titles(t, tt)
+	if math.Abs(float64(messages.X-agents.X-width)) > 1 {
+		t.Fatalf("shown after reload: left width %v, want %v", messages.X-agents.X, width)
 	}
 }
 

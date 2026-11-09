@@ -68,7 +68,7 @@ Global shows its views together, without tabs:
 - **⋯ → Agents** and **Messages** show or hide each view. Its room goes to the other views. Hiding the last one hides Global, and it comes back with Global.
   - Messages keep coming while hidden.
 - **⋯ → Side by Side** puts the views in columns, each as high as Global, and **Stacked** puts them one above the other.
-- Drag the line between two views to share their room. Both layouts use the same shares.
+- Drag the line between two views to resize them. Side by side, the left view keeps its dragged width as Global or the window changes; the right view takes the remaining room. When space is short, the left view temporarily narrows and returns to its saved width once there is room. Stacked views share the height by proportion.
 - **Toggle Agents**, **Toggle Messages** and **Toggle Global Layout** are in the View menu and the command palette. With Global hidden, the first two show it too.
 - **⌃Tab** and **⌘1**–**⌘9** move between the views shown.
 

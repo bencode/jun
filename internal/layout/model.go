@@ -41,6 +41,7 @@ type View struct {
 	Review       string       `json:"review,omitempty"`     // a review view's review, by its ID
 	Show         bool         `json:"show,omitempty"`       // its fixed region shows it; tabs always show
 	Share        float32      `json:"share,omitempty"`      // its weight among the views Global shows
+	Width        float32      `json:"width,omitempty"`      // its dragged width in DIPs when Global is side by side
 }
 
 // DiffRef is what a Diff view compares: a source of the view's project's
