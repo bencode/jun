@@ -71,4 +71,14 @@ func TestShelvedProjectIsNeverCurrent(t *testing.T) {
 	if !slices.Equal(shown(), []string{"B", "D"}) {
 		t.Fatalf("selecting D did not put it back in place: %v", shown())
 	}
+
+	// Revealing a tab, as an agent card or Back does, enters its project too.
+	tab := s.CurrentPerspective().Columns[0].Views[0]
+	shelve("D")
+	if _, err := s.RevealView(tab.ID); err != nil {
+		t.Fatal(err)
+	}
+	if s.ActiveProject != "D" || s.CurrentProject().Shelved {
+		t.Fatalf("revealing a tab of the shelved D left %s current, D shelved: %v", s.ActiveProject, s.CurrentProject().Shelved)
+	}
 }

@@ -201,21 +201,19 @@ func (a *app) commands() []paletteItem {
 	if name := a.state.ActiveProject; name != "" && a.canShelve(name) {
 		items = append(items, paletteItem{title: a.text("Shelve Project", "收起项目"), keys: shelveProjectKeys.String(), run: a.shelveCurrentProject})
 	}
-	shown := a.state.ShownProjects()
-	if len(shown) < len(a.state.Projects) {
+	shelved := a.state.ShelvedProjects()
+	if len(shelved) > 0 {
 		items = append(items, paletteItem{title: a.text("Shelved Projects", "已收起的项目"), keys: shelfKeys.String(), run: a.openShelf})
 	}
-	for i, p := range shown {
+	for i, p := range a.state.ShownProjects() {
 		item := paletteItem{title: a.text("Project: ", "项目：") + p.Name, run: func() { a.selectProject(p.Name) }}
 		if keys, ok := projectKeys(i); ok {
 			item.keys = keys.String()
 		}
 		items = append(items, item)
 	}
-	for _, p := range a.state.Projects {
-		if p.Shelved {
-			items = append(items, paletteItem{title: a.shelvedPrefix() + p.Name, run: func() { a.selectProject(p.Name) }})
-		}
+	for _, p := range shelved {
+		items = append(items, paletteItem{title: a.shelvedPrefix() + p.Name, run: func() { a.selectProject(p.Name) }})
 	}
 	if project := a.state.CurrentProject(); project != nil {
 		for i, p := range project.Perspectives {

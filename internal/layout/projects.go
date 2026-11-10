@@ -17,25 +17,32 @@ func (s *State) AddProject(name, cwd string) error {
 	p := &Project{Name: name, CWD: cwd, ActivePerspective: work.ID, Perspectives: []*Perspective{work}}
 
 	s.Projects = append(s.Projects, p)
-	s.ActiveProject = name
+	s.enter(p)
 	return nil
 }
 
-// SelectProject makes the project current, which takes it off the shelf.
 func (s *State) SelectProject(name string) error {
 	for _, p := range s.Projects {
 		if p.Name == name {
-			s.ActiveProject = name
-			p.Shelved = false
+			s.enter(p)
 			return nil
 		}
 	}
 	return fmt.Errorf("project not found: %s", name)
 }
 
+// enter makes the project current, which takes it off the shelf. Every
+// switch of project goes through it.
+func (s *State) enter(p *Project) { s.ActiveProject, p.Shelved = p.Name, false }
+
 // ShownProjects are the projects not shelved, in the rail's order.
 func (s *State) ShownProjects() []*Project {
 	return slices.DeleteFunc(slices.Clone(s.Projects), func(p *Project) bool { return p.Shelved })
+}
+
+// ShelvedProjects are the projects on the shelf, in the rail's order.
+func (s *State) ShelvedProjects() []*Project {
+	return slices.DeleteFunc(slices.Clone(s.Projects), func(p *Project) bool { return !p.Shelved })
 }
 
 // ShelveProject shelves the project. The current one hands over to the
@@ -53,7 +60,7 @@ func (s *State) ShelveProject(name string) error {
 	}
 	p.Shelved = true
 	if s.ActiveProject == name {
-		s.ActiveProject = next.Name
+		s.enter(next)
 	}
 	return nil
 }
@@ -126,7 +133,7 @@ func (s *State) RemoveProject(name string) ([]*View, error) {
 			if next == nil {
 				next = s.Projects[min(i, len(s.Projects)-1)]
 			}
-			s.ActiveProject, next.Shelved = next.Name, false
+			s.enter(next)
 		}
 	}
 	return removed, nil

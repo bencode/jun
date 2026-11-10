@@ -41,7 +41,7 @@ func (a *app) shelveCurrentProject() {
 func (a *app) shelvedPrefix() string { return a.text("Shelved Project: ", "已收起项目：") }
 
 func (a *app) openShelf() {
-	if len(a.state.ShownProjects()) < len(a.state.Projects) {
+	if len(a.state.ShelvedProjects()) > 0 {
 		a.openPalette(a.shelvedPrefix())
 	}
 }
@@ -54,19 +54,14 @@ func (a *app) shelfButton(c *ui.Context, shelved []*layout.Project, waiting map[
 		waits += waiting[p.Name]
 	}
 	expanded := a.state.RailExpanded
-	height := float32(40)
-	if expanded {
-		height = 44
-	}
 	label := fmt.Sprintf(a.text("Shelved projects: %d", "已收起的项目：%d"), len(shelved))
-	waitingLabel := fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), waits)
-	a.railAction(ui.ButtonBase(c.Key("shelf")).Height(height).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
+	waitingLabel := a.waitingLabel(waits)
+	a.railAction(ui.ButtonBase(c.Key("shelf")).Height(a.railTileHeight()).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
 		Label(label).Tooltip(label + " (" + shelfKeys.String() + ")")).Children(func() {
 		ui.Box(c).Width(32).Height(32).Shrink(0).Radius(8).Border(1, a.theme.Border).Center().Children(func() {
 			ui.Icon(c, moreIcon).Size(18, 18).Shrink(0)
 			if waits > 0 && !expanded {
-				ui.Box(c).Absolute().Top(-3).Right(-3).Width(10).Height(10).Radius(5).
-					Background(a.theme.Warning).Border(2, a.theme.Surface).Label(waitingLabel)
+				a.waitingDot(c, waitingLabel)
 			}
 		})
 		if !expanded {
@@ -75,7 +70,7 @@ func (a *app) shelfButton(c *ui.Context, shelved []*layout.Project, waiting map[
 		ui.Text(c, a.text("Shelved", "已收起")).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 		ui.Text(c, fmt.Sprint(len(shelved))).FontSize(theme.Caption).Shrink(0)
 		if waits > 0 {
-			ui.Text(c, fmt.Sprintf("●%d", waits)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
+			a.waitingCount(c, waits, waitingLabel)
 		}
 	}).OnClick(a.openShelf)
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
@@ -52,7 +51,7 @@ func (a *app) projectRail(c *ui.Context) {
 					}
 					a.projectButton(c, p, panels[p.Name], waiting[p.Name], home, tip)
 				}
-				if shelved := slices.DeleteFunc(slices.Clone(a.state.Projects), func(p *layout.Project) bool { return !p.Shelved }); len(shelved) > 0 {
+				if shelved := a.state.ShelvedProjects(); len(shelved) > 0 {
 					a.shelfButton(c, shelved, waiting)
 				}
 				add := a.text("Add Project", "添加项目")
@@ -76,11 +75,8 @@ func (a *app) projectRail(c *ui.Context) {
 // the agents waiting in it; tip is its tooltip.
 func (a *app) projectButton(c *ui.Context, p *layout.Project, hasPanels bool, waiting int, home, tip string) {
 	expanded := a.state.RailExpanded
-	height := float32(40)
-	if expanded {
-		height = 44
-	}
-	waitingLabel := fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), waiting)
+	height := a.railTileHeight()
+	waitingLabel := a.waitingLabel(waiting)
 	active := p.Name == a.state.ActiveProject
 	b := ui.ButtonBase(c.Key(p.Name)).Height(height).FillWidth().Shrink(0).Padding(0, 4).Gap(8).Justify(ui.Start).
 		Label(p.Name).Tooltip(tip).Children(func() {
@@ -90,8 +86,7 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, hasPanels bool, wa
 		ui.Box(c).Width(32).Height(32).Shrink(0).Radius(8).Background(projectColor(p.Name)).Center().Children(func() {
 			ui.Text(c, projectAbbrev(p.Name)).Bold().TextColor(ui.RGB(255, 255, 255))
 			if waiting > 0 && !expanded {
-				ui.Box(c).Absolute().Top(-3).Right(-3).Width(10).Height(10).Radius(5).
-					Background(a.theme.Warning).Border(2, a.theme.Surface).Label(waitingLabel)
+				a.waitingDot(c, waitingLabel)
 			}
 		})
 		if !expanded {
@@ -102,7 +97,7 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, hasPanels bool, wa
 			ui.Text(c, shortPath(p.CWD, home)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
 		})
 		if waiting > 0 {
-			ui.Text(c, fmt.Sprintf("●%d", waiting)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Warning).Label(waitingLabel)
+			a.waitingCount(c, waiting, waitingLabel)
 		}
 	})
 	if active {
@@ -112,6 +107,30 @@ func (a *app) projectButton(c *ui.Context, p *layout.Project, hasPanels bool, wa
 		b.Opacity(0.55)
 	}
 	b.OnClick(func() { a.selectProject(p.Name) }).ContextMenu(func(m *ui.Menu) { a.projectMenu(m, p.Name) })
+}
+
+// railTileHeight is the height of a rail tile, taller beside a name and
+// path when the rail is expanded.
+func (a *app) railTileHeight() float32 {
+	if a.state.RailExpanded {
+		return 44
+	}
+	return 40
+}
+
+func (a *app) waitingLabel(n int) string {
+	return fmt.Sprintf(a.text("%d waiting", "%d 个等待中"), n)
+}
+
+// waitingDot marks a tile's corner when agents wait; waitingCount shows
+// their number beside it in the expanded rail.
+func (a *app) waitingDot(c *ui.Context, label string) {
+	ui.Box(c).Absolute().Top(-3).Right(-3).Width(10).Height(10).Radius(5).
+		Background(a.theme.Warning).Border(2, a.theme.Surface).Label(label)
+}
+
+func (a *app) waitingCount(c *ui.Context, n int, label string) {
+	ui.Text(c, fmt.Sprintf("●%d", n)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Warning).Label(label)
 }
 
 // panelsByProject excludes the fixed side views and follows a panel's

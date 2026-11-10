@@ -314,7 +314,8 @@ func (s *State) RevealView(view ViewID) (RegionID, error) {
 	for _, p := range s.Projects {
 		for _, perspective := range p.Perspectives {
 			if r == perspective.Bottom || slices.Contains(perspective.Columns, r) {
-				s.ActiveProject, p.ActivePerspective = p.Name, perspective.ID
+				s.enter(p)
+				p.ActivePerspective = perspective.ID
 			}
 		}
 	}
