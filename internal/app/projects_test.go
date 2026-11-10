@@ -122,3 +122,37 @@ func TestProjectAbbrevAndShortPath(t *testing.T) {
 		}
 	}
 }
+
+func TestShelvedProjectsLeaveTheProjectKeys(t *testing.T) {
+	a, tt := testApp(t)
+	for _, name := range []string{"A", "B", "C"} {
+		if err := a.state.AddProject(name, t.TempDir()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a.selectProject("A")
+	tt.Key(ui.Ctrl|ui.Super, ui.KeyH)
+	if a.state.ActiveProject != "B" || !a.state.Projects[1].Shelved {
+		t.Fatalf("shelving A made %s current", a.state.ActiveProject)
+	}
+	tt.Key(ui.Ctrl|ui.Super, ui.KeyBracketRight)
+	tt.Key(ui.Ctrl|ui.Super, ui.KeyBracketRight)
+	if a.state.ActiveProject != "Jun" {
+		t.Fatalf("next project went to %s, not past the shelved A", a.state.ActiveProject)
+	}
+	tt.Key(ui.Ctrl|ui.Super, ui.Key2)
+	if a.state.ActiveProject != "B" {
+		t.Fatalf("⌃⌘2 went to %s, counting the shelved A", a.state.ActiveProject)
+	}
+
+	tt.Key(ui.Ctrl|ui.Super, ui.Key0)
+	tt.Frame()
+	items, err := a.paletteItems()
+	if err != nil || !a.palette.open || len(items) != 1 || items[0].title != "Shelved Project: A" {
+		t.Fatalf("the shelf listed %v, error %v", items, err)
+	}
+	tt.Key(0, ui.KeyEnter)
+	if a.state.ActiveProject != "A" || len(a.state.ShownProjects()) != 4 || a.state.ShownProjects()[1].Name != "A" {
+		t.Fatal("choosing A on the shelf did not bring it back in place")
+	}
+}

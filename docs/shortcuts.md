@@ -48,9 +48,11 @@ Perspectives are ordered as in the Perspective menu. Switching focuses the first
 |---|---|
 | Next / previous project | ⌃⌘] / ⌃⌘[ |
 | Project 1–9 | ⌃⌘1–⌃⌘9 |
+| Shelve the current project | ⌃⌘H |
+| Shelved projects (the command palette listing them) | ⌃⌘0 |
 | Open Project… (the command palette at `~/`) | ⌘O |
 
-Projects are ordered as in the project rail. Switching restores the project's selected perspective and focuses its first column.
+Projects are ordered as in the project rail, without the [shelved ones](workspace.md#projects). Switching restores the project's selected perspective and focuses its first column.
 
 ## Back and forward
 

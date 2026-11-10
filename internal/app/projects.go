@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bencode/jun/internal/layout"
@@ -40,7 +41,8 @@ func (a *app) projectRail(c *ui.Context) {
 				home, _ := os.UserHomeDir()
 				waiting := a.waitingByProject()
 				panels := a.panelsByProject()
-				for i, p := range a.state.Projects {
+				shown := a.state.ShownProjects()
+				for i, p := range shown {
 					tip := p.Name + " " + p.CWD
 					if keys, ok := projectKeys(i); ok {
 						tip += "\n" + keys.String()
@@ -49,6 +51,9 @@ func (a *app) projectRail(c *ui.Context) {
 						tip += "\n" + a.text("No open panels", "没有打开的面板")
 					}
 					a.projectButton(c, p, panels[p.Name], waiting[p.Name], home, tip)
+				}
+				if shelved := slices.DeleteFunc(slices.Clone(a.state.Projects), func(p *layout.Project) bool { return !p.Shelved }); len(shelved) > 0 {
+					a.shelfButton(c, shelved, waiting)
 				}
 				add := a.text("Add Project", "添加项目")
 				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
