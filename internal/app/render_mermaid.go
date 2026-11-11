@@ -18,7 +18,10 @@ type mermaidDiagrams struct {
 	made map[diagramKey]*diagram
 }
 
-type diagramKey struct{ src, family string }
+type diagramKey struct {
+	src, family string
+	width       float32
+}
 
 // diagram is a block laid out and ready to paint, or why it could not be.
 type diagram struct {
@@ -35,13 +38,15 @@ type inkFunc func(scene.Paint) (ui.Color, bool)
 
 // block shows a diagram no wider than the page and no larger than it was laid
 // out, or the code while the block is still being written. A diagram sumi
-// cannot draw stays code, with the reason below it.
+// cannot draw stays code, with the reason below it. A gantt diagram is laid out
+// as wide as the reading width, as Mermaid fills the element it draws in; the
+// full width gives none, and sumi takes its own, 1200.
 func (d *mermaidDiagrams) block(c *ui.Context, b *markdown.CodeBlockView) {
 	if b.Open {
 		markdown.DefaultCodeBlock(c, b)
 		return
 	}
-	dg := d.diagram(b.Code(), c.Theme().Font)
+	dg := d.diagram(b.Code(), c.Theme().Font, markdownMaxWidths[d.a.markdownWidth()])
 	if dg.err != nil {
 		markdown.DefaultCodeBlock(c, b)
 		ui.Text(c, d.a.text("Not drawn: ", "未绘制：")+dg.err.Error()).FontSize(theme.Caption).TextColor(c.Theme().TextMuted)
@@ -59,28 +64,28 @@ func (d *mermaidDiagrams) block(c *ui.Context, b *markdown.CodeBlockView) {
 	})
 }
 
-func (d *mermaidDiagrams) diagram(src, family string) *diagram {
-	k := diagramKey{src, family}
+func (d *mermaidDiagrams) diagram(src, family string, width float32) *diagram {
+	k := diagramKey{src, family, width}
 	if dg := d.made[k]; dg != nil {
 		return dg
 	}
 	if d.made == nil {
 		d.made = map[diagramKey]*diagram{}
 	}
-	dg := layOut(src, family)
+	dg := layOut(src, family, width)
 	d.made[k] = dg
 	return dg
 }
 
 // layOut runs sumi on the UI thread. A panic there is reported as the block's
 // error: a diagram must not take down the terminals running beside it.
-func layOut(src, family string) (dg *diagram) {
+func layOut(src, family string, width float32) (dg *diagram) {
 	defer func() {
 		if r := recover(); r != nil {
 			dg = &diagram{err: fmt.Errorf("sumi failed: %v", r)}
 		}
 	}()
-	s, err := mermaid.Layout(src, mermaid.Options{Measurer: uiMeasurer{family, map[scene.Font][2]float64{}}})
+	s, err := mermaid.Layout(src, mermaid.Options{Measurer: uiMeasurer{family, map[scene.Font][2]float64{}}, Width: float64(width)})
 	if err != nil {
 		return &diagram{err: err}
 	}
