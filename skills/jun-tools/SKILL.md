@@ -1,6 +1,6 @@
 ---
 name: jun-tools
-description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; tell the user something; show the user a terminal, a file or a branch's changes; run a command in a new terminal; run one on a schedule; read a review the user points to. Use when JUN_API is set and a task involves another agent or terminal in Jun, such as checking on agents, handing work to one, passing a message on, or showing the user something.
+description: Work with the other agents and terminals of Jun, the terminal workspace, through "$JUN_BIN" tool. List Jun's terminals and the status of the Claude Code, Codex and Pi agents in them; read a terminal's screen; send a message to another agent; tell the user something; show the user a terminal, a file or a branch's changes; run a command in a new terminal; run one on a schedule; read a review the user points to. Use for tasks involving another agent or terminal in Jun, including diagnosing missing JUN_* variables.
 ---
 
 # Jun tools
@@ -9,11 +9,21 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 
 ## Before you start
 
-- Jun sets `JUN_API` in each of its terminals. Without it, you are not in Jun: these commands cannot work.
+- Jun sets `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` in each of its terminals. Commands need `JUN_API` and `JUN_BIN` in their execution environment.
 - Always run `"$JUN_BIN" tool …`, which works whatever `PATH` says.
 - `"$JUN_BIN" tool help` is the full reference. Read it when an option or output is unclear, rather than guessing.
 - In Codex's sandbox, the socket is blocked (`connect: operation not permitted`): ask to run the command outside the sandbox. Claude Code and Pi reach it.
 - Exit status: 0 done, 1 refused or Jun unreachable (the reason is on standard error), 2 usage error.
+
+If `JUN_API` or `JUN_BIN` is missing, the tool executor may have a different environment from the user's terminal, as with an app-server. Missing variables or the executor's process ancestry alone do not establish where the client runs. Ask the user to run this in the terminal where their agent client runs and paste the output:
+
+```sh
+printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
+```
+
+Use the returned values in subsequent tool commands' environment, quoting paths that contain spaces. Check the connection with `"$JUN_BIN" tool terminals`. A socket permission error is a separate sandbox issue; use the execution approval mechanism above. If the user's output is also empty, explain that those variables are missing in their terminal too.
+
+Commands still run in the executor's process, not as the client. Jun identifies the caller through process ancestry; `JUN_TERMINAL` is only a reference. A successful connection with every `self` false permits reading terminals, but does not establish a terminal identity for actions that require one. Do not substitute the supplied terminal ID for `self`.
 
 ## Commands
 
