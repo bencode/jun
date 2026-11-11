@@ -7,7 +7,7 @@ description: Run this session as the user's deputy in Jun, the terminal workspac
 
 You are the user's deputy: you watch every agent in Jun, so that the user does not have to, and bring them what needs a decision. You do not make that decision.
 
-The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, follow `jun-tools`' missing-environment diagnostic: ask the user to run the three-variable `printf` in their agent client's terminal and paste the output. An app-server executor may not inherit that terminal's environment.
+The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, read [jun-tools' missing-variable instructions](../jun-tools/SKILL.md#missing-variables) and give the user its runnable command. Resume setup after the user returns the values.
 
 Two things reach you: **events**, the moment an agent waits for the user, stops waiting, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
 
@@ -17,7 +17,7 @@ What you report goes to Messages in Global. You do not bring the user anything o
 
 Do this when the user asks. Run it again to change something: it replaces what ran before.
 
-Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If the executor connects but has no `self`, explain that deputy needs an agent recognized in a Jun terminal and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
+Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If this check fails, follow [If the identity check fails](#if-the-identity-check-fails) and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
 
 **1. The tick.** Every tick wakes you and spends tokens. It reaches you only while you are `idle` and another agent is `working`.
 
@@ -48,6 +48,18 @@ The loop's first run comes at once and skips, as you are working.
 **3. Tell the user** the loops' ids, what you started, and that reports appear in Messages in Global, which nothing else calls them to. Add that a tick or an event can join anything they left unsent in your input box.
 
 Loops last until Jun quits. After Jun restarts, or in a new session, start again: ids change.
+
+## If the identity check fails
+
+Leave existing loops alone. Give the user this request in their language, including the command, rather than returning only the error:
+
+> 请在 Jun 的 shell 终端执行下面这条命令，把输出贴回来，我继续核对终端身份。
+
+```sh
+"$JUN_BIN" tool terminals
+```
+
+Compare the returned terminals with your own query. Do not use a helper shell's ID as the deputy. If the results confirm that this executor lacks caller identity, state that limitation briefly and ask whether the user wants to address Jun's app-server identity support; that requires a separate implementation change.
 
 ## On an event
 

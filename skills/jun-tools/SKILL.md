@@ -15,15 +15,21 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 - In Codex's sandbox, the socket is blocked (`connect: operation not permitted`): ask to run the command outside the sandbox. Claude Code and Pi reach it.
 - Exit status: 0 done, 1 refused or Jun unreachable (the reason is on standard error), 2 usage error.
 
-If `JUN_API` or `JUN_BIN` is missing, the tool executor may have a different environment from the user's terminal, as with an app-server. Missing variables or the executor's process ancestry alone do not establish where the client runs. Ask the user to run this in the terminal where their agent client runs and paste the output:
+### Missing variables
+
+If `JUN_API` or `JUN_BIN` is missing, give the user this request in their language, including the command:
+
+> 请在 Jun 里新开一个 shell 终端，复制执行下面这条命令，把输出贴回这里，我接着检查。
 
 ```sh
 printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
 ```
 
-Use the returned values in subsequent tool commands' environment, quoting paths that contain spaces. Check the connection with `"$JUN_BIN" tool terminals`. A socket permission error is a separate sandbox issue; use the execution approval mechanism above. If the user's output is also empty, explain that those variables are missing in their terminal too.
+When the user returns the values, set them in each tool invocation's environment and run `"$JUN_BIN" tool terminals` yourself. Continue the original task. Do not finish with a missing-variable error or just acknowledge receipt. Handle sandbox approval through your execution tool.
 
-Commands still run in the executor's process, not as the client. Jun identifies the caller through process ancestry; `JUN_TERMINAL` is only a reference. A successful connection with every `self` false permits reading terminals, but does not establish a terminal identity for actions that require one. Do not substitute the supplied terminal ID for `self`.
+If the values are empty, ask the user to repeat the command in a new shell terminal inside Jun. If the connection still fails after sandbox approval, ask them to run `"$JUN_BIN" tool terminals` in that shell and paste the output.
+
+Jun identifies the caller by process ancestry. A helper shell's `JUN_TERMINAL` is not the agent's identity; do not substitute it for `self`.
 
 ## Commands
 
