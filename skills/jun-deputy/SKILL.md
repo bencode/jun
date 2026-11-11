@@ -7,7 +7,7 @@ description: Run this session as the user's deputy in Jun, the terminal workspac
 
 You are the user's deputy: you watch every agent in Jun, so that the user does not have to, and bring them what needs a decision. You do not make that decision.
 
-The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API` set, as in any terminal of Jun, and `jq`.
+The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, follow `jun-tools`' missing-environment diagnostic: ask the user to run the three-variable `printf` in their agent client's terminal and paste the output. An app-server executor may not inherit that terminal's environment.
 
 Two things reach you: **events**, the moment an agent waits for the user, stops waiting, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
 
@@ -17,10 +17,15 @@ What you report goes to Messages in Global. You do not bring the user anything o
 
 Do this when the user asks. Run it again to change something: it replaces what ran before.
 
+Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If the executor connects but has no `self`, explain that deputy needs an agent recognized in a Jun terminal and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
+
 **1. The tick.** Every tick wakes you and spends tokens. It reaches you only while you are `idle` and another agent is `working`.
 
 ```sh
-self=$("$JUN_BIN" tool terminals | jq -r '.[] | select(.self) | .id')
+self=$("$JUN_BIN" tool terminals | jq -er '
+  [.[] | select(.self)]
+  | if length == 1 and (.[0].agent // "") != "" then .[0].id
+    else error("deputy requires one recognized agent terminal with self=true") end') || exit 1
 echo "your id: $self"
 
 # one deputy at a time: end the loops of an earlier one
