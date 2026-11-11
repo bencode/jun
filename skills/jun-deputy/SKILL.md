@@ -7,7 +7,7 @@ description: Run this session as the user's deputy in Jun, the terminal workspac
 
 You are the user's deputy: you watch every agent in Jun, so that the user does not have to, and bring them what needs a decision. You do not make that decision.
 
-The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, read [jun-tools' missing-variable instructions](../jun-tools/SKILL.md#missing-variables-give-the-user-the-next-step) and include its command and shell instructions in your reply. An app-server executor may not inherit the user's terminal environment. Resume setup after the user returns the values.
+The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, read [jun-tools' missing-variable instructions](../jun-tools/SKILL.md#missing-variables) and give the user its runnable command. Resume setup after the user returns the values.
 
 Two things reach you: **events**, the moment an agent waits for the user, stops waiting, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
 
@@ -17,7 +17,7 @@ What you report goes to Messages in Global. You do not bring the user anything o
 
 Do this when the user asks. Run it again to change something: it replaces what ran before.
 
-Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If this check fails, follow [When startup cannot proceed](#when-startup-cannot-proceed) and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
+Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If this check fails, follow [If the identity check fails](#if-the-identity-check-fails) and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
 
 **1. The tick.** Every tick wakes you and spends tokens. It reaches you only while you are `idle` and another agent is `working`.
 
@@ -49,20 +49,17 @@ The loop's first run comes at once and skips, as you are working.
 
 Loops last until Jun quits. After Jun restarts, or in a new session, start again: ids change.
 
-## When startup cannot proceed
+## If the identity check fails
 
-An error is a diagnostic for you, not a complete reply to the user. State what succeeded, what prevents startup, and the next action with its command or prompt. Do not finish with only the `jq` error, "no self", or "run inside Jun".
+Leave existing loops alone. Give the user this request in their language, including the command, rather than returning only the error:
 
-If the connection works but every `self` is false, explain that the current executor reaches Jun but Jun cannot associate it with a terminal. Deputy needs this identity to post reports in Messages and select its wakeup target. Exporting `JUN_TERMINAL` or restarting the same app-server-backed client does not establish it.
+> 请在 Jun 的 shell 终端执行下面这条命令，把输出贴回来，我继续核对终端身份。
 
-Offer a concrete handoff to an agent whose tool commands run locally under a Jun terminal. For example, if the user has Claude Code installed and wants to use it:
+```sh
+"$JUN_BIN" tool terminals
+```
 
-1. Open another terminal in the same Jun project, keeping the current session open.
-2. At that terminal's shell prompt, run `claude`.
-3. In Claude Code's chat input, send: `Use $jun-deputy to start monitoring the agents in Jun. Read skills/jun-deputy/SKILL.md if the skill is not listed.` Replace the skill path with the actual absolute path if the terminal is in another repository.
-4. The new deputy must verify its own `self` and report both loop IDs when startup succeeds.
-
-Offer this as a user choice; do not install another agent, change their configuration, or send the handoff yourself. If the user wants to keep the current app-server executor as deputy, explain that Jun needs a separate change to support its client identity; a skill edit cannot provide that support. Continue any read-only inspection the user already requested that does not require caller identity.
+Compare the returned terminals with your own query. Do not use a helper shell's ID as the deputy. If the results confirm that this executor lacks caller identity, state that limitation briefly and ask whether the user wants to address Jun's app-server identity support; that requires a separate implementation change.
 
 ## On an event
 
