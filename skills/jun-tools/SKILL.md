@@ -15,15 +15,27 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 - In Codex's sandbox, the socket is blocked (`connect: operation not permitted`): ask to run the command outside the sandbox. Claude Code and Pi reach it.
 - Exit status: 0 done, 1 refused or Jun unreachable (the reason is on standard error), 2 usage error.
 
-If `JUN_API` or `JUN_BIN` is missing, the tool executor may have a different environment from the user's terminal, as with an app-server. Missing variables or the executor's process ancestry alone do not establish where the client runs. Ask the user to run this in the terminal where their agent client runs and paste the output:
+### Missing variables: give the user the next step
+
+If `JUN_API` or `JUN_BIN` is missing, the tool executor may have a different environment from the user's terminal, as with an app-server. Missing variables or the executor's process ancestry alone do not establish where the client runs. Include a runnable command in your reply; do not finish with only "JUN_API is missing" or tell the user to consult this skill.
+
+Explain that you need the variables from their Jun instance, then give these instructions in the user's language:
+
+1. In Jun, open a shell terminal in the same Jun instance. If the current terminal shows an agent input box, use another terminal; keep the current agent running.
+2. Paste the command below at the shell prompt, not into the agent's chat input.
+3. Copy the three output lines back into this conversation. You will use them to check the connection and continue the original task.
 
 ```sh
 printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
 ```
 
-Use the returned values in subsequent tool commands' environment, quoting paths that contain spaces. Check the connection with `"$JUN_BIN" tool terminals`. A socket permission error is a separate sandbox issue; use the execution approval mechanism above. If the user's output is also empty, explain that those variables are missing in their terminal too.
+When the user returns the values, put them in the environment of each subsequent tool invocation, quoting paths that contain spaces. Setting them in the user's shell does not update an app-server's environment. Run `"$JUN_BIN" tool terminals` yourself and continue the original task when its prerequisites hold; do not stop at acknowledging receipt or ask for the same values again.
+
+If the output is empty, first clarify whether they used a shell inside Jun. If they used an external terminal, guide them to a new shell terminal in Jun and repeat the command there. If it is empty there too, investigate Jun's tool startup instead of inventing variable values. For a socket permission error, use the execution approval mechanism above. If Jun is unreachable, ask the user to confirm that the same Jun instance is still open and print its current variables again.
 
 Commands still run in the executor's process, not as the client. Jun identifies the caller through process ancestry; `JUN_TERMINAL` is only a reference. A successful connection with every `self` false permits reading terminals, but does not establish a terminal identity for actions that require one. Do not substitute the supplied terminal ID for `self`.
+
+The returned `JUN_TERMINAL` may identify the helper shell the user opened, rather than their agent. If caller identity blocks the task, explain the specific action that cannot proceed and give a concrete recovery step. For deputy startup, follow the recovery instructions in [jun-deputy](../jun-deputy/SKILL.md#when-startup-cannot-proceed).
 
 ## Commands
 
