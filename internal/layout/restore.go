@@ -29,6 +29,10 @@ func (s *State) Restore() error {
 	s.fillGlobalShares()
 	s.settleGlobal()
 	s.dropPlaceholders()
+	// The current project is never shelved, even in a file edited by hand.
+	if p := s.CurrentProject(); p != nil {
+		s.enter(p)
+	}
 	return nil
 }
 

@@ -68,7 +68,8 @@ func (s *State) RevealLocation(l Location) (RegionID, error) {
 	if r == nil {
 		return 0, fmt.Errorf("region not found")
 	}
-	s.ActiveProject, p.ActivePerspective = p.Name, perspective.ID
+	s.enter(p)
+	p.ActivePerspective = perspective.ID
 	s.reveal(r)
 	return r.ID, nil
 }

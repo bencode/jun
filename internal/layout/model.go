@@ -90,6 +90,7 @@ type Perspective struct {
 type Project struct {
 	Name              string         `json:"name"`
 	CWD               string         `json:"cwd"`
+	Shelved           bool           `json:"shelved,omitempty"` // folded away in the rail; never the current project
 	ActivePerspective PerspectiveID  `json:"activePerspective"`
 	Perspectives      []*Perspective `json:"perspectives"`
 }

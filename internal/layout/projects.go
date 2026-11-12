@@ -17,18 +17,67 @@ func (s *State) AddProject(name, cwd string) error {
 	p := &Project{Name: name, CWD: cwd, ActivePerspective: work.ID, Perspectives: []*Perspective{work}}
 
 	s.Projects = append(s.Projects, p)
-	s.ActiveProject = name
+	s.enter(p)
 	return nil
 }
 
 func (s *State) SelectProject(name string) error {
 	for _, p := range s.Projects {
 		if p.Name == name {
-			s.ActiveProject = name
+			s.enter(p)
 			return nil
 		}
 	}
 	return fmt.Errorf("project not found: %s", name)
+}
+
+// enter makes the project current, which takes it off the shelf. Every
+// switch of project goes through it.
+func (s *State) enter(p *Project) { s.ActiveProject, p.Shelved = p.Name, false }
+
+// ShownProjects are the projects not shelved, in the rail's order.
+func (s *State) ShownProjects() []*Project {
+	return slices.DeleteFunc(slices.Clone(s.Projects), func(p *Project) bool { return p.Shelved })
+}
+
+// ShelvedProjects are the projects on the shelf, in the rail's order.
+func (s *State) ShelvedProjects() []*Project {
+	return slices.DeleteFunc(slices.Clone(s.Projects), func(p *Project) bool { return !p.Shelved })
+}
+
+// ShelveProject shelves the project. The current one hands over to the
+// nearest shown project after it, else before it; the last shown project
+// cannot be shelved.
+func (s *State) ShelveProject(name string) error {
+	i := slices.IndexFunc(s.Projects, func(p *Project) bool { return p.Name == name })
+	if i < 0 {
+		return fmt.Errorf("project not found: %s", name)
+	}
+	p := s.Projects[i]
+	next := s.nearestShown(i, p)
+	if next == nil {
+		return fmt.Errorf("the last shown project cannot be shelved: %s", name)
+	}
+	p.Shelved = true
+	if s.ActiveProject == name {
+		s.enter(next)
+	}
+	return nil
+}
+
+// nearestShown is the first shown project from index i on, else the last
+// before it, skipping except.
+func (s *State) nearestShown(i int, except *Project) *Project {
+	shown := func(p *Project) bool { return !p.Shelved && p != except }
+	if j := slices.IndexFunc(s.Projects[i:], shown); j >= 0 {
+		return s.Projects[i+j]
+	}
+	for j := i - 1; j >= 0; j-- {
+		if shown(s.Projects[j]) {
+			return s.Projects[j]
+		}
+	}
+	return nil
 }
 
 // RenameProject renames the project and every reference to it: views of
@@ -57,7 +106,8 @@ func (s *State) RenameProject(old, name string) error {
 }
 
 // RemoveProject removes the project with its perspectives and its views
-// elsewhere, returning every view removed. Its neighbor becomes current.
+// elsewhere, returning every view removed. Its nearest shown neighbor
+// becomes current, or with none, its neighbor, taken off the shelf.
 func (s *State) RemoveProject(name string) ([]*View, error) {
 	i := slices.IndexFunc(s.Projects, func(p *Project) bool { return p.Name == name })
 	if i < 0 {
@@ -79,7 +129,11 @@ func (s *State) RemoveProject(name string) ([]*View, error) {
 	if s.ActiveProject == name {
 		s.ActiveProject = ""
 		if len(s.Projects) > 0 {
-			s.ActiveProject = s.Projects[min(i, len(s.Projects)-1)].Name
+			next := s.nearestShown(i, nil)
+			if next == nil {
+				next = s.Projects[min(i, len(s.Projects)-1)]
+			}
+			s.enter(next)
 		}
 	}
 	return removed, nil

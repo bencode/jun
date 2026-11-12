@@ -67,9 +67,11 @@ func shortcutGroups() []shortcutGroup {
 			{bilingual{"New perspective", "新建视角"}, keys(newPerspectiveKeys.String()), bilingual{}},
 		}},
 		{bilingual{"Projects", "项目"}, []shortcutRow{
-			{bilingual{"Next project", "下一个项目"}, keys("⌃⌘]"), bilingual{"In the project rail’s order, wrapping around", "按项目栏顺序循环"}},
-			{bilingual{"Previous project", "上一个项目"}, keys("⌃⌘["), bilingual{"In the project rail’s order, wrapping around", "按项目栏顺序循环"}},
-			{bilingual{"Project 1–9", "第 1–9 个项目"}, keys("⌃⌘1–⌃⌘9"), bilingual{"A missing one does nothing", "不存在时无操作"}},
+			{bilingual{"Next project", "下一个项目"}, keys("⌃⌘]"), bilingual{"In the project rail’s order, wrapping around; skips shelved projects", "按项目栏顺序循环，跳过已收起的项目"}},
+			{bilingual{"Previous project", "上一个项目"}, keys("⌃⌘["), bilingual{"In the project rail’s order, wrapping around; skips shelved projects", "按项目栏顺序循环，跳过已收起的项目"}},
+			{bilingual{"Project 1–9", "第 1–9 个项目"}, keys("⌃⌘1–⌃⌘9"), bilingual{"Counts only projects not shelved; a missing one does nothing", "只数未收起的项目；不存在时无操作"}},
+			{bilingual{"Shelve project", "收起项目"}, keys(shelveProjectKeys.String()), bilingual{"The current one; the last shown project stays", "收起当前项目；最后一个未收起的项目不能收起"}},
+			{bilingual{"Shelved projects", "已收起的项目"}, keys(shelfKeys.String()), bilingual{"The command palette listing them; choosing one brings it back", "打开只列已收起项目的命令面板，选中即放回"}},
 			{bilingual{"Open project", "打开项目"}, keys(openProjectKeys.String()), bilingual{"The command palette at ~/", "打开命令面板，预填 ~/"}},
 		}},
 		{bilingual{"Files", "文件"}, []shortcutRow{

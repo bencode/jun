@@ -16,6 +16,13 @@ func (a *app) projectMenu(m *ui.Menu, name string) {
 		f := &a.projectRename
 		f.open, f.project, f.name, f.error = true, name, name, ""
 	}
+	shelve := m.Item(a.text("Shelve Project", "收起项目")).Disabled(!a.canShelve(name))
+	if name == a.state.ActiveProject {
+		shelve.Shortcut(shelveProjectKeys.mods, shelveProjectKeys.key) // the shortcut shelves only the current one
+	}
+	if shelve.Chosen() {
+		a.shelveProject(name)
+	}
 	if m.Item(a.text("Remove Project…", "移除项目…")).Chosen() {
 		a.confirmRemoveProject(name)
 	}

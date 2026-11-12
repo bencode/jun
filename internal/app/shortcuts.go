@@ -32,6 +32,8 @@ var (
 	newPerspectiveKeys = keyCombo{ui.Super | ui.Shift, ui.KeyN}
 	goToHeadingKeys    = keyCombo{ui.Super | ui.Shift, ui.KeyO}
 	noteKeys           = keyCombo{ui.Super | ui.Shift, ui.KeyM}
+	shelveProjectKeys  = keyCombo{ui.Ctrl | ui.Super, ui.KeyH}
+	shelfKeys          = keyCombo{ui.Ctrl | ui.Super, ui.Key0}
 )
 
 // perspectiveKeys and projectKeys select the perspective or project at
@@ -125,6 +127,8 @@ func (a *app) shortcuts(c *ui.Context) {
 	c.OnShortcut(newPerspectiveKeys.mods, newPerspectiveKeys.key, func() { a.openPerspectiveForm(0) })
 	c.OnShortcut(ui.Ctrl|ui.Super, ui.KeyBracketRight, func() { a.cycleProject(1) })
 	c.OnShortcut(ui.Ctrl|ui.Super, ui.KeyBracketLeft, func() { a.cycleProject(-1) })
+	c.OnShortcut(shelveProjectKeys.mods, shelveProjectKeys.key, a.shelveCurrentProject)
+	c.OnShortcut(shelfKeys.mods, shelfKeys.key, a.openShelf)
 	for i, key := range digitKeys {
 		tab := i
 		if i == len(digitKeys)-1 {
@@ -168,17 +172,19 @@ func (a *app) selectPerspectiveAt(index int) {
 	}
 }
 
+// cycleProject and selectProjectAt go by the rail's shown projects.
 func (a *app) cycleProject(delta int) {
-	n := len(a.state.Projects)
+	shown := a.state.ShownProjects()
+	n := len(shown)
 	if n == 0 {
 		return
 	}
-	index := slices.IndexFunc(a.state.Projects, func(p *layout.Project) bool { return p.Name == a.state.ActiveProject })
-	a.selectProject(a.state.Projects[(index+delta+n)%n].Name)
+	index := slices.IndexFunc(shown, func(p *layout.Project) bool { return p.Name == a.state.ActiveProject })
+	a.selectProject(shown[(index+delta+n)%n].Name)
 }
 
 func (a *app) selectProjectAt(index int) {
-	if index < len(a.state.Projects) {
-		a.selectProject(a.state.Projects[index].Name)
+	if shown := a.state.ShownProjects(); index < len(shown) {
+		a.selectProject(shown[index].Name)
 	}
 }
