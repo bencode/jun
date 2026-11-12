@@ -13,7 +13,7 @@ import (
 
 const (
 	EnvAPI      = "JUN_API"      // the socket of the Jun that runs the terminal
-	EnvTerminal = "JUN_TERMINAL" // the terminal's id, for reference: Jun does not trust it
+	EnvTerminal = "JUN_TERMINAL" // the terminal's id, for a caller outside Jun's terminals
 	EnvBin      = "JUN_BIN"      // Jun's executable, whatever PATH and aliases say
 )
 
@@ -111,7 +111,11 @@ type Message struct {
 }
 
 type Request struct {
-	Op       Op      `json:"op"`
+	Op Op `json:"op"`
+	// Caller is the terminal the caller names as its own, from JUN_TERMINAL.
+	// Jun knows a caller by its processes, and takes this only for one in
+	// none of its terminals, such as a command Codex's shared server runs.
+	Caller   uint64  `json:"caller,omitempty"`
 	Terminal uint64  `json:"terminal,omitempty"` // screen
 	Lines    int     `json:"lines,omitempty"`    // screen, 1 to MaxLines
 	Target   *Target `json:"target,omitempty"`   // open, close, what a message links to
@@ -172,6 +176,10 @@ type Terminal struct {
 	Status  string `json:"status,omitempty"` // waiting, working or idle
 	Self    bool   `json:"self"`             // the caller runs in it
 }
+
+// EnvCommand prints a terminal's variables, for the user to run in it when a
+// program outside it needs them.
+const EnvCommand = `printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"`
 
 // Env is what a terminal's environment gets, for its programs to reach Jun.
 func Env(socket, bin string, terminal uint64) []string {

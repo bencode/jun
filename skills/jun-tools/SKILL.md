@@ -15,15 +15,24 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 - In Codex's sandbox, the socket is blocked (`connect: operation not permitted`): ask to run the command outside the sandbox. Claude Code and Pi reach it.
 - Exit status: 0 done, 1 refused or Jun unreachable (the reason is on standard error), 2 usage error.
 
-If `JUN_API` or `JUN_BIN` is missing, the tool executor may have a different environment from the user's terminal, as with an app-server. Missing variables or the executor's process ancestry alone do not establish where the client runs. Ask the user to run this in the terminal where their agent client runs and paste the output:
+### When the variables are missing
+
+Your commands may run outside the terminal your session is in, as the commands of Codex's shared background server do: `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` are missing there. Do not guess them, and do not stop at saying they are missing. Ask the user, in their language, to run this in the Jun terminal your session is in and paste what it prints:
 
 ```sh
 printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
 ```
 
-Use the returned values in subsequent tool commands' environment, quoting paths that contain spaces. Check the connection with `"$JUN_BIN" tool terminals`. A socket permission error is a separate sandbox issue; use the execution approval mechanism above. If the user's output is also empty, explain that those variables are missing in their terminal too.
+Then set all three for each command, quoting paths with spaces, and check with `terminals`:
 
-Commands still run in the executor's process, not as the client. Jun identifies the caller through process ancestry; `JUN_TERMINAL` is only a reference. A successful connection with every `self` false permits reading terminals, but does not establish a terminal identity for actions that require one. Do not substitute the supplied terminal ID for `self`.
+```sh
+export JUN_API='<JUN_API>' JUN_BIN='<JUN_BIN>' JUN_TERMINAL=<JUN_TERMINAL>
+"$JUN_BIN" tool terminals
+```
+
+Jun knows a caller by its processes. A caller in none of its terminals is taken to be the terminal `JUN_TERMINAL` names, so `self` and `open` work as in that terminal. If the user's output is empty too, their terminal is not one of Jun's: tell them so.
+
+When a command fails, its error says what to do next: follow it.
 
 ## Commands
 

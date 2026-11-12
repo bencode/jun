@@ -74,11 +74,26 @@ func TestLayoutToolsChangeOnlyForTheTerminalTheUserIsWith(t *testing.T) {
 			t.Fatalf("%+v: %q, want %q", req, resp.Error, want)
 		}
 	}
-	if resp := a.toolLayout(back, nil); resp.Error != "caller is not a terminal of this Jun" {
+	if resp := a.toolLayout(back, nil); !strings.HasPrefix(resp.Error, "caller is not a terminal of this Jun") {
 		t.Fatalf("a caller outside Jun: %q", resp.Error)
 	}
 	a.lastTerminal = other.ID
 	refused(back, "the user is not with you")
+	// A caller outside Jun's terminals, such as a command Codex's shared
+	// server runs, is the terminal it names, and the guard holds for it.
+	outside := func(named terminal.ID, want string) {
+		t.Helper()
+		if resp := a.toolLayout(tool.Request{Op: tool.OpBack, Caller: uint64(named)}, nil); !strings.HasPrefix(resp.Error, want) {
+			t.Fatalf("named %d: %q, want %q", named, resp.Error, want)
+		}
+	}
+	outside(caller.ID, "the user is not with you")
+	outside(other.ID, "nothing to go back to") // past the guard
+	outside(999, "JUN_TERMINAL=999 is not a terminal of this Jun")
+	// Its processes tell a caller in a terminal, whatever it names.
+	if resp := a.toolLayout(tool.Request{Op: tool.OpBack, Caller: uint64(other.ID)}, shellOf(t, caller)); resp.Error != "the user is not with you" {
+		t.Fatalf("a terminal's caller naming another: %q", resp.Error)
+	}
 	a.peek = agentPeek{id: caller.ID}
 	refused(back, "nothing to go back to") // past the guard
 	a.peek, a.lastTerminal = agentPeek{}, caller.ID

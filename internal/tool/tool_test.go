@@ -81,7 +81,7 @@ func TestMainUsage(t *testing.T) {
 	if code, _, stderr := runWith("/nowhere", strings.Repeat("x", MaxText)+"\n\n\n", "send", "3", "-"); code != 2 || !strings.Contains(stderr, "at most") {
 		t.Errorf("long standard input: exit %d, %q", code, stderr)
 	}
-	if code, _, stderr := run("", "terminals"); code != 1 || !strings.Contains(stderr, EnvAPI+" is not set") {
+	if code, _, stderr := run("", "terminals"); code != 1 || !strings.Contains(stderr, EnvAPI+" is not set") || !strings.Contains(stderr, EnvCommand) {
 		t.Fatalf("without JUN_API: %d %q", code, stderr)
 	}
 	if code, _, stderr := run(socketPath(t), "terminals"); code != 1 || !strings.Contains(stderr, "cannot reach Jun") {
@@ -163,6 +163,20 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "back"); code != 0 || out != "" {
 		t.Fatalf("back: %d %q", code, out)
 	}
+	// A caller outside Jun's terminals names its own, from JUN_TERMINAL.
+	named := func(value string) (int, string) {
+		var stderr bytes.Buffer
+		code := Main([]string{"back"}, strings.NewReader(""), &bytes.Buffer{}, &stderr, func(name string) string {
+			return map[string]string{EnvAPI: path, EnvTerminal: value}[name]
+		})
+		return code, stderr.String()
+	}
+	if code, stderr := named("5"); code != 0 {
+		t.Fatalf("named terminal: %d %q", code, stderr)
+	}
+	if code, stderr := named("five"); code != 2 || !strings.Contains(stderr, "is not a terminal id") {
+		t.Fatalf("a name that is no id: %d %q", code, stderr)
+	}
 	if code, _, _ := run(path, "send", "3", "a\nb\n"); code != 0 {
 		t.Fatalf("send: %d", code)
 	}
@@ -218,7 +232,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	}
 	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
-		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack},
+		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack}, {Op: OpBack, Caller: 5},
 		{Op: OpSend, Terminal: 3, Text: "a\nb"}, {Op: OpSend, Terminal: 3, Text: "x"},
 		{Op: OpMessage, Title: "Asks", Kind: MessageAsk, Target: &Target{Kind: TargetTerminal, ID: 3}, Text: "It waits"},
 		{Op: OpMessages}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone, Text: "Answered"}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone},

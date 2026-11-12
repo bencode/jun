@@ -55,9 +55,9 @@ func (a *app) toolMessage(req tool.Request, callers []int) (uint64, error) {
 	if !slices.Contains(tool.MessageKinds, kind) {
 		return 0, fmt.Errorf("no kind %q", kind)
 	}
-	caller := a.toolCaller(callers)
-	if caller == 0 {
-		return 0, errors.New("caller is not a terminal of this Jun")
+	caller, err := a.toolCaller(callers, req.Caller)
+	if err != nil {
+		return 0, err
 	}
 	var project *layout.Project
 	if req.Target != nil {
@@ -80,8 +80,8 @@ func (a *app) toolMessage(req tool.Request, callers []int) (uint64, error) {
 // toolUpdateMessage changes a message's kind, adds a reply, or both. A reply
 // is news, so the message moves to the top; a new kind alone leaves it there.
 func (a *app) toolUpdateMessage(req tool.Request, callers []int) error {
-	if a.toolCaller(callers) == 0 {
-		return errors.New("caller is not a terminal of this Jun")
+	if _, err := a.toolCaller(callers, req.Caller); err != nil {
+		return err
 	}
 	if req.Kind != "" && !slices.Contains(tool.MessageKinds, req.Kind) {
 		return fmt.Errorf("no kind %q", req.Kind)

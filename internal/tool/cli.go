@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -137,11 +138,16 @@ Environment, set in each of Jun's terminals:
   JUN_API       the socket of the Jun that runs the terminal; nothing else
                 is tried without it
   JUN_BIN       Jun's executable
-  JUN_TERMINAL  the terminal's id, for reference: Jun tells the caller by
-                its processes, not by this
+  JUN_TERMINAL  the terminal's id. Jun tells the caller by its processes,
+                and takes this only for one outside its terminals
 
 Exit status: 0 done, 1 refused or Jun unreachable, 2 usage error.
 Errors go to standard error.
+
+Outside Jun's terminals, as in the commands Codex's shared server runs,
+the variables are missing. Have the user run this in the Jun terminal of
+the session, and set what it prints:
+  ` + EnvCommand + `
 
 In a sandbox: the commands connect to the Unix socket in JUN_API. Codex's
 sandbox blocks it ("connect: operation not permitted"): approve running
@@ -157,7 +163,7 @@ var errHelp = errors.New("help")
 func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(string) string) int {
 	req, err := parse(args, stdin)
 	if errors.Is(err, errHelp) {
-		fmt.Fprint(stdout, help)
+		io.WriteString(stdout, help)
 		return 0
 	}
 	if err != nil {
@@ -166,12 +172,21 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 	}
 	path := getenv(EnvAPI)
 	if path == "" {
-		fmt.Fprintf(stderr, "jun tool: %s is not set; run inside a Jun terminal\n", EnvAPI)
+		fmt.Fprintf(stderr, "jun tool: %s is not set: this command runs outside Jun's terminals. Ask the user to run this "+
+			"in the Jun terminal your session runs in and paste what it prints, then set those variables for each command:\n  %s\n",
+			EnvAPI, EnvCommand)
 		return 1
 	}
 	if req.Op == OpWatch {
 		fmt.Fprintf(stderr, "jun tool: %v\n", watch(path, stdout))
 		return 1
+	}
+	if named := getenv(EnvTerminal); named != "" {
+		if req.Caller, err = strconv.ParseUint(named, 10, 64); err != nil {
+			fmt.Fprintf(stderr, "jun tool: %s=%q is not a terminal id: set it to what echo $%s prints in the terminal your session runs in\n",
+				EnvTerminal, named, EnvTerminal)
+			return 2
+		}
 	}
 	resp, err := call(path, req)
 	if err != nil {
