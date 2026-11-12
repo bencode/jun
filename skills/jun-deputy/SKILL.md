@@ -7,7 +7,7 @@ description: Run this session as the user's deputy in Jun, the terminal workspac
 
 You are the user's deputy: you watch every agent in Jun, so that the user does not have to, and bring them what needs a decision. You do not make that decision.
 
-The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_API`, `JUN_BIN` and `jq`. If either variable is missing, follow `jun-tools`' missing-environment diagnostic: ask the user to run the three-variable `printf` in their agent client's terminal and paste the output. An app-server executor may not inherit that terminal's environment.
+The commands are those of the `jun-tools` skill; without it, read `"$JUN_BIN" tool help`. You need `JUN_BIN` and `jq`. If the `JUN_*` variables are missing, as in the commands Codex's shared background server runs, set them as `jun-tools` says under "When the variables are missing".
 
 Two things reach you: **events**, the moment an agent waits for the user, stops waiting, finishes or goes while working, and a **tick** every 15 minutes while another agent is `working`, for what no event tells: that it is stuck.
 
@@ -17,7 +17,7 @@ What you report goes to Messages in Global. You do not bring the user anything o
 
 Do this when the user asks. Run it again to change something: it replaces what ran before.
 
-Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. If the executor connects but has no `self`, explain that deputy needs an agent recognized in a Jun terminal and leave existing loops alone. User-supplied `JUN_TERMINAL` does not establish this identity.
+Before cancelling or creating any loops, check the connection and confirm that `terminals` returns exactly one `self: true` entry with an agent. Without one, get `JUN_TERMINAL` from the user as `jun-tools` says, and leave existing loops alone until then.
 
 **1. The tick.** Every tick wakes you and spends tokens. It reaches you only while you are `idle` and another agent is `working`.
 

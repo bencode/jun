@@ -6,6 +6,7 @@ package tool
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -177,9 +178,11 @@ type Terminal struct {
 	Self    bool   `json:"self"`             // the caller runs in it
 }
 
-// EnvCommand prints a terminal's variables, for the user to run in it when a
-// program outside it needs them.
-const EnvCommand = `printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"`
+// SocketPath is the socket of the Jun whose configuration file is at
+// configPath, beside it.
+func SocketPath(configPath string) string {
+	return filepath.Join(filepath.Dir(configPath), "jun.sock")
+}
 
 // Env is what a terminal's environment gets, for its programs to reach Jun.
 func Env(socket, bin string, terminal uint64) []string {

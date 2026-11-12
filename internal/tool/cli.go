@@ -10,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/bencode/jun/internal/config"
 )
 
 const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
@@ -135,8 +137,8 @@ project, with no tab unless asked for:
   ssh joins them: quote a command whose own quotes must stay.
 
 Environment, set in each of Jun's terminals:
-  JUN_API       the socket of the Jun that runs the terminal; nothing else
-                is tried without it
+  JUN_API       the socket of the Jun that runs the terminal; without it,
+                jun.sock beside Jun's configuration file
   JUN_BIN       Jun's executable
   JUN_TERMINAL  the terminal's id. Jun tells the caller by its processes,
                 and takes this only for one outside its terminals
@@ -145,11 +147,11 @@ Exit status: 0 done, 1 refused or Jun unreachable, 2 usage error.
 Errors go to standard error.
 
 Outside Jun's terminals, as in the commands Codex's shared server runs,
-the variables are missing. Have the user run this in the Jun terminal of
-the session, and set what it prints:
-  ` + EnvCommand + `
+the variables are missing. The commands reach Jun all the same, but Jun
+cannot tell the caller's terminal: ask the user to run echo $JUN_TERMINAL
+in the Jun terminal of the session, and set JUN_TERMINAL to what it prints.
 
-In a sandbox: the commands connect to the Unix socket in JUN_API. Codex's
+In a sandbox: the commands connect to Jun's Unix socket. Codex's
 sandbox blocks it ("connect: operation not permitted"): approve running
 the command outside the sandbox, or set network_access = true under
 [sandbox_workspace_write] in ~/.codex/config.toml. Claude Code's sandbox
@@ -172,10 +174,12 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 	}
 	path := getenv(EnvAPI)
 	if path == "" {
-		fmt.Fprintf(stderr, "jun tool: %s is not set: this command runs outside Jun's terminals. Ask the user to run this "+
-			"in the Jun terminal your session runs in and paste what it prints, then set those variables for each command:\n  %s\n",
-			EnvAPI, EnvCommand)
-		return 1
+		configPath, err := config.DefaultPath()
+		if err != nil {
+			fmt.Fprintf(stderr, "jun tool: %s is not set, and Jun's configuration file is unknown: %v\n", EnvAPI, err)
+			return 1
+		}
+		path = SocketPath(configPath)
 	}
 	if req.Op == OpWatch {
 		fmt.Fprintf(stderr, "jun tool: %v\n", watch(path, stdout))

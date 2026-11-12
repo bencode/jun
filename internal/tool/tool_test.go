@@ -81,7 +81,10 @@ func TestMainUsage(t *testing.T) {
 	if code, _, stderr := runWith("/nowhere", strings.Repeat("x", MaxText)+"\n\n\n", "send", "3", "-"); code != 2 || !strings.Contains(stderr, "at most") {
 		t.Errorf("long standard input: exit %d, %q", code, stderr)
 	}
-	if code, _, stderr := run("", "terminals"); code != 1 || !strings.Contains(stderr, EnvAPI+" is not set") || !strings.Contains(stderr, EnvCommand) {
+	// Without JUN_API, the socket beside Jun's configuration file.
+	sock := socketPath(t)
+	t.Setenv("JUN_CONFIG_PATH", filepath.Join(filepath.Dir(sock), "config.json"))
+	if code, _, stderr := run("", "terminals"); code != 1 || !strings.Contains(stderr, "cannot reach Jun at "+sock) {
 		t.Fatalf("without JUN_API: %d %q", code, stderr)
 	}
 	if code, _, stderr := run(socketPath(t), "terminals"); code != 1 || !strings.Contains(stderr, "cannot reach Jun") {

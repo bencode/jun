@@ -242,16 +242,16 @@ Jun sets these in each of its terminals:
 
 | Variable | Value |
 |---|---|
-| `JUN_API` | The socket of the Jun that runs the terminal. The commands try no other: without it they fail. |
+| `JUN_API` | The socket of the Jun that runs the terminal. Without it, the commands use `jun.sock` beside the configuration file. |
 | `JUN_BIN` | Jun's executable |
-| `JUN_TERMINAL` | The terminal's id, for reference |
+| `JUN_TERMINAL` | The terminal's id |
 
-Jun tells which terminal a caller runs in by its processes, as macOS reports them, not by `JUN_TERMINAL`.
+Jun tells which terminal a caller runs in by its processes, as macOS reports them. A caller in none of its terminals, such as a command Codex's shared background server runs, names its terminal with `JUN_TERMINAL`: the user reads it with `echo $JUN_TERMINAL` in that terminal.
 
 - **The socket**: `jun.sock`, beside the [configuration file](configuration.md).
 - **Who can connect**: only your user.
 - **Another Jun**: while a Jun serves the socket, another one with the same configuration file serves no tools, and says so. A socket left by a Jun that ended is replaced.
-- **Outside Jun's terminals**: the read-only commands work from anywhere with `JUN_API` set, for instance to debug, and then `self` is `false` everywhere. Changes are refused (`caller is not a terminal of this Jun`).
+- **Outside Jun's terminals**: the commands reach the Jun of the default configuration file, or the one `JUN_API` names. With `JUN_TERMINAL` set, they act as from that terminal. Without it, `self` is `false` everywhere and changes are refused (`caller is not a terminal of this Jun`).
 - **A Jun in another's terminal**: its terminals reach it, not the outer Jun. A program there that points `JUN_API` at the outer Jun by hand counts, for the outer Jun, as running in the terminal the inner Jun was started from, as its processes descend from that terminal's shell.
 
 ## Exit status

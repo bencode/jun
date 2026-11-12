@@ -9,7 +9,7 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 
 ## Before you start
 
-- Jun sets `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` in each of its terminals. Commands need `JUN_API` and `JUN_BIN` in their execution environment.
+- Jun sets `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` in each of its terminals.
 - Always run `"$JUN_BIN" tool …`, which works whatever `PATH` says.
 - `"$JUN_BIN" tool help` is the full reference. Read it when an option or output is unclear, rather than guessing.
 - In Codex's sandbox, the socket is blocked (`connect: operation not permitted`): ask to run the command outside the sandbox. Claude Code and Pi reach it.
@@ -17,20 +17,20 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 
 ### When the variables are missing
 
-Your commands may run outside the terminal your session is in, as the commands of Codex's shared background server do: `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` are missing there. Do not guess them, and do not stop at saying they are missing. Ask the user, in their language, to run this in the Jun terminal your session is in and paste what it prints:
+Your commands may run outside the terminal your session is in, as the commands of Codex's shared background server do: `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` are missing there.
+
+- `JUN_API`: leave it unset. `jun tool` finds Jun's socket without it.
+- `JUN_BIN`: Jun's executable is `/Applications/Jun.app/Contents/MacOS/Jun`.
+- `JUN_TERMINAL`: do not guess it. Ask the user, in their language, to run `echo $JUN_TERMINAL` in the Jun terminal your session is in and tell you the number.
+
+Set both for each command, and check with `terminals`:
 
 ```sh
-printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
-```
-
-Then set all three for each command, quoting paths with spaces, and check with `terminals`:
-
-```sh
-export JUN_API='<JUN_API>' JUN_BIN='<JUN_BIN>' JUN_TERMINAL=<JUN_TERMINAL>
+export JUN_BIN=/Applications/Jun.app/Contents/MacOS/Jun JUN_TERMINAL=<the number>
 "$JUN_BIN" tool terminals
 ```
 
-Jun knows a caller by its processes. A caller in none of its terminals is taken to be the terminal `JUN_TERMINAL` names, so `self` and `open` work as in that terminal. If the user's output is empty too, their terminal is not one of Jun's: tell them so.
+Jun knows a caller by its processes. A caller in none of its terminals is taken to be the terminal `JUN_TERMINAL` names, so `self` and `open` work as in that terminal. If `echo` prints nothing, the user ran it outside Jun's terminals: tell them so.
 
 When a command fails, its error says what to do next: follow it.
 

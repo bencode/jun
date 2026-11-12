@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
@@ -32,7 +31,7 @@ func (a *app) startTools(configPath string, stop <-chan struct{}) {
 	if configPath == "" {
 		return
 	}
-	socket := filepath.Join(filepath.Dir(configPath), "jun.sock")
+	socket := tool.SocketPath(configPath)
 	bin, err := os.Executable()
 	if err == nil {
 		a.tools, err = tool.Start(socket, func(req tool.Request, callers []int) tool.Response {
