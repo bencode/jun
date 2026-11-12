@@ -20,7 +20,7 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 Your commands may run outside the terminal your session is in, as the commands of Codex's shared background server do: `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` are missing there. Do not guess them, and do not stop at saying they are missing. Ask the user, in their language, to run this in the Jun terminal your session is in and paste what it prints:
 
 ```sh
-printf 'JUN_API=%s\nJUN_BIN=%s\nJUN_TERMINAL=%s\n' "$JUN_API" "$JUN_BIN" "$JUN_TERMINAL"
+env | grep JUN_
 ```
 
 Then set all three for each command, quoting paths with spaces, and check with `terminals`:
@@ -30,7 +30,7 @@ export JUN_API='<JUN_API>' JUN_BIN='<JUN_BIN>' JUN_TERMINAL=<JUN_TERMINAL>
 "$JUN_BIN" tool terminals
 ```
 
-Jun knows a caller by its processes. A caller in none of its terminals is taken to be the terminal `JUN_TERMINAL` names, so `self` and `open` work as in that terminal. If the user's output is empty too, their terminal is not one of Jun's: tell them so.
+Jun knows a caller by its processes. A caller in none of its terminals is taken to be the terminal `JUN_TERMINAL` names, so `self` and `open` work as in that terminal. If it prints nothing, their terminal is not one of Jun's: tell them so.
 
 When a command fails, its error says what to do next: follow it.
 
