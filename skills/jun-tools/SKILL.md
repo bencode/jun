@@ -20,13 +20,16 @@ Jun runs agents in terminals. `jun tool` lets a program in one of them see the o
 Your commands may run outside the terminal your session is in, as the commands of Codex's shared background server do: `JUN_API`, `JUN_BIN` and `JUN_TERMINAL` are missing there.
 
 - `JUN_API`: leave it unset. `jun tool` finds Jun's socket without it.
-- `JUN_BIN`: Jun's executable is `/Applications/Jun.app/Contents/MacOS/Jun`.
-- `JUN_TERMINAL`: do not guess it. Ask the user, in their language, to run `echo $JUN_TERMINAL` in the Jun terminal your session is in and tell you the number.
+- `JUN_TERMINAL` and `JUN_BIN`: do not guess them. Ask the user, in their language, to run this in the Jun terminal your session is in and tell you what it prints, the terminal's id and then Jun's executable:
 
-Set both for each command, and check with `terminals`:
+  ```sh
+  echo $JUN_TERMINAL $JUN_BIN
+  ```
+
+Set both for each command, quoting the path, and check with `terminals`:
 
 ```sh
-export JUN_BIN=/Applications/Jun.app/Contents/MacOS/Jun JUN_TERMINAL=<the number>
+export JUN_TERMINAL=<the id> JUN_BIN='<the path>'
 "$JUN_BIN" tool terminals
 ```
 
