@@ -17,7 +17,11 @@ import (
 // requests are checked first, for their errors to go to the caller rather
 // than to a dialog in front of the user.
 func (a *app) toolLayout(req tool.Request, callers []int) tool.Response {
-	message, err := a.toolChange(req, a.toolCaller(callers))
+	caller, err := a.toolCaller(callers, req.Caller)
+	var message string
+	if err == nil {
+		message, err = a.toolChange(req, caller)
+	}
 	if err != nil {
 		return tool.Response{Error: err.Error()}
 	}
@@ -50,9 +54,6 @@ func (a *app) toolChange(req tool.Request, caller terminal.ID) (string, error) {
 // toolGuard lets a caller change what the user sees only while the user
 // is with it, and Jun waits for no answer of the user's.
 func (a *app) toolGuard(caller terminal.ID, target *tool.Target) error {
-	if caller == 0 {
-		return errors.New("caller is not a terminal of this Jun")
-	}
 	if a.dialogOpen() {
 		return errors.New("Jun is waiting for the user")
 	}

@@ -38,7 +38,7 @@ func TestToolTerminalsTellTheCallerAndSkipExited(t *testing.T) {
 
 	self := func(callers []int) []uint64 {
 		var ids []uint64
-		for _, terminal := range a.toolTerminals(callers) {
+		for _, terminal := range a.toolTerminals(callers, 0) {
 			if terminal.Self {
 				ids = append(ids, terminal.ID)
 			}
@@ -55,7 +55,7 @@ func TestToolTerminalsTellTheCallerAndSkipExited(t *testing.T) {
 
 	caller.Terminal.Send([]byte("exit\n"))
 	eventually(t, "the shell to exit", caller.Exited)
-	if slices.ContainsFunc(a.toolTerminals(nil), func(t tool.Terminal) bool { return t.ID == uint64(caller.ID) }) {
+	if slices.ContainsFunc(a.toolTerminals(nil, 0), func(t tool.Terminal) bool { return t.ID == uint64(caller.ID) }) {
 		t.Fatal("an exited terminal is listed")
 	}
 	if _, err := a.toolScreen(caller.ID); err == nil {

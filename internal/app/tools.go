@@ -61,7 +61,10 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 	onUI := func(fn func()) bool { return a.onUI(stop, fn) }
 	closing := tool.Response{Error: "Jun is closing"}
 	layout := slices.Contains([]tool.Op{tool.OpOpen, tool.OpClose, tool.OpBack, tool.OpForward}, req.Op)
-	refused := func() bool { return layout && a.toolGuard(a.toolCaller(callers), req.Target) != nil }
+	refused := func() bool {
+		caller, err := a.toolCaller(callers, req.Caller)
+		return layout && (err != nil || a.toolGuard(caller, req.Target) != nil)
+	}
 	if (layout || req.Op == tool.OpMessage) && !a.awaitRepo(stop, onUI, req.Target, refused) {
 		return closing
 	}
@@ -126,7 +129,7 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 	}
 	layout := func() tool.Response { return a.toolLayout(req, callers) }
 	return map[tool.Op]func() tool.Response{
-		tool.OpTerminals: func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers)} },
+		tool.OpTerminals: func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers, req.Caller)} },
 		tool.OpOpen:      layout,
 		tool.OpClose:     layout,
 		tool.OpBack:      layout,
@@ -230,8 +233,8 @@ func (a *app) await(stop <-chan struct{}, onUI func(func()) bool, loading func()
 }
 
 // toolTerminals lists the running terminals by id.
-func (a *app) toolTerminals(callers []int) []tool.Terminal {
-	caller := a.toolCaller(callers)
+func (a *app) toolTerminals(callers []int, named uint64) []tool.Terminal {
+	caller, _ := a.toolCaller(callers, named) // none: no terminal is the caller's
 	var result []tool.Terminal
 	for _, s := range a.terminals.All() {
 		if s.Exited() {
@@ -255,12 +258,22 @@ func (a *app) toolScreen(id terminal.ID) (*ghostty.Terminal, error) {
 	return s.Terminal, nil
 }
 
-// toolCaller is the terminal whose shell the caller descends from, or 0.
-func (a *app) toolCaller(callers []int) terminal.ID {
+// toolCaller is the terminal whose shell the caller descends from. A caller
+// in none, such as a command Codex's shared server runs, is the terminal it
+// names, as the user read it there.
+func (a *app) toolCaller(callers []int, named uint64) (terminal.ID, error) {
 	for _, s := range a.terminals.All() {
 		if pid, ok := s.ShellPID(); ok && slices.Contains(callers, pid) {
-			return s.ID
+			return s.ID, nil
 		}
 	}
-	return 0
+	if named == 0 {
+		return 0, fmt.Errorf("caller is not a terminal of this Jun: set %s to the id of the terminal your session runs in; "+
+			"the user gets it with echo $%[1]s there", tool.EnvTerminal)
+	}
+	if s := a.terminals.Get(terminal.ID(named)); s == nil || s.Exited() {
+		return 0, fmt.Errorf("%s=%d is not a terminal of this Jun: ask the user for the id again, "+
+			"from echo $%[1]s in the terminal your session runs in", tool.EnvTerminal, named)
+	}
+	return terminal.ID(named), nil
 }

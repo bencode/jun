@@ -94,7 +94,7 @@ func TestAnyTerminalTellsTheUser(t *testing.T) {
 		t.Fatal("took a blank message")
 	}
 	outside := tool.Request{Op: tool.OpMessage, Text: "From outside"}
-	if resp := a.uiAnswers(outside, nil)[tool.OpMessage](); resp.Error != "caller is not a terminal of this Jun" {
+	if resp := a.uiAnswers(outside, nil)[tool.OpMessage](); !strings.HasPrefix(resp.Error, "caller is not a terminal of this Jun") {
 		t.Fatalf("from outside Jun: %q", resp.Error)
 	}
 	tt.Frame()
@@ -599,7 +599,7 @@ func TestARefusedUpdateChangesNothing(t *testing.T) {
 		t.Fatal("took a blank reply")
 	}
 	outside := tool.Request{Op: tool.OpUpdateMessage, Message: asked, Kind: tool.MessageDone}
-	if resp := a.uiAnswers(outside, nil)[tool.OpUpdateMessage](); resp.Error != "caller is not a terminal of this Jun" {
+	if resp := a.uiAnswers(outside, nil)[tool.OpUpdateMessage](); !strings.HasPrefix(resp.Error, "caller is not a terminal of this Jun") {
 		t.Fatalf("from outside Jun: %q", resp.Error)
 	}
 	list := a.toolMessages()
