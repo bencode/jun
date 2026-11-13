@@ -18,7 +18,7 @@ A project is a local directory. The project rail, at the window's left edge, lis
   - The characters are the initials of the name's first two words; words are split at separators, camelCase and digits (`cc-mission-control` → CM, `jun2` → J2).
   - With one word, they are its first two letters (`jun` → Ju).
   - The color follows the name.
-- **Expanded rail** (click the Jun logo at the rail's top, or **Toggle Project Names** in ⌘K): adds each project's name and directory. Home shows as `~`, and long paths are cut to their last two parts.
+- **Expanded rail** (the button at the rail's top, or **Toggle Project Names** in ⌘K): adds each project's name and directory. Home shows as `~`, and long paths are cut to their last two parts.
 - **Waiting agents**: a project whose agents wait for you shows an orange dot on its tile, and their number when the rail is expanded.
 - **No open panels**: a project with no tabs in any perspective appears dimmed until hovered or selected. Fixed side-bar views and terminals without an open tab do not count; projects with waiting agents stay bright.
 - **Shelved projects**: a project you are not working on today can be shelved instead of removed. It keeps its perspectives, tabs and terminals, and the agents in it keep running.
