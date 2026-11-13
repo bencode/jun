@@ -5,7 +5,7 @@ A native macOS workspace for running terminal coding agents (Claude Code, Codex,
 - **Platform**: Apple Silicon Mac, macOS 13 or later
 - **Built with**: Go and [MyGo](https://github.com/egoist/mygo); terminals rendered on the GPU by Ghostty; no WebView
 - **AI**: none of its own. Jun runs the agent CLIs you already have, and makes no AI API calls.
-- **Status**: 0.2.0, the first public release. Ad-hoc signed, with no automatic updates.
+- **Status**: 0.3.0. Ad-hoc signed, with no automatic updates.
 
 ![Jun with Claude Code, Codex and Pi running in one project](docs/images/overview.png)
 
@@ -13,7 +13,7 @@ A native macOS workspace for running terminal coding agents (Claude Code, Codex,
 
 ### Download
 
-1. Download `jun-0.2.0-arm64.dmg` from [Releases](https://github.com/bencode/jun/releases/latest).
+1. Download `jun-0.3.0-arm64.dmg` from [Releases](https://github.com/bencode/jun/releases/latest).
 2. Open the DMG and drag **Jun** into **Applications**.
 3. Open Jun the first time. It is ad-hoc signed, not notarized, so macOS asks first:
    - **macOS 13–14**: Control-click **Jun** in Applications → **Open** → **Open**.
