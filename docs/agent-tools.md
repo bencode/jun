@@ -277,3 +277,5 @@ Checked with Claude Code 2.1.318, Codex 0.166.0 and Pi 1.5.0.
 ## A directory named tool
 
 `jun tool` runs the tools. To open a directory named `tool` as a project, write `jun ./tool`.
+
+A tool command without `tool`, such as `jun open file:x.md`, exits with status 2 and prints the command to run instead, unless a directory or file of that name is in the working directory.

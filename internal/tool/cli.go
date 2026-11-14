@@ -8,7 +8,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -157,6 +160,36 @@ and Pi let it through.
 `
 
 var errHelp = errors.New("help")
+
+// commands are the words that may follow "tool", those parse takes.
+var commands = []string{"help", "terminals", "watch", "screen", "open", "close", "back", "forward", "send", "message", "run", "loop"}
+
+// MistakenCommand tells, for the words jun was started with, how to run
+// the tool command they look like when "tool" was left out, as "jun open
+// file:x.md", or "": the app would take them as directories to open as
+// projects, and the command would exit 0 though it ran nothing. A word
+// that is a path in wd, as a directory named run, is not mistaken.
+func MistakenCommand(args []string, wd string) string {
+	if len(args) == 0 || !slices.Contains(commands, args[0]) {
+		return ""
+	}
+	if _, err := os.Stat(filepath.Join(wd, args[0])); err == nil {
+		return ""
+	}
+	words := make([]string, len(args))
+	for i, w := range args {
+		words[i] = shellQuote(w)
+	}
+	return fmt.Sprintf("jun: %q is a tool command; run it as:\n  \"$JUN_BIN\" tool %s\n", args[0], strings.Join(words, " "))
+}
+
+// shellQuote writes w for a shell to read back as one word.
+func shellQuote(w string) string {
+	if w != "" && strings.Trim(w, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./:=@,+%") == "" {
+		return w
+	}
+	return "'" + strings.ReplaceAll(w, "'", `'\''`) + "'"
+}
 
 // Main runs jun tool with args, the words after "tool", returning the
 // exit status.

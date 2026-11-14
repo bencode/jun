@@ -61,9 +61,24 @@ func TestOpenArgs(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	a.openArgs([]string{file}, wd)
-	if len(a.state.Projects) != 1 || !a.errorOpen {
-		t.Fatal("jun <file> opened a project, or did not say why not")
+	a.openArgs([]string{"notes.md"}, wd)
+	if len(a.state.Projects) != 1 || a.errorOpen {
+		t.Fatal("jun <file> opened a project, or failed")
+	}
+	if v := activeView(a.tabsTarget()); v == nil || v.File == nil || filepath.Base(v.File.Path) != "notes.md" {
+		t.Fatalf("jun <file> did not show the file in a tab: %+v", v)
+	}
+}
+
+func TestOpenArgsFileWithoutProject(t *testing.T) {
+	a := testNewApp(t)
+	file := filepath.Join(t.TempDir(), "notes.md")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a.openArgs([]string{file}, "/")
+	if len(a.state.Projects) != 0 || !a.errorOpen {
+		t.Fatal("jun <file> with no project open opened one, or did not say why not")
 	}
 }
 
