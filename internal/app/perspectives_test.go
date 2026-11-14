@@ -120,7 +120,7 @@ func TestRailSettingsAndPerspectiveContext(t *testing.T) {
 	if !slices.ContainsFunc(mygo.App.Menu().Items(), func(item *mygo.MenuItem) bool { return item.Label == "语言" }) {
 		t.Fatal("settings did not refresh the native application menu")
 	}
-	click(t, tt, "展开或收起项目名称")
+	click(t, tt, "展开项目名称")
 	tt.Frame()
 	if a.projectRailWidth() != 192 {
 		t.Fatal("the rail did not expand")

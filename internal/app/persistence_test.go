@@ -70,7 +70,7 @@ func TestAutosaveWaitsForIdle(t *testing.T) {
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("saved before idle: %v", err)
 	}
-	click(t, tt, "Toggle project names")
+	click(t, tt, "Show Project Names")
 	tt.Advance(200 * time.Millisecond)
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("did not merge continuous changes: %v", err)
@@ -185,7 +185,7 @@ func TestDamagedConfigStaysUntouchedWhileEditing(t *testing.T) {
 	a.projectForm.path = t.TempDir()
 	a.submitProject()
 	tt.Frame()
-	click(t, tt, "Toggle project names")
+	click(t, tt, "Show Project Names")
 	tt.Advance(time.Second)
 	event := &mygo.CloseEvent{}
 	a.beforeClose(event)

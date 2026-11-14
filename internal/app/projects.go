@@ -22,52 +22,84 @@ func (a *app) projectRailWidth() float32 {
 }
 
 func (a *app) projectRail(c *ui.Context) {
-	rail := ui.Column(c).Key("project-rail").Width(a.projectRailWidth()).Shrink(0).FillHeight().Padding(8).Gap(8)
+	rail := ui.Column(c).Key("project-rail").Width(a.projectRailWidth()).Shrink(0).FillHeight()
 	background := a.theme.Surface
 	if rail.FileDragOver() {
 		background = a.theme.Selection
 	}
 	rail.Background(background).Children(func() {
-		toggle := a.text("Toggle project names", "展开或收起项目名称")
-		ui.ButtonBase(c.Key("logo")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
-			Label(toggle).Tooltip(toggle).Children(func() {
-			ui.Icon(c, logoIcon).Height(20).Shrink(0)
-		}).OnClick(func() { a.state.RailExpanded = !a.state.RailExpanded; a.layoutChanged() })
-		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
-		ui.Scroll(c).Grow(1).FillWidth().Children(func() {
-			ui.Column(c).FillWidth().Gap(6).Children(func() {
-				// Without a home, paths show in full.
-				home, _ := os.UserHomeDir()
-				waiting := a.waitingByProject()
-				panels := a.panelsByProject()
-				shown := a.state.ShownProjects()
-				for i, p := range shown {
-					tip := p.Name + " " + p.CWD
-					if keys, ok := projectKeys(i); ok {
-						tip += "\n" + keys.String()
+		a.railHeader(c)
+		ui.Column(c).Grow(1).FillWidth().MinHeight(0).Padding(8).Gap(8).Children(func() {
+			ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Column(c).FillWidth().Gap(6).Children(func() {
+					// Without a home, paths show in full.
+					home, _ := os.UserHomeDir()
+					waiting := a.waitingByProject()
+					panels := a.panelsByProject()
+					shown := a.state.ShownProjects()
+					for i, p := range shown {
+						tip := p.Name + " " + p.CWD
+						if keys, ok := projectKeys(i); ok {
+							tip += "\n" + keys.String()
+						}
+						if !panels[p.Name] {
+							tip += "\n" + a.text("No open panels", "没有打开的面板")
+						}
+						a.projectButton(c, p, panels[p.Name], waiting[p.Name], home, tip)
 					}
-					if !panels[p.Name] {
-						tip += "\n" + a.text("No open panels", "没有打开的面板")
+					if shelved := a.state.ShelvedProjects(); len(shelved) > 0 {
+						a.shelfButton(c, shelved, waiting)
 					}
-					a.projectButton(c, p, panels[p.Name], waiting[p.Name], home, tip)
-				}
-				if shelved := a.state.ShelvedProjects(); len(shelved) > 0 {
-					a.shelfButton(c, shelved, waiting)
-				}
-				add := a.text("Add Project", "添加项目")
-				a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
-					Label(add).Tooltip(add + " (" + openProjectKeys.String() + ")")).Children(func() {
-					ui.Icon(c, addIcon).Size(18, 18).Shrink(0)
-				}).OnClick(func() { a.openPalette("~/") })
+					add := a.text("Add Project", "添加项目")
+					a.railAction(ui.ButtonBase(c.Key("add-project")).Height(36).FillWidth().Shrink(0).Justify(ui.Center).
+						Label(add).Tooltip(add + " (" + openProjectKeys.String() + ")")).Children(func() {
+						ui.Icon(c, addIcon).Size(18, 18).Shrink(0)
+					}).OnClick(func() { a.openPalette("~/") })
+				})
 			})
+			ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
+			a.settingsButton(c)
 		})
-		ui.Box(c).Height(1).FillWidth().Shrink(0).Background(a.theme.Border)
-		a.settingsButton(c)
 	})
 	if paths := rail.DroppedFiles(); paths != nil {
 		a.openDroppedProject(paths)
 		c.Invalidate()
 	}
+}
+
+// railHeader heads the rail as the tab bars head the regions, its line
+// continuing theirs: "Projects" and their number when the rail is
+// expanded, and the button expanding or collapsing it.
+func (a *app) railHeader(c *ui.Context) {
+	expanded := a.state.RailExpanded
+	label := a.text("Show Project Names", "展开项目名称")
+	if expanded {
+		label = a.text("Hide Project Names", "收起项目名称")
+	}
+	ui.Box(c).Height(40).FillWidth().Shrink(0).Children(func() {
+		ui.Box(c).Absolute().Left(0).Right(0).Bottom(0).Height(1).Background(a.theme.Border)
+		row := ui.Row(c).Absolute().Left(0).Top(0).Right(0).Bottom(0).AlignItems(ui.Center).Gap(6)
+		if expanded {
+			row.Padding(0, 8, 0, 14)
+		} else {
+			row.Justify(ui.Center)
+		}
+		row.Children(func() {
+			if expanded {
+				ui.Text(c, a.text("Projects", "项目")).FontSize(theme.Caption).Bold().TextColor(a.theme.TextMuted).SingleLine()
+				ui.Text(c, fmt.Sprint(len(a.state.Projects))).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Grow(1)
+			}
+			a.railAction(ui.ButtonBase(c.Key("rail-toggle")).Width(28).Height(26).Shrink(0).Justify(ui.Center).
+				Label(label).Tooltip(label)).Children(func() {
+				ui.Icon(c, railIcon).Size(16, 16)
+			}).OnClick(a.toggleRail)
+		})
+	})
+}
+
+func (a *app) toggleRail() {
+	a.state.RailExpanded = !a.state.RailExpanded
+	a.layoutChanged()
 }
 
 // projectButton shows a project as a colored tile of its abbreviation,
