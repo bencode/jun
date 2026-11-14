@@ -253,8 +253,10 @@ func (a *app) openProjectDirectory(path string) {
 	a.projectForm.open = a.projectForm.error != ""
 }
 
-// openArgs opens the directories jun was started with, relative to wd,
-// as "jun ." in a terminal; flags, as macOS may pass, are not directories.
+// openArgs opens what jun was started with, relative to wd: a directory
+// as a project, as "jun ." in a terminal, and a file in a tab of the
+// current project, read-only, as "jun tool open file:" does; flags, as
+// macOS may pass, are neither.
 func (a *app) openArgs(args []string, wd string) {
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") {
@@ -263,7 +265,23 @@ func (a *app) openArgs(args []string, wd string) {
 		if !filepath.IsAbs(arg) {
 			arg = filepath.Join(wd, arg)
 		}
+		if info, err := os.Stat(arg); err == nil && info.Mode().IsRegular() {
+			a.openArgFile(arg)
+			continue
+		}
 		a.openProjectPath(arg)
+	}
+}
+
+// openArgFile shows the file jun was started with in the current project.
+func (a *app) openArgFile(path string) {
+	p := a.state.CurrentProject()
+	if p == nil {
+		a.report(fmt.Errorf(a.text("Open a project to show a file in: %s", "需要先打开一个项目才能显示文件：%s"), path))
+		return
+	}
+	if err := a.showFile(p.Name, path); err != nil {
+		a.report(err)
 	}
 }
 

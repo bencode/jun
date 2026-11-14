@@ -14,6 +14,12 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "tool" {
 		os.Exit(tool.Main(os.Args[2:], os.Stdin, os.Stdout, os.Stderr, os.Getenv))
 	}
+	if wd, err := os.Getwd(); err == nil {
+		if hint := tool.MistakenCommand(os.Args[1:], wd); hint != "" {
+			os.Stderr.WriteString(hint)
+			os.Exit(2)
+		}
+	}
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}

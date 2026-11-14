@@ -10,7 +10,7 @@ A project is a local directory. The project rail, at the window's left edge, lis
   - ⌘K, then type a directory such as `~/work/`. Tab goes into the highlighted directory, and Enter opens it.
   - ⌘O, **File → Open Project…** or the rail's **+** open the palette at `~/`. **Browse…** opens the system folder picker.
   - Drag a directory from Finder onto the rail, one at a time. A file dragged to a region opens in a tab instead: see [Files](files.md#files-outside-the-project).
-  - From a terminal, run `jun <directory>`, such as `jun .`. This needs the [`jun` alias](../README.md#optional-jun-command).
+  - From a terminal, run `jun <directory>`, such as `jun .`. This needs the [`jun` alias](../README.md#optional-jun-command). `jun <file>` shows the file in a read-only tab of the current project instead.
 - **Name**: the directory's name. Jun asks for another one only when that name is already taken.
 - **Already open**: opening the same directory again selects its project.
 - **A new project** starts with one perspective, **Work**, which shows its side bar and one terminal in the project's directory.

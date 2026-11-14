@@ -41,7 +41,7 @@ go tool mygo build -platform darwin/arm64
 alias jun=/Applications/Jun.app/Contents/MacOS/Jun
 ```
 
-- Add it to your shell's profile. Then `jun .` opens the current directory as a project.
+- Add it to your shell's profile. Then `jun .` opens the current directory as a project, and `jun notes.md` shows a file in a tab of the current project.
 
 ## Quick start
 
