@@ -7,9 +7,16 @@ import (
 
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
+	"github.com/bencode/jun/internal/theme"
 	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
+
+// terminalNumber is the id the user and agents call a terminal by, as
+// `jun tool` and the tags of Messages give it.
+func (a *app) terminalNumber(c *ui.Context, s *terminal.Session) {
+	ui.Text(c, fmt.Sprintf("#%d", s.ID)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Shrink(0)
+}
 
 func (a *app) sessionFor(view layout.ViewID) *terminal.Session {
 	return a.terminals.Get(a.bindings[view])

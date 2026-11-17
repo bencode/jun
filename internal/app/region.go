@@ -105,6 +105,9 @@ func (a *app) tabs(c *ui.Context, r *layout.Region, views []*layout.View, fixed 
 					a.pendingFocus = 0
 				}
 				tab.Children(func() {
+					if session := a.sessionFor(v.ID); session != nil {
+						a.terminalNumber(c, session)
+					}
 					title := ui.Text(c, a.title(v)).MinWidth(0).MaxWidth(160).SingleLine().Ellipsis("…")
 					if v.ID != r.Active {
 						title.TextColor(a.theme.TextMuted)
