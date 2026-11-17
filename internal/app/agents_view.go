@@ -199,7 +199,7 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Elem
 
 func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo) {
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
-	a.agentNumber(c, s)
+	a.terminalNumber(c, s)
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 	ui.Box(c).Width(22).Height(16).Radius(4).Shrink(0).Background(projectColor(s.ProjectName)).Center().Children(func() {
@@ -275,7 +275,7 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, c
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
-			a.agentNumber(c, s)
+			a.terminalNumber(c, s)
 			ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 		})
 		ui.Text(c, s.ProjectName+" · "+agentName(info.Kind)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
@@ -287,12 +287,6 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, c
 		ui.Text(c, a.text("Current", "当前")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
-}
-
-// agentNumber is the id the user and agents call a terminal by, as the tags
-// of Messages show it.
-func (a *app) agentNumber(c *ui.Context, s *terminal.Session) {
-	ui.Text(c, fmt.Sprintf("#%d", s.ID)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).Shrink(0)
 }
 
 func (a *app) agentTitle(s *terminal.Session) string {
