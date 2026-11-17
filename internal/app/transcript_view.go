@@ -75,7 +75,7 @@ func (a *app) transcriptView(c *ui.Context, v *layout.View) {
 	st := a.transcripts[v.ID]
 	if st == nil || st.ref != *v.Transcript {
 		st = &transcriptState{ref: *v.Transcript, list: ui.ListState{FollowEnd: true}}
-		st.options = markdown.Options{Theme: &st.theme, OnLink: a.openWebLink}
+		st.options = markdown.Options{Theme: &st.theme, OnLink: a.openWebLink, LinkMenu: a.linkMenu(a.openWebLink)}
 		a.transcripts[v.ID] = st
 	}
 	if !st.loading && (!st.read || s.Updated.After(st.readAt)) {
