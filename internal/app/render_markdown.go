@@ -29,7 +29,8 @@ var markdownKind = renderKind{
 		m.diagrams.a = f.a
 		m.options = markdown.Options{
 			Theme: &m.theme, LoadImage: m.loadImage, OnLink: m.openLink, Block: m.noteBlock,
-			Code: map[string]func(*ui.Context, *markdown.CodeBlockView){"mermaid": m.diagrams.block},
+			LinkMenu: f.a.linkMenu(m.openLink),
+			Code:     map[string]func(*ui.Context, *markdown.CodeBlockView){"mermaid": m.diagrams.block},
 		}
 		return m
 	},
@@ -158,6 +159,22 @@ func (m *markdownRender) openLink(dest string) {
 		return
 	}
 	m.f.a.openFile(m.f.project, fileNode{source: m.f.s.Key(), path: name}, false)
+}
+
+// linkMenu is the context menu of a link in Markdown: open it as a click
+// does, or copy its destination, which selecting the link's text cannot
+// give, as in a table's cell.
+func (a *app) linkMenu(open func(string)) func(*ui.Menu, string) {
+	return func(m *ui.Menu, dest string) {
+		if m.Item(a.text("Open Link", "打开链接")).Chosen() {
+			open(dest)
+		}
+		if m.Item(a.text("Copy Link", "复制链接")).Chosen() {
+			mygo.Clipboard.WriteText(dest)
+		}
+		m.Separator()
+		m.EditItems()
+	}
 }
 
 // repoPath resolves a link's destination to a path in the repository: in

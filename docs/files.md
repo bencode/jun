@@ -57,6 +57,7 @@ A file in one of the project's worktrees shows as if opened in Files. Any other 
   - A `mermaid` code block shows as a diagram: sequence, flowchart, state, class, entity relationship, Gantt and pie. [Diagrams](diagrams.md) shows each, and what is not drawn.
   - Web links open in the browser. Links to the repository's files open in Jun, as a click in Files does.
   - Links to a heading within the page do nothing yet.
+  - **Right-click a link**: Open Link, or Copy Link for its address, which copying its text does not give, as in a table's cell.
   - **Go to heading** (⌘⇧O, or View ▸ Go to Heading…): the command palette at `@` lists the headings of the active tab's page, indented by level. Typing filters them; Enter scrolls the heading to the top.
   - **Reading width**: View ▸ Reading Width, or Reading Width in the command palette: narrow (640 points), medium (760, the default), wide (960) or full, the tab's width. Saved as `markdown.width` in the [settings file](settings.md).
   - Go to heading is on while the active tab shows a Markdown page, and Reading Width also on a [session's tab](sessions.md): otherwise their menu items are dimmed and the palette leaves them out.
