@@ -143,7 +143,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" 
 
 The new terminal belongs to your project, or the one named, and has no tab: follow it with `screen <id>`, or pass `--open` to show it to the user.
 
-**Lead other agents.** The agents you start with `run` have you as their `lead`; Jun shows it in Agents, beside each of them. Follow just yours:
+**Lead other agents.** The agents you start with `run` have you as their `lead`; in Agents, Jun lists them under you. Follow just yours:
 
 ```sh
 "$JUN_BIN" tool terminals | jq -c ".[] | select(.lead == $JUN_TERMINAL)"
