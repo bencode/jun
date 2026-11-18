@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -162,5 +163,41 @@ func TestAgentsHighlightLastFocusedTerminal(t *testing.T) {
 	tt.Frame()
 	if !current(shown[1]) || current(shown[0]) {
 		t.Fatal("the current agent changed when the focus left the terminals")
+	}
+}
+
+func TestAgentsGroupUnderTheirLead(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	idle, lead, waiting := sessions[0], sessions[1], sessions[2]
+	addAgents(t, a, agent.Idle, agent.Waiting, agent.Idle, agent.Waiting)
+	all := a.terminals.All()
+	m1, m2, nested, orphan := all[3], all[4], all[5], all[6]
+	shell, err := a.terminals.Create("Jun", a.state.CurrentProject().CWD, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.leads[m1.ID], a.leads[m2.ID], a.leads[nested.ID], a.leads[orphan.ID] = lead.ID, lead.ID, m1.ID, shell.ID
+	resize(tt, 1440, 900)
+
+	// The lead's group comes with the waiting agents, as one of its own
+	// waits; the lead first, then the rest of the group by id.
+	want := []terminal.ID{lead.ID, m1.ID, m2.ID, nested.ID, waiting.ID, orphan.ID, idle.ID}
+	if got := a.agentOrder(); !slices.Equal(got, want) {
+		t.Fatalf("order %v, want %v", got, want)
+	}
+	for _, heading := range []string{"Waiting 6", "Idle 1"} {
+		if !tt.HasText(heading) {
+			t.Fatalf("missing heading %q", heading)
+		}
+	}
+	// The group's line marks its lead; an agent led by another, or by no
+	// running agent, is marked.
+	mark := func(id terminal.ID) bool { return tt.HasText(fmt.Sprintf("↳ #%d", id)) }
+	at := func(s *terminal.Session) float32 { return row(t, tt, a, s).X }
+	if at(m1)-at(lead) != memberIndent || at(nested) != at(m1) || at(orphan) != at(lead) {
+		t.Fatalf("rows at %v, %v, %v, %v", at(lead), at(m1), at(nested), at(orphan))
+	}
+	if mark(lead.ID) || !mark(m1.ID) || !mark(shell.ID) || !strings.Contains(a.agentLabel(m2), fmt.Sprintf("#%d", lead.ID)) {
+		t.Fatal("marks of leads: the group's lead is marked, or another lead is not")
 	}
 }

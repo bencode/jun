@@ -28,7 +28,8 @@ func (a *app) agentsState(view layout.ViewID) *agentsViewState {
 }
 
 func (a *app) agentsView(c *ui.Context, v *layout.View) {
-	sessions := a.agentSessions()
+	groups := a.agentGroups()
+	sessions := slices.Concat(groups...)
 	ui.Column(c.Key(v.ID)).Fill().Gap(8).Padding(12).Children(func() {
 		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Start).Children(func() {
 			a.agentCounts(c, sessions)
@@ -54,27 +55,31 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 		if follow {
 			st.followed = a.lastTerminal
 		}
-		area.Children(func() { a.agentList(c, st, sessions, room.H, follow) })
+		area.Children(func() { a.agentList(c, st, groups, room.H, follow) })
 	})
 }
 
-// agentList lists the agents under a heading for each status, in compact
-// rows when rows would not fit, and with the idle ones folded under their
-// heading when compact rows would not either.
-func (a *app) agentList(c *ui.Context, st *agentsViewState, sessions []*terminal.Session, height float32, follow bool) {
-	var groups [][]*terminal.Session
-	for i, s := range sessions {
-		if i == 0 || a.agents[s.ID].Status != a.agents[sessions[i-1].ID].Status {
-			groups = append(groups, nil)
+// memberIndent is how far an agent of a group is set in from its lead.
+const memberIndent float32 = 18
+
+// agentList lists the groups of agents under a heading for the status of
+// their most urgent agent, in compact rows when rows would not fit, and
+// with the idle ones folded under their heading when compact rows would
+// not either. A heading counts the agents under it.
+func (a *app) agentList(c *ui.Context, st *agentsViewState, groups [][]*terminal.Session, height float32, follow bool) {
+	var sections [][][]*terminal.Session
+	for i, group := range groups {
+		if i == 0 || a.urgency(group) != a.urgency(groups[i-1]) {
+			sections = append(sections, nil)
 		}
-		groups[len(groups)-1] = append(groups[len(groups)-1], s)
+		sections[len(sections)-1] = append(sections[len(sections)-1], group)
 	}
-	compact, foldIdle := listFit(height, len(groups), len(sessions))
+	compact, foldIdle := listFit(height, len(sections), len(slices.Concat(groups...)))
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Column(c).FillWidth().Gap(rowGap).Children(func() {
-			for _, group := range groups {
-				status := a.agents[group[0].ID].Status
-				heading := fmt.Sprintf("%s %d", a.statusName(status), len(group))
+			for _, section := range sections {
+				status := a.urgency(section[0])
+				heading := fmt.Sprintf("%s %d", a.statusName(status), len(slices.Concat(section...)))
 				if status == agent.Idle && foldIdle && !st.idleOpen {
 					ui.ButtonBase(c).FillWidth().Height(groupHeight).Padding(0, 10).Radius(4).Justify(ui.Start).Children(func() {
 						ui.Text(c, heading+" ▸").FontSize(theme.Caption).TextColor(a.theme.TextMuted)
@@ -84,15 +89,42 @@ func (a *app) agentList(c *ui.Context, st *agentsViewState, sessions []*terminal
 				ui.Row(c).FillWidth().Height(groupHeight).Padding(0, 10).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, heading).FontSize(theme.Caption).TextColor(a.theme.TextMuted)
 				})
-				for _, s := range group {
-					row := a.agentRow(c, s, compact)
-					if follow && s.ID == a.lastTerminal {
-						row.ScrollIntoView()
+				for _, group := range section {
+					for i, s := range group {
+						row := a.groupRow(c, s, compact, group[0].ID, i, len(group))
+						if follow && s.ID == a.lastTerminal {
+							row.ScrollIntoView()
+						}
 					}
 				}
 			}
 		})
 	})
+}
+
+// groupRow shows the agent at index i of its group: the lead as any row,
+// the others set in under it, with a line from it.
+func (a *app) groupRow(c *ui.Context, s *terminal.Session, compact bool, groupLead terminal.ID, i, n int) ui.Element {
+	if i == 0 {
+		return a.agentRow(c, s, compact, groupLead)
+	}
+	height := rowHeight
+	if compact {
+		height = compactRowHeight
+	}
+	// The line comes down through the gap above; the last row's ends at it.
+	line := height + rowGap
+	if i == n-1 {
+		line = height/2 + rowGap
+	}
+	color := a.theme.TextMuted.Alpha(0.5)
+	var row ui.Element
+	ui.Row(c).FillWidth().Padding(0, 0, 0, memberIndent).Children(func() {
+		ui.Box(c).Absolute().Left(8).Top(-rowGap).Width(1).Height(line).Background(color)
+		ui.Box(c).Absolute().Left(8).Top(height / 2).Width(7).Height(1).Background(color)
+		row = a.agentRow(c, s, compact, groupLead)
+	})
+	return row
 }
 
 func (a *app) agentCounts(c *ui.Context, sessions []*terminal.Session) {
@@ -130,12 +162,13 @@ func (a *app) countChip(c *ui.Context, name string, n int, dot *ui.Color) {
 
 // agentRow shows an agent in a list: its title over its project and kind,
 // or, compact, its title beside its project's tile. The current agent is
-// marked as the rail marks the current project.
-func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Element {
+// marked as the rail marks the current project. It marks the agent's lead
+// unless that is its group's, whose line marks it.
+func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool, groupLead terminal.ID) ui.Element {
 	info := a.agents[s.ID]
-	height, content := rowHeight, func() { a.agentHeading(c, s, info) }
+	height, content := rowHeight, func() { a.agentHeading(c, s, info, groupLead) }
 	if compact {
-		height, content = compactRowHeight, func() { a.compactHeading(c, s, info) }
+		height, content = compactRowHeight, func() { a.compactHeading(c, s, info, groupLead) }
 	}
 	row := ui.ButtonBase(c.Key(s.ID)).FillWidth().Height(height).Padding(0, 10).Gap(10).Radius(6).
 		Label(a.agentLabel(s)).Children(func() {
@@ -157,11 +190,11 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Elem
 	return row
 }
 
-func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo) {
+func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo, groupLead terminal.ID) {
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	a.terminalNumber(c, s)
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
-	a.leadMark(c, s)
+	a.leadMark(c, s, groupLead)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 	ui.Box(c).Width(22).Height(16).Radius(4).Shrink(0).Background(projectColor(s.ProjectName)).Center().Children(func() {
 		ui.Text(c, projectAbbrev(s.ProjectName)).FontSize(theme.Caption).Bold().TextColor(ui.RGB(255, 255, 255))
@@ -186,7 +219,7 @@ func (a *app) clickAgent(id terminal.ID, reveal bool) {
 	}
 }
 
-func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo) {
+func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, groupLead terminal.ID) {
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
@@ -198,13 +231,14 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo) {
 	if s.ID == a.peek.id {
 		ui.Text(c, a.text("Peeking", "查看中")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}
-	a.leadMark(c, s)
+	a.leadMark(c, s, groupLead)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 }
 
-// leadMark names the terminal of the agent that leads the agent, if one does.
-func (a *app) leadMark(c *ui.Context, s *terminal.Session) {
-	if lead := a.lead(s.ID); lead != 0 {
+// leadMark names the terminal of the agent that leads the agent, if one
+// does other than its group's lead.
+func (a *app) leadMark(c *ui.Context, s *terminal.Session, groupLead terminal.ID) {
+	if lead := a.lead(s.ID); lead != 0 && lead != groupLead {
 		ui.Text(c, fmt.Sprintf("↳ #%d", lead)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.TextMuted)
 	}
 }
