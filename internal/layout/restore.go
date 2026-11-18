@@ -196,13 +196,6 @@ func (c *restoreCheck) region(r *Region, kinds []ViewKind, project string, fixed
 		if !slices.Contains(kinds, v.Kind) {
 			return fmt.Errorf("view %d: kind %q does not belong in this region", v.ID, v.Kind)
 		}
-		if v.Kind == ViewAgents {
-			if !slices.Contains([]AgentsLayout{AgentsAuto, AgentsCards, AgentsList}, v.AgentsLayout) {
-				return fmt.Errorf("unknown agents layout %q", v.AgentsLayout)
-			}
-		} else if v.AgentsLayout != AgentsAuto {
-			return fmt.Errorf("view %d is not an Agents view but has an agents layout", v.ID)
-		}
 		if (v.Kind == ViewFile) != (v.File != nil) {
 			return fmt.Errorf("view %d: only a file view has a file, and it must", v.ID)
 		}

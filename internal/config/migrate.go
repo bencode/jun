@@ -30,16 +30,20 @@ func decodeJSON(data []byte, target any) error {
 // decodeLayout converts earlier versions in memory, through each later
 // version, then restores the layout.
 func decodeLayout(version int, data json.RawMessage) (*layout.State, error) {
+	if version < 1 || version > 4 {
+		return nil, fmt.Errorf("unsupported version %d", version)
+	}
+	data, err := dropAgentsLayouts(data)
+	if err != nil {
+		return nil, err
+	}
 	var state *layout.State
-	var err error
 	if version == 1 {
 		state, err = migrateV1(data)
-	} else if version == 2 || version == 4 {
-		err = decodeJSON(data, &state)
 	} else if version == 3 {
 		state, err = migrateV3(data)
 	} else {
-		return nil, fmt.Errorf("unsupported version %d", version)
+		err = decodeJSON(data, &state)
 	}
 	if err == nil && version < 3 {
 		err = migrateV2(state)
@@ -51,6 +55,33 @@ func decodeLayout(version int, data json.RawMessage) (*layout.State, error) {
 		return nil, err
 	}
 	return state, nil
+}
+
+// dropAgentsLayouts takes out the agentsLayout an Agents view kept when it
+// could show cards, in any version: the view now only lists agents.
+func dropAgentsLayouts(data json.RawMessage) (json.RawMessage, error) {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber() // IDs go past what a float64 holds
+	var doc any
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	var drop func(value any)
+	drop = func(value any) {
+		if object, ok := value.(map[string]any); ok {
+			delete(object, "agentsLayout")
+			for _, v := range object {
+				drop(v)
+			}
+		}
+		if items, ok := value.([]any); ok {
+			for _, item := range items {
+				drop(item)
+			}
+		}
+	}
+	drop(doc)
+	return json.Marshal(doc)
 }
 
 type legacyState struct {

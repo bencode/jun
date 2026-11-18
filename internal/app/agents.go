@@ -22,10 +22,9 @@ type agentInfo struct {
 
 // agentJob is what a poll reads, gathered on the UI thread.
 type agentJob struct {
-	pids     map[terminal.ID]int
-	ttys     map[terminal.ID]string
-	sources  map[terminal.ID]*ghostty.Terminal
-	previews map[terminal.ID]*preview
+	pids    map[terminal.ID]int
+	ttys    map[terminal.ID]string
+	sources map[terminal.ID]*ghostty.Terminal
 }
 
 const agentPollInterval = time.Second
@@ -54,7 +53,7 @@ func (a *app) startAgentPoller(stop <-chan struct{}) {
 
 func (a *app) agentJob() agentJob {
 	job := agentJob{pids: map[terminal.ID]int{}, ttys: map[terminal.ID]string{},
-		sources: map[terminal.ID]*ghostty.Terminal{}, previews: map[terminal.ID]*preview{}}
+		sources: map[terminal.ID]*ghostty.Terminal{}}
 	for _, session := range a.terminals.All() {
 		select {
 		case <-session.Terminal.Done():
@@ -68,22 +67,13 @@ func (a *app) agentJob() agentJob {
 			job.pids[session.ID] = pid
 		}
 	}
-	a.closeStalePreviews()
 	maps.DeleteFunc(a.viewSizes, func(id terminal.ID, _ ui.Rect) bool { return a.terminals.Get(id) == nil })
-	for id, p := range a.previews {
-		if job.sources[id] != nil && time.Since(p.seen) < 2*agentPollInterval {
-			job.previews[id] = p
-		}
-	}
 	return job
 }
 
 // pollAgents runs off the UI thread: ps and the terminals' reads take time.
 func (a *app) pollAgents(job agentJob) {
 	ttys, agents, err := readAgents(job)
-	for id, p := range job.previews {
-		p.refresh(job.sources[id], 5)
-	}
 	a.window.Update(func() {
 		a.agentPolling = false
 		if err != nil {
