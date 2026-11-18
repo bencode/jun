@@ -147,6 +147,8 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpLoop:          func() tool.Response { return started(a.toolLoop(req, callers)) },
 		tool.OpLoops:         func() tool.Response { return tool.Response{Loops: a.toolLoops()} },
 		tool.OpCancelLoop:    func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
+		tool.OpJoin:          func() tool.Response { return outcome(a.toolJoin(req, callers)) },
+		tool.OpLeave:         func() tool.Response { return outcome(a.toolLeave(req, callers)) },
 	}
 }
 
@@ -241,7 +243,7 @@ func (a *app) toolTerminals(callers []int, named uint64) []tool.Terminal {
 			continue
 		}
 		t := tool.Terminal{ID: uint64(s.ID), Project: s.ProjectName, Dir: cmp.Or(s.Terminal.Dir(), s.CWD),
-			Title: a.sessionTitle(s), Self: s.ID == caller}
+			Title: a.sessionTitle(s), Self: s.ID == caller, Lead: uint64(a.lead(s.ID))}
 		if info, ok := a.agents[s.ID]; ok {
 			t.Title, t.Agent, t.Status = a.agentTitle(s), string(info.Kind), string(info.Status)
 		}

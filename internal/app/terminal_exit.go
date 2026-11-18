@@ -2,9 +2,11 @@ package app
 
 import (
 	"errors"
+	"maps"
 	"slices"
 
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/terminal"
 )
 
 func (a *app) reapExitedTerminals(focused layout.ViewID) bool {
@@ -12,6 +14,7 @@ func (a *app) reapExitedTerminals(focused layout.ViewID) bool {
 	if len(closed) == 0 && cleanupErr == nil {
 		return false
 	}
+	maps.DeleteFunc(a.leads, func(led, lead terminal.ID) bool { return slices.Contains(closed, led) || slices.Contains(closed, lead) })
 	var destination layout.RegionID
 	modal := a.palette.open || a.projectForm.open || a.perspectiveForm.open || a.projectRename.open || a.confirmation.open || a.errorOpen ||
 		a.persistence != nil && a.persistence.errorOpen

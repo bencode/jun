@@ -201,6 +201,7 @@ func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo)
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	a.terminalNumber(c, s)
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+	a.leadMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 	ui.Box(c).Width(22).Height(16).Radius(4).Shrink(0).Background(projectColor(s.ProjectName)).Center().Children(func() {
 		ui.Text(c, projectAbbrev(s.ProjectName)).FontSize(theme.Caption).Bold().TextColor(ui.RGB(255, 255, 255))
@@ -286,7 +287,15 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, c
 	if current {
 		ui.Text(c, a.text("Current", "当前")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}
+	a.leadMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
+}
+
+// leadMark names the terminal of the agent that leads the agent, if one does.
+func (a *app) leadMark(c *ui.Context, s *terminal.Session) {
+	if lead := a.lead(s.ID); lead != 0 {
+		ui.Text(c, fmt.Sprintf("↳ #%d", lead)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.TextMuted)
+	}
 }
 
 func (a *app) agentTitle(s *terminal.Session) string {
@@ -299,6 +308,9 @@ func (a *app) agentTitle(s *terminal.Session) string {
 func (a *app) agentLabel(s *terminal.Session) string {
 	info := a.agents[s.ID]
 	label := fmt.Sprintf("%s, %s, %s %s", a.agentTitle(s), a.statusName(info.Status), s.ProjectName, agentName(info.Kind))
+	if lead := a.lead(s.ID); lead != 0 {
+		label += fmt.Sprintf(a.text(", led by #%d", "，协调者 #%d"), lead)
+	}
 	if s.ID == a.lastTerminal {
 		label += a.text(", current", "，当前")
 	}

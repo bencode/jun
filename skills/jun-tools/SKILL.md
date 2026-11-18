@@ -38,8 +38,8 @@ When a command fails, its error says what to do next: follow it.
 
 | Command | Does |
 |---|---|
-| `terminals` | Jun's terminals as JSON: `id`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self` |
-| `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `from`, `to` |
+| `terminals` | Jun's terminals as JSON: `id`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead` |
+| `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `lead`, `from`, `to` |
 | `screen <id> [--lines N]` | The last N lines of a terminal's text, scrollback included (default 40, at most 500) |
 | `send <id> <text>` / `send <id> -` | Submits the text to the agent in that terminal, as pasted then Enter; `-` reads standard input |
 | `open terminal:<id> [--peek]` | Shows that terminal to the user: its tab, or the peek drawer |
@@ -52,7 +52,8 @@ When a command fails, its error says what to do next: follow it.
 | `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` / `… -` | Tells the user, in Messages in Global, without disturbing them, and prints the message's id; `-` reads standard input, and with a title the text may go |
 | `message update <id> [--kind <kind>] [<text>]` / `… -` | Changes the message's kind, adds the text as a reply, or both |
 | `message` | The messages as JSON, the latest first: `id`, `time`, `kind`, `title`, `text`, `project`, `link`, `replies` |
-| `run [--dir <path>] [--open] <command…>` | Starts a terminal running the command; prints its id |
+| `run [--project <name>] [--dir <path>] [--open] <command…>` | Starts a terminal running the command, in your project or the one named; prints its id |
+| `join <id>` / `leave` | Makes the agent in that terminal your lead / drops your lead |
 | `loop <every> [--dir <path>] <command…>` | Runs the command every interval (at least `1m`) in a terminal of its own; prints the loop's id |
 | `loop` / `loop cancel <id>` | Lists the loops as JSON / ends one |
 
@@ -136,10 +137,20 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" 
 
 ```sh
 "$JUN_BIN" tool run --dir ../api codex
+"$JUN_BIN" tool run --project api codex     # in another project, in its directory
 "$JUN_BIN" tool run 'make test 2>&1 | tail -20'
 ```
 
-The new terminal belongs to your project and has no tab: follow it with `screen <id>`, or pass `--open` to show it to the user.
+The new terminal belongs to your project, or the one named, and has no tab: follow it with `screen <id>`, or pass `--open` to show it to the user.
+
+**Lead other agents.** The agents you start with `run` have you as their `lead`; Jun shows it in Agents, beside each of them. Follow just yours:
+
+```sh
+"$JUN_BIN" tool terminals | jq -c ".[] | select(.lead == $JUN_TERMINAL)"
+"$JUN_BIN" tool watch | jq --unbuffered -c "select(.lead == $JUN_TERMINAL)"
+```
+
+A session the user started and hands to you joins you itself: when the user tells you to work for terminal 3, run `join 3`. `leave` ends it; so does either terminal ending. A lead is a mark, not a lock: anyone may still `send` to your agents.
 
 **Hear of changes as they happen.** For an event, use `watch`, not a short loop:
 

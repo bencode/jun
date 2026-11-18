@@ -17,6 +17,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 | Idle | The agent waits for a new prompt | last |
 
 - The rail shows a project's waiting agents on its tile; see [Workspace](workspace.md#projects).
+- An agent led by another, which started it or which it joined, shows `↳ #3`, the number of its lead's card; see [join and leave](agent-tools.md#join-and-leave).
 
 ## Layout
 

@@ -62,7 +62,7 @@ func (a *app) agentEvents() map[terminal.ID]tool.Event {
 	for id, info := range a.agents {
 		if s := a.terminals.Get(id); s != nil {
 			events[id] = tool.Event{ID: uint64(id), Project: s.ProjectName, Agent: string(info.Kind),
-				Title: a.agentTitle(s), To: string(info.Status)}
+				Title: a.agentTitle(s), To: string(info.Status), Lead: uint64(a.lead(id))}
 		}
 	}
 	return events

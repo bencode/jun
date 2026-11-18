@@ -72,6 +72,8 @@ func TestMainUsage(t *testing.T) {
 		{"run"}, {"run", "--open"}, {"run", "--dir"}, {"run", "--dir", "", "x"}, {"run", "--open", "--open", "x"}, {"run", "--every", "x"},
 		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
+		{"run", "--project"}, {"run", "--project", " ", "x"}, {"run", "--project", "a", "--project", "b", "x"}, {"loop", "5m", "--project", "a", "x"},
+		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
@@ -217,6 +219,16 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "run", "--open", "codex", "--full-auto"); code != 0 || out != "12\n" {
 		t.Fatalf("run: %d %q", code, out)
 	}
+	for _, args := range [][]string{{"run", "--project", " Web ", "codex"}, {"run", "--project", "web", "--dir", "sub", "codex"}} {
+		if code, out, _ := run(path, args...); code != 0 || out != "12\n" {
+			t.Fatalf("%q: %d %q", args, code, out)
+		}
+	}
+	for _, args := range [][]string{{"join", "3"}, {"leave"}} {
+		if code, out, _ := run(path, args...); code != 0 || out != "" {
+			t.Fatalf("%q: %d %q", args, code, out)
+		}
+	}
 	if code, out, _ := run(path, "loop", "5m", "--dir", "sub", "echo", "hi"); code != 0 || out != "12\n" {
 		t.Fatalf("loop: %d %q", code, out)
 	}
@@ -239,6 +251,8 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpUpdateMessage, Message: 7, Text: "a\nb"}, {Op: OpMessage, Text: "update"},
 		{Op: OpMessage, Title: "Done"}, {Op: OpMessage, Text: "-- deploy failed"}, {Op: OpMessage, Title: "Quiet"}, {Op: OpMessage, Text: "a\nb"},
 		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
+		{Op: OpRun, Command: "codex", Project: "Web"}, {Op: OpRun, Command: "codex", Project: "web", Dir: filepath.Join(here, "sub")},
+		{Op: OpJoin, Terminal: 3}, {Op: OpLeave},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
 		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12},
 		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}

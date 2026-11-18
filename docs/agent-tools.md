@@ -34,7 +34,9 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints the message's id. |
 | `jun tool message update <id> [--kind <kind>] [<text>]`, or `-` for the text | Changes the message's kind, adds a reply, or both. Prints nothing. |
 | `jun tool message` | The messages, as a JSON array, the latest first |
-| `jun tool run [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
+| `jun tool run [--project <name>] [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
+| `jun tool join <id>` | Makes the agent in that terminal the caller's lead. Prints nothing. |
+| `jun tool leave` | Drops the caller's lead. Prints nothing. |
 | `jun tool loop <every> [--dir <path>] <command…>` | Runs the command every interval in a terminal of its own. Prints the loop's id. |
 | `jun tool loop` | The loops, as a JSON array |
 | `jun tool loop cancel <id>` | Ends the loop and its terminal. Prints nothing. |
@@ -52,7 +54,8 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
     "title": "Fix the login form",
     "agent": "claude",
     "status": "waiting",
-    "self": false
+    "self": false,
+    "lead": 2
   }
 ]
 ```
@@ -66,6 +69,7 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 | `agent` | `claude`, `codex` or `pi`, when one runs in it; absent otherwise |
 | `status` | `waiting`, `working` or `idle`, as the [Agents](agents-view.md) view shows it; with `agent` only |
 | `self` | `true` for the terminal the caller runs in |
+| `lead` | The terminal of the agent that [leads](#join-and-leave) it, when one does |
 
 Terminals with closed tabs are listed too: their shells keep running. Terminals whose shell has ended are not.
 
@@ -79,7 +83,7 @@ Runs until Jun quits, printing a line as soon as there is news of an agent:
 
 | Field | Meaning |
 |---|---|
-| `id`, `project`, `agent`, `title` | As `terminals` has them |
+| `id`, `project`, `agent`, `title`, `lead` | As `terminals` has them |
 | `from` | The status before; empty for an agent that is new |
 | `to` | The status now; empty for an agent that is gone, or whose terminal closed |
 
@@ -206,6 +210,9 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 
 Both run a command in a terminal of the caller's project, in `--dir`, by default the caller's current directory. The terminal has no tab: `open terminal:<id>` shows it, and `terminals` lists it.
 
+- **`run --project <name>`** starts the terminal in that project instead, whatever the case of its name, in the project's directory unless `--dir` says otherwise. A project that does not exist is status 1.
+- **A terminal an agent runs** has that agent as its [lead](#join-and-leave). One that a shell or a loop runs has none.
+
 - **The command**: the words after the options, joined by spaces into one command line, as `ssh` joins them. Quote a command whose own quotes must stay: `run 'git commit -m "a b"'`.
 - **run** types the command into a new shell, as if you had, so your shell's configuration applies; the shell stays once the command ends. `run codex` starts Codex there. With `--open`, the terminal shows in a tab, focused, under the same rules as `open`.
 - **loop** runs the command again and again, each run the interval after the one before ends, so that runs never overlap. The interval is written as `90s`, `5m` or `1h`, at least `1m`.
@@ -234,6 +241,20 @@ Jun runs what it is asked: a loop may run `run`, or start another loop. A loop t
     "dir": "/path/to/web"
   }
 ]
+```
+
+### join and leave
+
+An agent can lead others: hand them work, follow them and answer them. Jun records which agent leads which terminal, and shows it in [Agents](agents-view.md#order-and-status); what leading means is up to the agents.
+
+- **A lead comes** from `run`, for the terminal an agent starts, or from `join <id>`, which a terminal calls to be led by the agent in terminal `<id>`, as a session you started yourself and hand over does.
+- **One lead at a time**: a join takes the place of the lead before.
+- **Refused**: a terminal running no agent, the caller's own, and a terminal the caller leads, however far down.
+- **It ends** with `leave`, or when either terminal ends. The terminals the ended one led then have no lead, not the one above it. Leads last until Jun quits.
+- **A lead follows its own** with `lead` in `terminals` and `watch`:
+
+```sh
+"$JUN_BIN" tool watch | jq --unbuffered -c "select(.lead == $JUN_TERMINAL)"
 ```
 
 ## Environment

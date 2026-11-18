@@ -46,6 +46,8 @@ const (
 	OpLoops         Op = "loops"       // lists them
 	OpCancelLoop    Op = "cancel-loop" // the one of Request.Terminal
 	OpWatch         Op = "watch"       // answers with events until the connection ends
+	OpJoin          Op = "join"        // makes the terminal of Request.Terminal the caller's lead
+	OpLeave         Op = "leave"       // drops the caller's lead
 )
 
 // MinEvery is the shortest interval a loop takes.
@@ -132,8 +134,9 @@ type Request struct {
 	// absolute path.
 	Command string        `json:"command,omitempty"`
 	Dir     string        `json:"dir,omitempty"`
-	Open    bool          `json:"open,omitempty"`  // run: in a tab, focused
-	Every   time.Duration `json:"every,omitempty"` // loop: at least MinEvery, in whole seconds
+	Open    bool          `json:"open,omitempty"`    // run: in a tab, focused
+	Project string        `json:"project,omitempty"` // run: the project, else the caller's; an empty Dir is its directory
+	Every   time.Duration `json:"every,omitempty"`   // loop: at least MinEvery, in whole seconds
 }
 
 type Response struct {
@@ -163,8 +166,9 @@ type Event struct {
 	Project string `json:"project"`
 	Agent   string `json:"agent"`
 	Title   string `json:"title"`
-	From    string `json:"from"` // empty: the agent is new
-	To      string `json:"to"`   // empty: the agent is gone
+	From    string `json:"from"`           // empty: the agent is new
+	To      string `json:"to"`             // empty: the agent is gone
+	Lead    uint64 `json:"lead,omitempty"` // as terminals has it
 }
 
 type Terminal struct {
@@ -175,6 +179,9 @@ type Terminal struct {
 	Agent   string `json:"agent,omitempty"`  // claude, codex or pi
 	Status  string `json:"status,omitempty"` // waiting, working or idle
 	Self    bool   `json:"self"`             // the caller runs in it
+	// Lead is the terminal of the agent that leads it: the agent that ran
+	// it, or the one it joined. None once that terminal ends.
+	Lead uint64 `json:"lead,omitempty"`
 }
 
 // EnvCommand prints a terminal's variables, for the user to run in it when a
