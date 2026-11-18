@@ -8,16 +8,14 @@ import (
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
-	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
 
 // agentsViewState is what an Agents view keeps between frames.
 type agentsViewState struct {
-	room     ui.Rect      // the area under the counts, measured last frame
-	idleOpen bool         // the folded idle agents were shown
-	followed terminal.ID  // the current agent last scrolled to
-	grid     ui.GridState // the cards' scrolling
+	room     ui.Rect     // the area under the counts, measured last frame
+	idleOpen bool        // the folded idle agents were shown
+	followed terminal.ID // the current agent last scrolled to
 }
 
 func (a *app) agentsState(view layout.ViewID) *agentsViewState {
@@ -34,7 +32,6 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 	ui.Column(c.Key(v.ID)).Fill().Gap(8).Padding(12).Children(func() {
 		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Start).Children(func() {
 			a.agentCounts(c, sessions)
-			a.agentsLayoutChoice(c, v)
 		})
 		if len(sessions) == 0 {
 			ui.Column(c).Grow(1).FillWidth().AlignItems(ui.Center).Justify(ui.Center).Children(func() {
@@ -44,7 +41,7 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 			})
 			return
 		}
-		// The agents show as their room allows, so the room is measured first.
+		// The list fits its room, so the room is measured first.
 		area := ui.Box(c).Grow(1).FillWidth().MinHeight(0)
 		st, room := a.agentsState(v.ID), area.LayoutBounds()
 		if room.W != st.room.W || room.H != st.room.H {
@@ -52,49 +49,12 @@ func (a *app) agentsView(c *ui.Context, v *layout.View) {
 			c.Invalidate()
 		}
 		// A newly current agent is scrolled into view, once.
-		current := slices.IndexFunc(sessions, func(s *terminal.Session) bool { return s.ID == a.lastTerminal })
-		follow := current >= 0 && st.followed != a.lastTerminal
+		follow := st.followed != a.lastTerminal &&
+			slices.ContainsFunc(sessions, func(s *terminal.Session) bool { return s.ID == a.lastTerminal })
 		if follow {
 			st.followed = a.lastTerminal
 		}
-		area.Children(func() {
-			width, height, fits := cardGrid(room.W, room.H, len(sessions))
-			if v.AgentsLayout == layout.AgentsList || v.AgentsLayout == layout.AgentsAuto && !fits {
-				a.agentList(c, st, sessions, room.H, follow)
-				return
-			}
-			if !fits {
-				width, height = cardWidth, cardHeight
-			}
-			if follow {
-				st.grid.ScrollIntoView(current)
-			}
-			// Under the width of the cards, as GridView rounds down its columns.
-			ui.GridView(c, &st.grid, len(sessions), width-0.5, height, func(i int) {
-				a.agentCard(c, sessions[i])
-			}).Fill()
-		})
-	})
-}
-
-// agentsLayoutChoice switches the view among cards when they fit, cards
-// and a list, from a menu, which leaves the counts its width.
-func (a *app) agentsLayoutChoice(c *ui.Context, v *layout.View) {
-	names := map[layout.AgentsLayout][2]string{
-		layout.AgentsAuto: {"Auto", "自动"}, layout.AgentsCards: {"Cards", "卡片"}, layout.AgentsList: {"List", "列表"},
-	}
-	name := func(l layout.AgentsLayout) string { return a.text(names[l][0], names[l][1]) }
-	ui.ButtonBase(c).Height(24).Padding(0, 8).Gap(4).Radius(12).Shrink(0).
-		Label(a.text("Agents layout", "Agents 显示方式")).Children(func() {
-		ui.Text(c, name(v.AgentsLayout)).TextColor(a.theme.TextMuted)
-		ui.Icon(c, downIcon).Size(12, 12).TextColor(a.theme.TextMuted)
-	}).Menu(func(m *ui.Menu) {
-		for _, l := range []layout.AgentsLayout{layout.AgentsAuto, layout.AgentsCards, layout.AgentsList} {
-			if m.Item(name(l)).Radio(v.AgentsLayout == l).Chosen() {
-				v.AgentsLayout = l
-				a.layoutChanged()
-			}
-		}
+		area.Children(func() { a.agentList(c, st, sessions, room.H, follow) })
 	})
 }
 
@@ -173,7 +133,7 @@ func (a *app) countChip(c *ui.Context, name string, n int, dot *ui.Color) {
 // marked as the rail marks the current project.
 func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool) ui.Element {
 	info := a.agents[s.ID]
-	height, content := rowHeight, func() { a.agentHeading(c, s, info, false) }
+	height, content := rowHeight, func() { a.agentHeading(c, s, info) }
 	if compact {
 		height, content = compactRowHeight, func() { a.compactHeading(c, s, info) }
 	}
@@ -208,34 +168,6 @@ func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo)
 	})
 }
 
-func (a *app) agentCard(c *ui.Context, s *terminal.Session) {
-	info := a.agents[s.ID]
-	border := a.theme.Border
-	if info.Status == agent.Waiting {
-		border = a.statusColor(agent.Waiting)
-	}
-	width := float32(1)
-	if s.ID == a.peek.id {
-		width, border = 2, a.theme.Accent
-	}
-	card := ui.ButtonBase(c.Key(s.ID)).Fill().Column().AlignItems(ui.Stretch).Gap(6).Padding(8).Radius(8).
-		Border(width, border).Background(a.theme.Surface).Label(a.agentLabel(s))
-	current := s.ID == a.lastTerminal
-	card.Children(func() {
-		heading := ui.Row(c).FillWidth().Height(32).Gap(10).Padding(0, 4).Radius(4).AlignItems(ui.Center).
-			Children(func() { a.agentHeading(c, s, info, current) })
-		if current {
-			heading.Background(a.theme.Accent.Alpha(0.10))
-		}
-		a.cardScreen(c, s)
-		// The current agent is marked as the focused tab is, clear of the corners.
-		if current {
-			ui.Box(c).Absolute().Top(0).Left(8).Right(8).Height(2).Background(a.theme.Accent)
-		}
-	})
-	card.OnClick(a.agentClick(card, s.ID)).ContextMenu(func(m *ui.Menu) { a.agentMenu(m, s) })
-}
-
 // agentClick peeks the agent, or closes the drawer peeking it; with ⌘
 // held, it shows its tab.
 func (a *app) agentClick(e ui.Element, id terminal.ID) func() {
@@ -254,25 +186,7 @@ func (a *app) clickAgent(id terminal.ID, reveal bool) {
 	}
 }
 
-// cardScreen shows a live copy of the agent's screen.
-func (a *app) cardScreen(c *ui.Context, s *terminal.Session) {
-	p := a.previewFor(s)
-	if p == nil {
-		return
-	}
-	// The area keeps its place as the font changes; the screen shows once
-	// its font fits, as a new card's would first show at the default size.
-	area := ui.Box(c).Grow(1).FillWidth().MinHeight(0).Clip()
-	bounds := area.LayoutBounds()
-	if p.fit(bounds) || bounds.W == 0 {
-		c.Invalidate()
-	}
-	if p.fontSize > 0 {
-		area.Children(func() { ghostty.View(c, p.term).Fill().PassThrough() })
-	}
-}
-
-func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, current bool) {
+func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo) {
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
@@ -283,9 +197,6 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, c
 	})
 	if s.ID == a.peek.id {
 		ui.Text(c, a.text("Peeking", "查看中")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
-	}
-	if current {
-		ui.Text(c, a.text("Current", "当前")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}
 	a.leadMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))

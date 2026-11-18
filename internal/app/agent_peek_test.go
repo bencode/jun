@@ -128,7 +128,7 @@ func TestPeekOfAShownTerminalFocusesItsTab(t *testing.T) {
 	}
 }
 
-func TestClickingThePeekedCardClosesIt(t *testing.T) {
+func TestClickingThePeekedRowClosesIt(t *testing.T) {
 	a, tt, _ := agentsApp(t)
 	addAgents(t, a, agent.Waiting)
 	all := a.terminals.All()
@@ -137,12 +137,12 @@ func TestClickingThePeekedCardClosesIt(t *testing.T) {
 	click(t, tt, a.agentLabel(hidden))
 	tt.Frame()
 	if a.peek.id != hidden.ID {
-		t.Fatal("clicking the card did not peek its agent")
+		t.Fatal("clicking the row did not peek its agent")
 	}
 	click(t, tt, a.agentLabel(hidden))
 	tt.Frame()
 	if a.peek.id != 0 {
-		t.Fatal("clicking the peeked card again did not close the drawer")
+		t.Fatal("clicking the peeked row again did not close the drawer")
 	}
 }
 

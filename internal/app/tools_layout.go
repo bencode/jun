@@ -114,7 +114,7 @@ func (a *app) toolOpen(req tool.Request, caller terminal.ID) error {
 }
 
 // toolOpenDiff opens the changes of the branch the terminal is on, as its
-// agent card's Review Changes does, in the perspective named in, of the
+// agent's Review Changes does, in the perspective named in, of the
 // terminal's project, when given; focused, which closes any peek.
 func (a *app) toolOpenDiff(s *terminal.Session, in string) error {
 	source, err := a.toolDiffSource(s)

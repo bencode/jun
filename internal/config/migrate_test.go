@@ -209,7 +209,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 			t.Errorf("%s: views %v, active %d; want %v, %d", c.name, got, c.region.Active, c.views, c.active)
 		}
 	}
-	if s.Global.Views[0].AgentsLayout != layout.AgentsList || !s.GlobalVisible || !work.BottomVisible {
+	if !s.GlobalVisible || !work.BottomVisible {
 		t.Fatal("migration lost Global's or Work's state")
 	}
 	for _, p := range []*layout.Perspective{work, review, brain.Perspectives[0]} {
@@ -227,6 +227,29 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 	restored, err := Load(path)
 	if err != nil || !reflect.DeepEqual(restored.Projects, s.Projects) || !reflect.DeepEqual(restored.Global, s.Global) {
 		t.Fatal("v4 round trip changed migrated state", err)
+	}
+}
+
+// An Agents view kept the layout it was given when it could show cards;
+// Jun loads such a file as if it had none.
+func TestLoadDropsTheAgentsLayout(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, snapshot(t)); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards := bytes.Replace(data, []byte(`"kind": "agents",`), []byte(`"kind": "agents", "agentsLayout": "cards",`), 1)
+	if bytes.Equal(cards, data) {
+		t.Fatal("the layout has no Agents view")
+	}
+	if err := os.WriteFile(path, cards, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err != nil {
+		t.Fatal(err)
 	}
 }
 

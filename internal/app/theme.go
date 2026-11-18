@@ -16,9 +16,6 @@ func (a *app) applyTheme(name string) error {
 	}
 	a.theme = theme.UI(name, term)
 	a.terminals.SetTheme(term)
-	for _, p := range a.previews {
-		p.term.SetTheme(term, nil)
-	}
 	a.matchAppearance()
 	return nil
 }

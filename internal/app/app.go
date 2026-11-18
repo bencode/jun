@@ -81,7 +81,6 @@ type app struct {
 	loops           map[terminal.ID]loop        // by the terminal each runs in
 	leads           map[terminal.ID]terminal.ID // each terminal's lead, by the terminal led
 	ttys            map[terminal.ID]string
-	previews        map[terminal.ID]*preview
 	agentPolling    bool
 	watched         watchedAgents            // what `jun tool watch` has told
 	watchers        map[chan tool.Event]bool // the watches running, by their queues
@@ -113,7 +112,7 @@ type app struct {
 func newApp(runtimeDir string) *app {
 	a := &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
-		agents: map[terminal.ID]agentInfo{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, ttys: map[terminal.ID]string{}, previews: map[terminal.ID]*preview{}, viewSizes: map[terminal.ID]ui.Rect{},
+		agents: map[terminal.ID]agentInfo{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, ttys: map[terminal.ID]string{}, viewSizes: map[terminal.ID]ui.Rect{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
 		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},
@@ -175,7 +174,6 @@ func Run() error {
 		a.window.OnClosed(func() {
 			close(stopAgents)
 			a.stopTools()
-			a.closePreviews()
 			a.closeTerminals()
 		})
 		a.window.OnBlur(a.saveInBackground)
