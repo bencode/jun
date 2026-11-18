@@ -26,6 +26,19 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 	if command == "watch" && len(rest) == 0 {
 		return Request{Op: OpWatch}, nil
 	}
+	if command == "leave" && len(rest) == 0 {
+		return Request{Op: OpLeave}, nil
+	}
+	if command == "join" {
+		if len(rest) != 1 {
+			return Request{}, errors.New("join takes the terminal id of the agent to be led by")
+		}
+		id, err := strconv.ParseUint(rest[0], 10, 64)
+		if err != nil || id == 0 {
+			return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", rest[0])
+		}
+		return Request{Op: OpJoin, Terminal: id}, nil
+	}
 	if (command == "back" || command == "forward") && len(rest) == 0 {
 		return Request{Op: Op(command)}, nil
 	}
@@ -315,15 +328,20 @@ func parseLoop(args []string) (Request, error) {
 	return req, nil
 }
 
-// parseCommand reads the options before a command, --open only where
-// open, then the command: the words left, joined by spaces, as ssh joins
-// them. Dir is where it runs: --dir's, made absolute, else here.
-func parseCommand(args []string, req *Request, open bool) error {
+// parseCommand reads the options before a command, --open and --project
+// only for run, then the command: the words left, joined by spaces, as ssh
+// joins them. Dir is where it runs: --dir's, made absolute, else here, or
+// with --project none, for Jun to take the project's.
+func parseCommand(args []string, req *Request, run bool) error {
 	dir, dirSet := "", false
 	for len(args) > 0 && strings.HasPrefix(args[0], "--") {
 		flag := args[0]
-		if flag == "--open" && open && !req.Open {
+		if flag == "--open" && run && !req.Open {
 			req.Open, args = true, args[1:]
+			continue
+		}
+		if flag == "--project" && run && req.Project == "" && len(args) > 1 && strings.TrimSpace(args[1]) != "" {
+			req.Project, args = strings.TrimSpace(args[1]), args[2:]
 			continue
 		}
 		if flag == "--dir" && !dirSet && len(args) > 1 && args[1] != "" {
@@ -335,6 +353,9 @@ func parseCommand(args []string, req *Request, open bool) error {
 	req.Command = strings.TrimSpace(strings.Join(args, " "))
 	if req.Command == "" {
 		return errors.New("no command")
+	}
+	if req.Project != "" && !dirSet {
+		return nil
 	}
 	abs, err := filepath.Abs(cmp.Or(dir, "."))
 	if err != nil {

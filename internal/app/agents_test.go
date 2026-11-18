@@ -2,13 +2,12 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bencode/jun/internal/agent"
-	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
-	ghostty "github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -16,7 +15,6 @@ import (
 func agentsApp(t *testing.T) (*app, *ui.Tester, []*terminal.Session) {
 	t.Helper()
 	a, tt := testApp(t)
-	t.Cleanup(a.closePreviews)
 	sessions := a.terminals.All()
 	if len(sessions) != 3 {
 		t.Fatalf("want 3 terminals, got %d", len(sessions))
@@ -56,15 +54,10 @@ func resize(tt *ui.Tester, width, height int) {
 	tt.Frame()
 }
 
-func TestAgentsLayoutFitsRoom(t *testing.T) {
+func TestAgentsListFitsRoom(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.CenterPercent = 76
 	a.toggleGlobalView(a.state.Global.Views[1].ID) // the room is all Agents'
-	tt.Frame()
-	tt.Frame()
-	if len(a.previews) != 3 || row(t, tt, a, sessions[2]).H < cardMinHeight {
-		t.Fatal("three agents in Global did not show as cards")
-	}
 	addAgents(t, a, agent.Working, agent.Idle, agent.Idle)
 	resize(tt, 1440, 900)
 	idle, working, waiting := row(t, tt, a, sessions[0]), row(t, tt, a, sessions[1]), row(t, tt, a, sessions[2])
@@ -86,18 +79,6 @@ func TestAgentsLayoutFitsRoom(t *testing.T) {
 	}
 	click(t, tt, "Idle 3 ▸")
 	row(t, tt, a, sessions[0])
-}
-
-func TestAgentsLayoutChoice(t *testing.T) {
-	a, tt, sessions := agentsApp(t)
-	click(t, tt, "Agents layout")
-	if err := tt.ChooseMenuItem("List"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
-	if row(t, tt, a, sessions[0]).H != rowHeight || a.state.Global.Views[0].AgentsLayout != layout.AgentsList {
-		t.Fatal("choosing List did not list the agents, or was not kept in the layout")
-	}
 }
 
 func TestAgentCommandClickRevealsTabAcrossProjects(t *testing.T) {
@@ -142,52 +123,6 @@ func TestAgentCommandClickReopensClosedTabInItsProject(t *testing.T) {
 	}
 }
 
-func TestPreviewSkipsHalfDrawnSynchronizedUpdates(t *testing.T) {
-	source, err := ghostty.New(ghostty.Options{Conn: &discardConn{done: make(chan struct{})}, ResizeByConn: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { source.Close() })
-	source.Resize(20, 4)
-	source.Feed([]byte("before"))
-	p, err := newPreview(func() {})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { p.term.Close() })
-	p.refresh(source, 1)
-	source.Feed([]byte("\x1b[?2026h\x1b[2K\r"))
-	p.refresh(source, 2)
-	if !strings.Contains(p.term.Text(), "before") {
-		t.Fatalf("preview showed a half-drawn screen: %q", p.term.Text())
-	}
-	source.Feed([]byte("after\x1b[?2026l"))
-	p.refresh(source, 2)
-	if text := p.term.Text(); !strings.Contains(text, "after") || strings.Contains(text, "before") {
-		t.Fatalf("preview missed the finished update: %q", text)
-	}
-}
-
-func TestPreviewShowsTheBottomOfTheScreenItsViewFits(t *testing.T) {
-	source, err := ghostty.New(ghostty.Options{Conn: &discardConn{done: make(chan struct{})}, ResizeByConn: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { source.Close() })
-	source.Resize(30, 10)
-	source.Feed([]byte("\r\n\r\n\r\n\r\nolder\r\n> box\r\n  status"))
-	p, err := newPreview(func() {})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { p.term.Close() })
-	p.refresh(source, 1)
-	p.conn.Resize(80, 2)
-	if cols, rows := p.term.Size(); cols != 30 || rows != 2 || p.term.Text() != "> box\n  status" {
-		t.Fatalf("preview %dx%d shows %q", cols, rows, p.term.Text())
-	}
-}
-
 func TestRailShowsWaitingAgents(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	for _, expanded := range []bool{false, true} {
@@ -228,5 +163,41 @@ func TestAgentsHighlightLastFocusedTerminal(t *testing.T) {
 	tt.Frame()
 	if !current(shown[1]) || current(shown[0]) {
 		t.Fatal("the current agent changed when the focus left the terminals")
+	}
+}
+
+func TestAgentsGroupUnderTheirLead(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	idle, lead, waiting := sessions[0], sessions[1], sessions[2]
+	addAgents(t, a, agent.Idle, agent.Waiting, agent.Idle, agent.Waiting)
+	all := a.terminals.All()
+	m1, m2, nested, orphan := all[3], all[4], all[5], all[6]
+	shell, err := a.terminals.Create("Jun", a.state.CurrentProject().CWD, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.leads[m1.ID], a.leads[m2.ID], a.leads[nested.ID], a.leads[orphan.ID] = lead.ID, lead.ID, m1.ID, shell.ID
+	resize(tt, 1440, 900)
+
+	// The lead's group comes with the waiting agents, as one of its own
+	// waits; the lead first, then the rest of the group by id.
+	want := []terminal.ID{lead.ID, m1.ID, m2.ID, nested.ID, waiting.ID, orphan.ID, idle.ID}
+	if got := a.agentOrder(); !slices.Equal(got, want) {
+		t.Fatalf("order %v, want %v", got, want)
+	}
+	for _, heading := range []string{"Waiting 6", "Idle 1"} {
+		if !tt.HasText(heading) {
+			t.Fatalf("missing heading %q", heading)
+		}
+	}
+	// The group's line marks its lead; an agent led by another, or by no
+	// running agent, is marked.
+	mark := func(id terminal.ID) bool { return tt.HasText(fmt.Sprintf("↳ #%d", id)) }
+	at := func(s *terminal.Session) float32 { return row(t, tt, a, s).X }
+	if at(m1)-at(lead) != memberIndent || at(nested) != at(m1) || at(orphan) != at(lead) {
+		t.Fatalf("rows at %v, %v, %v, %v", at(lead), at(m1), at(nested), at(orphan))
+	}
+	if mark(lead.ID) || !mark(m1.ID) || !mark(shell.ID) || !strings.Contains(a.agentLabel(m2), fmt.Sprintf("#%d", lead.ID)) {
+		t.Fatal("marks of leads: the group's lead is marked, or another lead is not")
 	}
 }

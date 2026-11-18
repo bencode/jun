@@ -22,10 +22,9 @@ type agentInfo struct {
 
 // agentJob is what a poll reads, gathered on the UI thread.
 type agentJob struct {
-	pids     map[terminal.ID]int
-	ttys     map[terminal.ID]string
-	sources  map[terminal.ID]*ghostty.Terminal
-	previews map[terminal.ID]*preview
+	pids    map[terminal.ID]int
+	ttys    map[terminal.ID]string
+	sources map[terminal.ID]*ghostty.Terminal
 }
 
 const agentPollInterval = time.Second
@@ -54,7 +53,7 @@ func (a *app) startAgentPoller(stop <-chan struct{}) {
 
 func (a *app) agentJob() agentJob {
 	job := agentJob{pids: map[terminal.ID]int{}, ttys: map[terminal.ID]string{},
-		sources: map[terminal.ID]*ghostty.Terminal{}, previews: map[terminal.ID]*preview{}}
+		sources: map[terminal.ID]*ghostty.Terminal{}}
 	for _, session := range a.terminals.All() {
 		select {
 		case <-session.Terminal.Done():
@@ -68,22 +67,13 @@ func (a *app) agentJob() agentJob {
 			job.pids[session.ID] = pid
 		}
 	}
-	a.closeStalePreviews()
 	maps.DeleteFunc(a.viewSizes, func(id terminal.ID, _ ui.Rect) bool { return a.terminals.Get(id) == nil })
-	for id, p := range a.previews {
-		if job.sources[id] != nil && time.Since(p.seen) < 2*agentPollInterval {
-			job.previews[id] = p
-		}
-	}
 	return job
 }
 
 // pollAgents runs off the UI thread: ps and the terminals' reads take time.
 func (a *app) pollAgents(job agentJob) {
 	ttys, agents, err := readAgents(job)
-	for id, p := range job.previews {
-		p.refresh(job.sources[id], 5)
-	}
 	a.window.Update(func() {
 		a.agentPolling = false
 		if err != nil {
@@ -122,22 +112,62 @@ func readAgents(job agentJob) (map[terminal.ID]string, map[terminal.ID]agentInfo
 
 var statusOrder = map[agent.Status]int{agent.Waiting: 0, agent.Working: 1, agent.Idle: 2}
 
-// agentSessions lists the agents most in need of the user first.
+// agentSessions lists the agents as the Agents view does.
 func (a *app) agentSessions() []*terminal.Session {
+	return slices.Concat(a.agentGroups()...)
+}
+
+// agentGroups lists the agents in groups, each a lead and the agents it
+// leads, however far down; an agent no running agent leads is a group of
+// its own. A group comes as urgently as its most urgent agent, then by its
+// lead's project and id; in it the lead comes first, the rest by id.
+func (a *app) agentGroups() [][]*terminal.Session {
 	projectOrder := func(name string) int {
 		return slices.IndexFunc(a.state.Projects, func(p *layout.Project) bool { return p.Name == name })
 	}
-	sessions := slices.DeleteFunc(a.terminals.All(), func(s *terminal.Session) bool {
-		_, ok := a.agents[s.ID]
-		return !ok
-	})
-	slices.SortFunc(sessions, func(x, y *terminal.Session) int {
+	// The terminals come in the order they started, that of their ids.
+	var leads []*terminal.Session
+	led := map[terminal.ID][]*terminal.Session{}
+	for _, s := range a.terminals.All() {
+		if _, ok := a.agents[s.ID]; !ok {
+			continue
+		}
+		if root := a.agentRoot(s.ID); root == s.ID {
+			leads = append(leads, s)
+		} else {
+			led[root] = append(led[root], s)
+		}
+	}
+	groups := make([][]*terminal.Session, len(leads))
+	for i, lead := range leads {
+		groups[i] = append([]*terminal.Session{lead}, led[lead.ID]...)
+	}
+	slices.SortFunc(groups, func(x, y []*terminal.Session) int {
 		return cmp.Or(
-			cmp.Compare(statusOrder[a.agents[x.ID].Status], statusOrder[a.agents[y.ID].Status]),
-			cmp.Compare(projectOrder(x.ProjectName), projectOrder(y.ProjectName)),
-			cmp.Compare(x.ID, y.ID))
+			cmp.Compare(statusOrder[a.urgency(x)], statusOrder[a.urgency(y)]),
+			cmp.Compare(projectOrder(x[0].ProjectName), projectOrder(y[0].ProjectName)),
+			cmp.Compare(x[0].ID, y[0].ID))
 	})
-	return sessions
+	return groups
+}
+
+// agentRoot is the agent at the top of the leads above the agent, going up
+// while the lead runs an agent.
+func (a *app) agentRoot(id terminal.ID) terminal.ID {
+	for {
+		lead := a.lead(id)
+		if _, ok := a.agents[lead]; !ok {
+			return id
+		}
+		id = lead
+	}
+}
+
+// urgency is the status of the group's most urgent agent.
+func (a *app) urgency(group []*terminal.Session) agent.Status {
+	return a.agents[slices.MinFunc(group, func(x, y *terminal.Session) int {
+		return cmp.Compare(statusOrder[a.agents[x.ID].Status], statusOrder[a.agents[y.ID].Status])
+	}).ID].Status
 }
 
 // waitingByProject counts the agents waiting for the user, by project.

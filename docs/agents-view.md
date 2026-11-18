@@ -17,19 +17,20 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 | Idle | The agent waits for a new prompt | last |
 
 - The rail shows a project's waiting agents on its tile; see [Workspace](workspace.md#projects).
+- An agent [leads](agent-tools.md#join-and-leave) those it started and those that joined it. The list keeps a lead and the agents it leads together, as a group:
+  - The group comes under the status of its most urgent agent: when one of its agents waits, the whole group comes with the waiting ones.
+  - In the group, the lead comes first, and the agents it leads are set in below it, by number, with a line from it.
+  - Only one level is set in: an agent led by one of those comes in the same group, and shows `↳ #8`, the number of its own lead.
+  - An agent whose lead runs no agent any more comes on its own, under its own status, and shows `↳ #3`.
 
 ## Layout
 
-- **Auto** (the default)
-  - When every agent fits, they show as **cards**, each with a read-only, live copy of the agent's screen.
-  - When they do not fit, they are **listed** under a heading for each status.
-  - With too many for normal rows, the list uses compact single-line rows. When even those do not fit, the idle ones are folded under their heading.
-  - Widen Global to fit more cards.
-- The view's **Auto ▾** menu can keep it to **Cards** or **List**. The view remembers the choice.
+- The agents are listed under a heading for each status, which counts the agents under it.
+- With too many for normal rows, the list uses compact single-line rows. When even those do not fit, the idle ones are folded under their heading.
 
 ## Current agent
 
-- The agent in the terminal you focused last is marked **Current**.
+- The agent in the terminal you focused last is marked with a bar at the left of its row.
 - When the view scrolls, it scrolls the current agent into view.
 
 ## Actions
@@ -46,7 +47,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 - Each message shows an icon for its kind, its number, its title, its age, its text and, when it links to something, a tag, the latest first.
   - The icons tell what asks for you, a warning, what is done and what is for your information. When an agent sees that you handled what asked for you, it turns the icon to done.
   - The number, such as `M12`, is what you and agents call the message by.
-  - The tag names the project and the terminal, Diff or file: `#13 yimi`, `#13 yimi · Diff`, `yimi · notes.md`. `#13` is the number on the agent's card.
+  - The tag names the project and the terminal, Diff or file: `#13 yimi`, `#13 yimi · Diff`, `yimi · notes.md`. `#13` is the number on the agent's row.
 - **Replies** are what agents added to a message later, indented below it, each with its age. A reply brings its message to the top.
 - **Click a message with a tag** to go to what it links to:
 
@@ -74,11 +75,11 @@ Global shows its views together, without tabs:
 
 ## Peek
 
-Peek opens an agent's terminal in a drawer that slides out of Global's edge, so you can answer it without leaving the project and perspective you are in. The rest of the work area dims; Global stays bright, and its card for the agent says **Peeking**.
+Peek opens an agent's terminal in a drawer that slides out of Global's edge, so you can answer it without leaving the project and perspective you are in. The rest of the work area dims; Global stays bright, and the agent's row in it is outlined.
 
-- **⌘J** peeks the first waiting agent. Pressed again, it moves to the next waiting one. On the last, the drawer's button reads **Close ⌘J**, and ⌘J closes it. With none waiting, ⌘J peeks the current agent.
+- **⌘J** peeks the first waiting agent. Pressed again, it moves to the next waiting one, in the list's order. On the last, the drawer's button reads **Close ⌘J**, and ⌘J closes it. With none waiting, ⌘J peeks the current agent.
 - **Keys**: ⌘ shortcuts stay Jun's. Every other key goes to the agent, as in any terminal, **Esc** too: the drawer's header says **Esc → agent**, and after Esc it shows for a moment how to close the drawer.
-- **Closing**: ✕, ⌘W, a click on the dimmed work area, or a click on the agent's card again. The focus goes back to where it was.
+- **Closing**: ✕, ⌘W, a click on the dimmed work area, or a click on the agent's row again. The focus goes back to where it was.
 - **Open Tab ⌘↩** shows the agent's tab, as ⌘-click does. **Next ⌘J** goes to the next waiting agent.
 - **Size**: the drawer is as tall as the work area, and as wide as the agent's tab, up to 62% of the work area (or 560 points where that is more). An agent from a wider tab redraws at the drawer's width, and again back in its tab.
 - When the agent's tab is already on screen, a peek focuses the tab instead.

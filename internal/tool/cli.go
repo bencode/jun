@@ -19,7 +19,8 @@ const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N
 	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
-	"  run [--dir <path>] [--open] <command…> | loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
+	"  run [--project <name>] [--dir <path>] [--open] <command…> | join <id> | leave |\n" +
+	"  loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
 const help = `jun tool: ask the Jun that runs this terminal about its terminals, and
 change what it shows.
@@ -37,11 +38,13 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
         agent    claude, codex or pi, when one runs in it; absent otherwise
         status   waiting, working or idle, with agent
         self     true for the terminal the caller runs in
+        lead     the terminal of the agent that leads it, when one does:
+                 the agent that ran it, or the one it joined
   jun tool watch
       Agents' status as it changes, a JSON object a line, until Jun quits
       or the reader falls behind; then status 1. It starts with each
       agent, from empty:
-        id, project, agent, title   as terminals has them
+        id, project, agent, title   as terminals has them, and lead
         from, to                    the status before and now; from is
                                     empty for a new agent, to for one gone
       Jun tells idle after it holds for a few seconds, the rest at once.
@@ -119,11 +122,13 @@ Sending:
 
 Running commands, each in a terminal of its own, in the caller's
 project, with no tab unless asked for:
-  jun tool run [--dir <path>] [--open] <command…>
+  jun tool run [--project <name>] [--dir <path>] [--open] <command…>
       Starts a terminal in the directory (default: the current one) and
       types the command into its shell, which stays once the command
-      ends. Prints the terminal's id. --open shows it in a tab, focused,
-      as open does, for the terminal the user is with only.
+      ends. Prints the terminal's id. --project starts it in that project,
+      in its directory unless --dir says otherwise. --open shows it in a
+      tab, focused, as open does, for the terminal the user is with only.
+      Run by an agent, the terminal has that agent as its lead.
   jun tool loop <every> [--dir <path>] <command…>
       Runs the command again and again in a terminal of its own, every
       interval (90s, 5m, 1h: at least 1m) after a run ends, with
@@ -136,6 +141,16 @@ project, with no tab unless asked for:
       Ends the loop and its terminal; Control-C in it does too.
   The words of a command are joined by spaces into one command line, as
   ssh joins them: quote a command whose own quotes must stay.
+
+Leading, for an agent that has others work for it:
+  jun tool join <id>
+      Makes the agent in that terminal the caller's lead, in place of any
+      other: terminals and watch tell it, and Jun shows it beside the
+      caller in Agents. A terminal running no agent, the caller's own and
+      one the caller leads, however far down, are refused.
+  jun tool leave
+      Drops the caller's lead. A terminal that ends drops its own, and
+      those of the terminals it leads. Leads last until Jun quits.
 
 Environment, set in each of Jun's terminals:
   JUN_API       the socket of the Jun that runs the terminal; nothing else
@@ -162,7 +177,7 @@ and Pi let it through.
 var errHelp = errors.New("help")
 
 // commands are the words that may follow "tool", those parse takes.
-var commands = []string{"help", "terminals", "watch", "screen", "open", "close", "back", "forward", "send", "message", "run", "loop"}
+var commands = []string{"help", "terminals", "watch", "screen", "open", "close", "back", "forward", "send", "message", "run", "join", "leave", "loop"}
 
 // MistakenCommand tells, for the words jun was started with, how to run
 // the tool command they look like when "tool" was left out, as "jun open

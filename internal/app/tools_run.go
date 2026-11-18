@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"maps"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
 )
@@ -22,10 +24,10 @@ type loop struct {
 	dir     string
 }
 
-// toolRun starts a terminal in the caller's project and types the command
-// into its shell, which stays once the command ends, as resuming an agent
-// session does. Shown in a tab only when asked, for the terminal the user
-// is with.
+// toolRun starts a terminal in the caller's project, or the one asked for,
+// and types the command into its shell, which stays once the command ends,
+// as resuming an agent session does. Shown in a tab only when asked, for
+// the terminal the user is with. An agent that runs it is its lead.
 func (a *app) toolRun(req tool.Request, callers []int) (terminal.ID, error) {
 	if strings.TrimSpace(req.Command) == "" {
 		return 0, errors.New("no command")
@@ -39,13 +41,16 @@ func (a *app) toolRun(req tool.Request, callers []int) (terminal.ID, error) {
 			return 0, err
 		}
 	}
-	project, err := a.newTerminalProject(caller)
+	project, dir, err := a.runProject(req, caller)
 	if err != nil {
 		return 0, err
 	}
-	s, err := a.terminals.Create(project, req.Dir, a.invalidate())
+	s, err := a.terminals.Create(project, dir, a.invalidate())
 	if err != nil {
 		return 0, err
+	}
+	if _, ok := a.agents[caller]; ok {
+		a.leads[s.ID] = caller
 	}
 	s.Terminal.Send([]byte(req.Command + "\r"))
 	if req.Open {
@@ -108,6 +113,22 @@ func (a *app) toolCancelLoop(id terminal.ID) error {
 	}
 	delete(a.loops, id)
 	return nil
+}
+
+// runProject is the project and directory run starts its terminal in: the
+// project asked for, whatever the case of its name, in its directory
+// unless one is asked for; else the caller's, in the directory asked for.
+func (a *app) runProject(req tool.Request, caller terminal.ID) (project, dir string, err error) {
+	if req.Project == "" {
+		project, err = a.newTerminalProject(caller)
+		return project, req.Dir, err
+	}
+	i := slices.IndexFunc(a.state.Projects, func(p *layout.Project) bool { return strings.EqualFold(p.Name, req.Project) })
+	if i < 0 {
+		return "", "", fmt.Errorf("no project %s", req.Project)
+	}
+	p := a.state.Projects[i]
+	return p.Name, cmp.Or(req.Dir, p.CWD), nil
 }
 
 // newTerminalProject is the project of the caller's terminal, else the

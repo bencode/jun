@@ -90,7 +90,7 @@ func shortcutGroups() []shortcutGroup {
 				"在 Global 旁的抽屉中显示；没有等待的 agent 时显示当前 agent。再按切到下一个，没有其他等待时关闭"}},
 			{bilingual{"Show the peeked agent’s tab", "显示 Peek 中 agent 的标签"}, keys("⌘↩"), inPeek},
 			{bilingual{"Close the peek", "关闭 Peek"}, keys(closeTabKeys.String()), bilingual{
-				"Esc goes to the agent; ✕, a click beside the drawer or on the agent's card close it too", "Esc 发给 agent；点 ✕、抽屉外的区域或 agent 的卡片也会关闭"}},
+				"Esc goes to the agent; ✕, a click beside the drawer or on the agent's row close it too", "Esc 发给 agent；点 ✕、抽屉外的区域或 agent 的那一行也会关闭"}},
 		}},
 		{bilingual{"Terminal", "终端"}, []shortcutRow{
 			{bilingual{"Copy / paste / select all", "复制 / 粘贴 / 全选"}, keys("⌘C / ⌘V / ⌘A"), bilingual{}},

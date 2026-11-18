@@ -75,7 +75,6 @@ func TestRestoreRejectsInvalidReferencesAndShapes(t *testing.T) {
 		"hidden Sessions":   func(s *State) { s.CurrentPerspective().Side.Views[0].Show = false },
 		"invalid splits":    func(s *State) { s.CurrentPerspective().ColumnSplits = []float32{50} },
 		"unknown kind":      func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = "other" },
-		"agents layout":     func(s *State) { s.CurrentPerspective().Columns[0].Views[0].AgentsLayout = AgentsList },
 		"duplicate name":    func(s *State) { p := *s.CurrentProject(); p.Name = "JUN"; s.Projects = append(s.Projects, &p) },
 		"files in a column": func(s *State) { s.CurrentPerspective().Columns[0].Views[0].Kind = ViewTree },
 		"agents in a column": func(s *State) {

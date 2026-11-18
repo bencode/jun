@@ -24,7 +24,7 @@ Jun keeps two files. **Preferences** live in the settings file, which you edit. 
   - the file a file tab shows: a branch, or a detached worktree's directory, and a path;
   - the session a session tab shows;
   - what a Diff tab compares.
-- Global, its visibility, and the Agents view's layout choice.
+- Global and its visibility.
 - Which of Global's views show, how they are arranged, their dragged column widths, and how they share the height when stacked.
 - Whether the project rail is expanded.
 
@@ -59,6 +59,7 @@ Jun keeps two files. **Preferences** live in the settings file, which you edit. 
   - **Version 1 → 2** keeps the Work and Review perspectives, every tab and region ID, the selections, each tab's project, and hidden layouts.
   - **Version 2 → 3** gives each perspective a hidden side bar. Terminals in Global move to the end of the first column of their project's current perspective. Agents and Files tabs in columns and bottom regions are dropped, as are version 1's placeholder file tabs.
   - **Version 3 → 4** says on each view of Global and the side bar whether it shows, rather than whether it is hidden: a view Jun adds later starts hidden. What shows stays the same.
+- A view's `agentsLayout`, which earlier versions of Jun saved for the Agents view's choice of cards or a list, is ignored, and the next save leaves it out.
 - Older versions of Jun cannot load version 4. Quit the previous Jun before running the upgraded app with the same file.
 - Preferences that earlier versions kept in the layout file (`chinese`, `theme`, `textSize`) move into the settings file on the first start.
 - Even older files, `state.json`, `settings.json` and `window-state.json`, are left untouched.
