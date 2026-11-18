@@ -17,11 +17,15 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 | Idle | The agent waits for a new prompt | last |
 
 - The rail shows a project's waiting agents on its tile; see [Workspace](workspace.md#projects).
-- An agent led by another, which started it or which it joined, shows `↳ #3`, the number of its lead; see [join and leave](agent-tools.md#join-and-leave).
+- An agent [leads](agent-tools.md#join-and-leave) those it started and those that joined it. The list keeps a lead and the agents it leads together, as a group:
+  - The group comes under the status of its most urgent agent: when one of its agents waits, the whole group comes with the waiting ones.
+  - In the group, the lead comes first, and the agents it leads are set in below it, by number, with a line from it.
+  - Only one level is set in: an agent led by one of those comes in the same group, and shows `↳ #8`, the number of its own lead.
+  - An agent whose lead runs no agent any more comes on its own, under its own status, and shows `↳ #3`.
 
 ## Layout
 
-- The agents are listed under a heading for each status.
+- The agents are listed under a heading for each status, which counts the agents under it.
 - With too many for normal rows, the list uses compact single-line rows. When even those do not fit, the idle ones are folded under their heading.
 
 ## Current agent
@@ -73,7 +77,7 @@ Global shows its views together, without tabs:
 
 Peek opens an agent's terminal in a drawer that slides out of Global's edge, so you can answer it without leaving the project and perspective you are in. The rest of the work area dims; Global stays bright, and the agent's row in it is outlined.
 
-- **⌘J** peeks the first waiting agent. Pressed again, it moves to the next waiting one. On the last, the drawer's button reads **Close ⌘J**, and ⌘J closes it. With none waiting, ⌘J peeks the current agent.
+- **⌘J** peeks the first waiting agent. Pressed again, it moves to the next waiting one, in the list's order. On the last, the drawer's button reads **Close ⌘J**, and ⌘J closes it. With none waiting, ⌘J peeks the current agent.
 - **Keys**: ⌘ shortcuts stay Jun's. Every other key goes to the agent, as in any terminal, **Esc** too: the drawer's header says **Esc → agent**, and after Esc it shows for a moment how to close the drawer.
 - **Closing**: ✕, ⌘W, a click on the dimmed work area, or a click on the agent's row again. The focus goes back to where it was.
 - **Open Tab ⌘↩** shows the agent's tab, as ⌘-click does. **Next ⌘J** goes to the next waiting agent.
