@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 func parse(args []string, stdin io.Reader) (Request, error) {
@@ -20,8 +21,11 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 	if command == "help" && len(rest) == 0 {
 		return Request{}, errHelp
 	}
-	if command == "terminals" && len(rest) == 0 {
-		return Request{Op: OpTerminals}, nil
+	if command == "terminals" {
+		if len(rest) == 0 {
+			return Request{Op: OpTerminals}, nil
+		}
+		return parseUpdateTerminal(rest)
 	}
 	if command == "watch" && len(rest) == 0 {
 		return Request{Op: OpWatch}, nil
@@ -204,6 +208,36 @@ func parseUpdateMessage(args []string, stdin io.Reader) (Request, error) {
 	}
 	req.Text = text
 	return req, nil
+}
+
+// parseUpdateTerminal reads what follows `terminals`: update, an id and
+// --name with the terminal's name, or none to drop it.
+func parseUpdateTerminal(args []string) (Request, error) {
+	if len(args) != 4 || args[0] != "update" || args[2] != "--name" {
+		return Request{}, errors.New("terminals takes update <id> --name <name>, or nothing to list them")
+	}
+	id, err := strconv.ParseUint(args[1], 10, 64)
+	if err != nil || id == 0 {
+		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[1])
+	}
+	name := strings.TrimSpace(args[3])
+	if err := CheckName(name); err != nil {
+		return Request{}, err
+	}
+	return Request{Op: OpUpdateTerminal, Terminal: id, Name: name}, nil
+}
+
+// CheckName tells whether a terminal can be named so, trimmed: a line of
+// at most MaxName bytes that is not a number, as ids are; none drops a
+// name.
+func CheckName(name string) error {
+	if name != strings.TrimSpace(name) || strings.ContainsFunc(name, unicode.IsControl) || len(name) > MaxName {
+		return fmt.Errorf("name must be one line of at most %d bytes, trimmed: %q", MaxName, name)
+	}
+	if _, err := strconv.ParseUint(name, 10, 64); err == nil {
+		return fmt.Errorf("name must not be a number, which ids are: %q", name)
+	}
+	return nil
 }
 
 // isFlag tells a mistyped option from a text, which has spaces.

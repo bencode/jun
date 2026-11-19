@@ -193,6 +193,7 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool, groupLe
 func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo, groupLead terminal.ID) {
 	ui.Box(c).Width(8).Height(8).Radius(4).Shrink(0).Background(a.statusColor(info.Status))
 	a.terminalNumber(c, s)
+	a.terminalName(c, s)
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 	a.leadMark(c, s, groupLead)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
@@ -224,6 +225,7 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, g
 	ui.Column(c).Grow(1).MinWidth(0).Children(func() {
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
 			a.terminalNumber(c, s)
+			a.terminalName(c, s)
 			ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 		})
 		ui.Text(c, s.ProjectName+" · "+agentName(info.Kind)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
@@ -233,6 +235,13 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, g
 	}
 	a.leadMark(c, s, groupLead)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
+}
+
+// terminalName shows the name agents call the terminal by, if it has one.
+func (a *app) terminalName(c *ui.Context, s *terminal.Session) {
+	if name := a.names[s.ID]; name != "" {
+		ui.Text(c, name).Bold().SingleLine().Shrink(0)
+	}
 }
 
 // leadMark names the terminal of the agent that leads the agent, if one
@@ -253,6 +262,9 @@ func (a *app) agentTitle(s *terminal.Session) string {
 func (a *app) agentLabel(s *terminal.Session) string {
 	info := a.agents[s.ID]
 	label := fmt.Sprintf("%s, %s, %s %s", a.agentTitle(s), a.statusName(info.Status), s.ProjectName, agentName(info.Kind))
+	if name := a.names[s.ID]; name != "" {
+		label = name + ", " + label
+	}
 	if lead := a.lead(s.ID); lead != 0 {
 		label += fmt.Sprintf(a.text(", led by #%d", "，协调者 #%d"), lead)
 	}

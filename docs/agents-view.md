@@ -26,6 +26,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 ## Layout
 
 - The agents are listed under a heading for each status, which counts the agents under it.
+- A row shows the agent's number, then its [name](agent-tools.md#terminals-update) in bold when it has one, then its title.
 - With too many for normal rows, the list uses compact single-line rows. When even those do not fit, the idle ones are folded under their heading.
 
 ## Current agent

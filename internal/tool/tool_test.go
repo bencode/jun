@@ -74,6 +74,10 @@ func TestMainUsage(t *testing.T) {
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
 		{"run", "--project"}, {"run", "--project", " ", "x"}, {"run", "--project", "a", "--project", "b", "x"}, {"loop", "5m", "--project", "a", "x"},
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
+		{"terminals", "update"}, {"terminals", "update", "3"}, {"terminals", "update", "3", "达芬奇"}, {"terminals", "update", "0", "--name", "a"},
+		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
+		{"terminals", "update", "3", "--name", strings.Repeat("x", MaxName+1)}, {"terminals", "update", "3", "--name", "a", "b"},
+		{"terminals", "name", "3", "--name", "a"}, {"terminals", "update", "3", "--name", "a\tb"}, {"terminals", "update", "3", "--name", "a\x1b[2mb"},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
@@ -239,6 +243,11 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "loop", "cancel", "12"); code != 0 || out != "" {
 		t.Fatalf("loop cancel: %d %q", code, out)
 	}
+	for _, args := range [][]string{{"terminals", "update", "3", "--name", " 达芬奇 "}, {"terminals", "update", "3", "--name", ""}} {
+		if code, out, _ := run(path, args...); code != 0 || out != "" {
+			t.Fatalf("%q: %d %q", args, code, out)
+		}
+	}
 	if code, out, _ := run(path, "open", "file:docs/a.md"); code != 0 || out != "" {
 		t.Fatalf("open file: %d %q", code, out)
 	}
@@ -255,6 +264,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpJoin, Terminal: 3}, {Op: OpLeave},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
 		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12},
+		{Op: OpUpdateTerminal, Terminal: 3, Name: "达芬奇"}, {Op: OpUpdateTerminal, Terminal: 3},
 		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
