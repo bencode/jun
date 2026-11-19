@@ -153,14 +153,18 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 }
 
 // handleSend sends, then waits up to a few seconds for the agent to work,
-// as its status, polled every second, tells.
+// as its status, polled every second, tells; a text held, it tells so at once.
 func (a *app) handleSend(stop <-chan struct{}, onUI func(func()) bool, req tool.Request) tool.Response {
+	var held bool
 	var err error
-	if !onUI(func() { err = a.toolSend(req) }) {
+	if !onUI(func() { held, err = a.toolSend(req) }) {
 		return tool.Response{Error: "Jun is closing"}
 	}
 	if err != nil {
 		return tool.Response{Error: err.Error()}
+	}
+	if held {
+		return tool.Response{Message: "held: the user is typing in its input; Jun submits it once the input is empty"}
 	}
 	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); {
 		working := false

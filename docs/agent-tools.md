@@ -30,7 +30,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
 | `jun tool close <target>` | Closes the target. Prints nothing, or what it leaves pending. |
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
-| `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal. Prints nothing, or `sent, not started yet`. |
+| `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal, or holds it while the user is typing there. Prints nothing, `sent, not started yet` or `held: …`. |
 | `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints the message's id. |
 | `jun tool message update <id> [--kind <kind>] [<text>]`, or `-` for the text | Changes the message's kind, adds a reply, or both. Prints nothing. |
 | `jun tool message` | The messages, as a JSON array, the latest first |
@@ -145,6 +145,7 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - With `-`, the text is standard input, for long or multi-line messages. Line breaks at its end go; at most 1 MiB.
 - Any agent takes it, whatever it is doing, the caller's own terminal too. A terminal running no agent does not: text there would run as a command.
 - Once sent, Jun waits up to 5 seconds for the agent to work. If it does not by then, `send` prints `sent, not started yet`, still with status 0.
+- While the user has typed something in the agent's input and not submitted it, Enter would submit it with the text. Jun holds the text instead, and submits it once the input is empty, as the user submits or clears it; `send` prints `held: …` at once, with status 0. Texts sent to an agent while others are held follow them, in order. Held texts go if the agent or Jun quits first. Placeholders and suggested prompts, which agents show dim, are not the user's.
 
 ### message
 

@@ -94,7 +94,10 @@ Sending:
       standard input. Line breaks at its end go; at most 1 MiB. Any agent
       takes it, whatever it is doing, the caller's own too; a terminal
       running no agent does not. Prints nothing once the agent works,
-      else "sent, not started yet" after 5 seconds.
+      else "sent, not started yet" after 5 seconds. While the user has
+      typed in the agent's input and not submitted it, Jun holds the
+      text, after any held before, and submits it once the input is
+      empty; it prints "held: ..." at once.
   jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>
   jun tool message [--title <title>] [--kind <kind>] [--link <resource>] -
       Shows the text to the user, in Messages in Global, without
