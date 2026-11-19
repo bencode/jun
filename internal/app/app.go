@@ -80,6 +80,7 @@ type app struct {
 	agents          map[terminal.ID]agentInfo
 	loops           map[terminal.ID]loop        // by the terminal each runs in
 	leads           map[terminal.ID]terminal.ID // each terminal's lead, by the terminal led
+	names           map[terminal.ID]string      // what agents call terminals, given with terminals update
 	ttys            map[terminal.ID]string
 	agentPolling    bool
 	heldSends       map[terminal.ID][]string // texts sent to agents while the user had a draft, in order
@@ -113,7 +114,7 @@ type app struct {
 func newApp(runtimeDir string) *app {
 	a := &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
-		agents: map[terminal.ID]agentInfo{}, heldSends: map[terminal.ID][]string{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, ttys: map[terminal.ID]string{}, viewSizes: map[terminal.ID]ui.Rect{},
+		agents: map[terminal.ID]agentInfo{}, heldSends: map[terminal.ID][]string{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, names: map[terminal.ID]string{}, ttys: map[terminal.ID]string{}, viewSizes: map[terminal.ID]ui.Rect{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
 		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},

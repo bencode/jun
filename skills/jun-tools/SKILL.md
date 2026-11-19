@@ -38,7 +38,8 @@ When a command fails, its error says what to do next: follow it.
 
 | Command | Does |
 |---|---|
-| `terminals` | Jun's terminals as JSON: `id`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead` |
+| `terminals` | Jun's terminals as JSON: `id`, `name`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead` |
+| `terminals update <id> --name <name>` | Names that terminal, for the user and agents to call it by; `--name ''` drops the name |
 | `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `lead`, `from`, `to` |
 | `screen <id> [--lines N]` | The last N lines of a terminal's text, scrollback included (default 40, at most 500) |
 | `send <id> <text>` / `send <id> -` | Submits the text to the agent in that terminal, as pasted then Enter; `-` reads standard input |
@@ -78,7 +79,14 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 ## Common work
 
-**Find an agent.** Run `terminals` and pick by `project`, `dir`, `title` and `agent`. `self: true` is your own terminal.
+**Find an agent.** Run `terminals` and pick by `name`, `project`, `dir`, `title` and `agent`. `self: true` is your own terminal. When the user calls an agent by name, as in "what is Euler doing?" or "hand this to Euler", find the terminal with that `name`, then use its `id`: the other commands take ids only. The agents it leads are those whose `lead` is its `id`.
+
+**Name agents.** Give a terminal a name when the user asks for one, or when you lead terminals and the user gave you names or a theme for them, such as mathematicians: `run` prints the new terminal's id, then name it. A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Names last while the terminal runs, until Jun quits.
+
+```sh
+id=$("$JUN_BIN" tool run --project web claude)
+"$JUN_BIN" tool terminals update "$id" --name Euler
+```
 
 **See how it is going.** `screen <id> --lines 80`. The text includes the agent's frames, status bar and input box; its last reply is near the bottom.
 

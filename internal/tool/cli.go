@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-const usage = "usage: jun tool help | terminals | watch | screen <id> [--lines N] |\n" +
-	"  open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
+const usage = "usage: jun tool help | terminals | terminals update <id> --name <name> | watch |\n" +
+	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
 	"  run [--project <name>] [--dir <path>] [--open] <command…> | join <id> | leave |\n" +
@@ -32,6 +32,7 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
   jun tool terminals
       Jun's running terminals, as a JSON array, by id:
         id       the terminal's id, for the other commands
+        name     what agents call it, when it has one; absent otherwise
         project  the project it belongs to
         dir      its shell's directory
         title    its title, as Jun shows it
@@ -40,11 +41,21 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
         self     true for the terminal the caller runs in
         lead     the terminal of the agent that leads it, when one does:
                  the agent that ran it, or the one it joined
+      A name the user gives an agent is its name here: find its id by it.
+  jun tool terminals update <id> --name <name>
+      Names the terminal, for the user and agents to call its agent by,
+      in place of any name before; --name '' drops it. Any terminal may
+      name any running one. A name is one line of at most 64 bytes, not a
+      number, and no other running terminal's, whatever its case. Jun
+      shows it in Agents, beside the terminal's id, and forgets it when the
+      terminal ends or Jun quits. The other commands still take the id.
+      Prints nothing.
   jun tool watch
       Agents' status as it changes, a JSON object a line, until Jun quits
       or the reader falls behind; then status 1. It starts with each
       agent, from empty:
-        id, project, agent, title   as terminals has them, and lead
+        id, name, project, agent,   as terminals has them
+        title, lead
         from, to                    the status before and now; from is
                                     empty for a new agent, to for one gone
       Jun tells idle after it holds for a few seconds, the rest at once.

@@ -25,6 +25,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 |---|---|
 | `jun tool help` | The commands, fields, environment and exit status |
 | `jun tool terminals` | Jun's running terminals, as a JSON array, by id |
+| `jun tool terminals update <id> --name <name>` | Names the terminal, or drops its name for `''`. Prints nothing. |
 | `jun tool watch` | Agents' status as it changes, as JSON, a line each, until it ends |
 | `jun tool screen <id> [--lines N]` | The last N lines of the terminal's text, as plain text |
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
@@ -49,6 +50,7 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 [
   {
     "id": 3,
+    "name": "Euler",
     "project": "web",
     "dir": "/path/to/web",
     "title": "Fix the login form",
@@ -63,6 +65,7 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 | Field | Meaning |
 |---|---|
 | `id` | The terminal's id, for `screen`. Ids hold while Jun runs; a new run numbers its terminals anew. |
+| `name` | What agents call it, when it has [one](#terminals-update); absent otherwise |
 | `project` | The project the terminal belongs to |
 | `dir` | Its shell's directory |
 | `title` | Its title, as the Agents view or its tab shows it |
@@ -73,17 +76,26 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 
 Terminals with closed tabs are listed too: their shells keep running. Terminals whose shell has ended are not.
 
+### terminals update
+
+`terminals update <id> --name <name>` names a terminal, for you and agents to call it by, as in "hand this to Euler" or "what is Euler doing?". An agent finds the id in `terminals` by the name, then uses the id: the other commands take ids only.
+
+- **Who**: any terminal may name any running one, a lead the terminals it runs above all. A new name takes the place of the one before; `--name ''` drops it.
+- **A name** is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case.
+- **Shown** in [Agents](agents-view.md#order-and-status), beside the terminal's number, and given as `name` by `terminals` and `watch`.
+- **It ends** with the terminal, or when Jun quits.
+
 ### watch
 
 Runs until Jun quits, printing a line as soon as there is news of an agent:
 
 ```json
-{"id":3,"project":"web","agent":"claude","title":"Fix the login form","from":"working","to":"waiting"}
+{"id":3,"name":"Euler","project":"web","agent":"claude","title":"Fix the login form","from":"working","to":"waiting"}
 ```
 
 | Field | Meaning |
 |---|---|
-| `id`, `project`, `agent`, `title`, `lead` | As `terminals` has them |
+| `id`, `name`, `project`, `agent`, `title`, `lead` | As `terminals` has them. A new name alone is no news: it comes with the agent's next line. |
 | `from` | The status before; empty for an agent that is new |
 | `to` | The status now; empty for an agent that is gone, or whose terminal closed |
 

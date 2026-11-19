@@ -24,6 +24,7 @@ const (
 	MaxMessage   = 4096    // the bytes message takes
 	MaxTitle     = 200     // the bytes a message's title takes
 	MaxReplies   = 50      // the replies a message keeps, the latest
+	MaxName      = 64      // the bytes a terminal's name takes
 )
 
 type Op string
@@ -48,6 +49,9 @@ const (
 	OpWatch         Op = "watch"       // answers with events until the connection ends
 	OpJoin          Op = "join"        // makes the terminal of Request.Terminal the caller's lead
 	OpLeave         Op = "leave"       // drops the caller's lead
+	// OpUpdateTerminal names the terminal of Request.Terminal Request.Name,
+	// or drops its name for none.
+	OpUpdateTerminal Op = "update-terminal"
 )
 
 // MinEvery is the shortest interval a loop takes.
@@ -137,6 +141,7 @@ type Request struct {
 	Open    bool          `json:"open,omitempty"`    // run: in a tab, focused
 	Project string        `json:"project,omitempty"` // run: the project, else the caller's; an empty Dir is its directory
 	Every   time.Duration `json:"every,omitempty"`   // loop: at least MinEvery, in whole seconds
+	Name    string        `json:"name,omitempty"`    // update-terminal: the terminal's name, none to drop it
 }
 
 type Response struct {
@@ -162,7 +167,8 @@ type Loop struct {
 // Event is an agent's status changing, as watch tells it. A watch starts
 // with one for each agent, From empty.
 type Event struct {
-	ID      uint64 `json:"id"` // its terminal's
+	ID      uint64 `json:"id"`             // its terminal's
+	Name    string `json:"name,omitempty"` // as terminals has it
 	Project string `json:"project"`
 	Agent   string `json:"agent"`
 	Title   string `json:"title"`
@@ -173,6 +179,7 @@ type Event struct {
 
 type Terminal struct {
 	ID      uint64 `json:"id"`
+	Name    string `json:"name,omitempty"` // what agents call it, given with terminals update
 	Project string `json:"project"`
 	Dir     string `json:"dir"`
 	Title   string `json:"title"`

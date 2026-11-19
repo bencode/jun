@@ -91,6 +91,7 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 
    - `<id>` is the agent's, as `terminals` and `watch` give it: without `--link` the user cannot go to it. For an agent whose terminal closed, `--link terminal:` is refused: give `--link project:<its project>`.
    - Jun adds the project and the time, and a click peeks that agent.
+   - Call an agent by its `name` when it has one, as the user does: `Euler (#42) asks to open a PR`.
 3. Close what is handled. An `ask` stays to do until you change it: when the screen shows its question answered or gone, say what happened, and the user sees it done. When you cannot tell from the screen, leave it.
 
    ```sh
@@ -110,7 +111,7 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 | Action | Rule |
 |---|---|
 | `terminals`, `watch`, `screen`, `message`, `message update` | On your own |
-| `send` to another agent, `open`, `run`, other loops | Only after the user says yes, for that action |
+| `send` to another agent, `open`, `run`, other loops, `terminals update` | Only after the user says yes, for that action |
 | Answer an agent's permission or choice | Never: that question is the user's |
 | Press a key for a notice, close a terminal, stop an agent | Never |
 
