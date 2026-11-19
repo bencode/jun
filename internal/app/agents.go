@@ -81,6 +81,7 @@ func (a *app) pollAgents(job agentJob) {
 			return
 		}
 		a.ttys, a.agents = ttys, agents
+		a.sendHeld()
 		a.publishAgents(time.Now())
 	})
 }

@@ -90,6 +90,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool send 7 -
 ```
 
 - `send` prints nothing once the agent works, or `sent, not started yet` if it has not in 5 seconds: check its `screen`.
+- `held: …` means the user is typing in that agent's input: Jun submits the text once they submit or clear theirs. Do not send it again.
 - Line breaks stay in one message. Use `-` for long or multi-line text.
 - Afterwards, check `terminals` for its status, then `screen` for its answer. Trust what the screen shows over what the agent says it did.
 

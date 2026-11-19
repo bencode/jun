@@ -82,6 +82,7 @@ type app struct {
 	leads           map[terminal.ID]terminal.ID // each terminal's lead, by the terminal led
 	ttys            map[terminal.ID]string
 	agentPolling    bool
+	heldSends       map[terminal.ID][]string // texts sent to agents while the user had a draft, in order
 	watched         watchedAgents            // what `jun tool watch` has told
 	watchers        map[chan tool.Event]bool // the watches running, by their queues
 	agentViews      map[layout.ViewID]*agentsViewState
@@ -112,7 +113,7 @@ type app struct {
 func newApp(runtimeDir string) *app {
 	a := &app{state: layout.New(), theme: theme.UI(theme.Default, nil), scroll: map[layout.ViewID]*ui.ScrollState{},
 		terminals: terminal.NewStore(runtimeDir), bindings: map[layout.ViewID]terminal.ID{}, terminalErrors: map[layout.ViewID]error{},
-		agents: map[terminal.ID]agentInfo{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, ttys: map[terminal.ID]string{}, viewSizes: map[terminal.ID]ui.Rect{},
+		agents: map[terminal.ID]agentInfo{}, heldSends: map[terminal.ID][]string{}, watchers: map[chan tool.Event]bool{}, loops: map[terminal.ID]loop{}, leads: map[terminal.ID]terminal.ID{}, ttys: map[terminal.ID]string{}, viewSizes: map[terminal.ID]ui.Rect{},
 		agentViews: map[layout.ViewID]*agentsViewState{}, repos: map[string]*repoState{}, trees: map[layout.ViewID]*filesViewState{},
 		fileViews: map[layout.ViewID]*fileViewState{}, previewTabs: map[layout.RegionID]layout.ViewID{},
 		sessionLists: map[string]*sessionList{}, sessionViews: map[layout.ViewID]*sessionsViewState{}, transcripts: map[layout.ViewID]*transcriptState{},
