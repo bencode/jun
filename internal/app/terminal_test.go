@@ -186,3 +186,41 @@ func TestTerminalInputCompositionClipboardAndResize(t *testing.T) {
 		t.Fatal("terminal did not resize with view")
 	}
 }
+
+func TestTerminalsStartWhereTheirShellsWereAtQuit(t *testing.T) {
+	a, _ := testApp(t)
+	column := a.state.CurrentPerspective().Columns[1].ID
+	a.newTerminal(column)
+	a.newTerminal(column)
+	a.restoreTerminals()
+	views := a.terminalViews()
+	kept, gone := t.TempDir(), t.TempDir()
+	for i, dir := range []string{kept, gone} {
+		s := a.sessionFor(views[len(views)-2+i].ID)
+		s.Terminal.Send([]byte(fmt.Sprintf("cd %q && printf '\\nCD_OK\\n'\n", dir)))
+		waitTerminal(t, nil, func() bool { return strings.Contains(s.Terminal.Text(), "\nCD_OK\n") })
+	}
+	a.recordTerminalDirs()
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := config.Save(path, a.state); err != nil {
+		t.Fatal(err)
+	}
+	restored := testNewApp(t)
+	restored.restoreConfig(path)
+	restored.restoreTerminals()
+	same := func(a, b string) bool {
+		x, errX := os.Stat(a)
+		y, errY := os.Stat(b)
+		return errX == nil && errY == nil && os.SameFile(x, y)
+	}
+	views = restored.terminalViews()
+	if s := restored.sessionFor(views[len(views)-2].ID); !same(s.CWD, kept) {
+		t.Fatalf("a shell restarted in %q, not where it was, %q", s.CWD, kept)
+	}
+	if s := restored.sessionFor(views[len(views)-1].ID); s.CWD != restored.state.CurrentProject().CWD {
+		t.Fatalf("a shell whose directory is gone restarted in %q, not the project's", s.CWD)
+	}
+}
