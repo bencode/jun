@@ -77,7 +77,7 @@ func (a *app) scanSessions(l *sessionList, r *repoState, dir string) {
 	l.loads++
 	load := l.loads
 	l.loading, l.repoRead = true, r.loads
-	homes := map[string][]string{"claude": slices.Clone(a.prefs.Claude.ConfigDirs)}
+	homes := a.claudeHomes()
 	var sessions []history.Session
 	var err error
 	a.background(func() { sessions, err = a.history.List(dirs, homes) }, func() {

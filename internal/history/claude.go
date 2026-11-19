@@ -16,12 +16,16 @@ var claudeKind = kind{name: "claude", home: claudeHome, list: claudeList, read: 
 // CLAUDE_CONFIG_DIR's, else ~/.claude.
 func claudeHome() (string, error) { return home("CLAUDE_CONFIG_DIR", ".claude") }
 
-// claudeResume resumes the session from its configuration directory, which
-// Claude Code is told unless it is the one it uses by default: told one,
-// it reads its state there rather than from ~/.claude.json.
-func claudeResume(s Session) string {
-	command := "claude --resume " + s.ID
+// claudeResume resumes the session from its configuration directory: with
+// the directory's command, which sets it; else with claude, told the
+// directory unless it is the one it uses by default: told one, it reads
+// its state there rather than from ~/.claude.json.
+func claudeResume(s Session, commands map[string]string) string {
 	root := filepath.Dir(filepath.Dir(filepath.Dir(s.Path)))
+	if command := commands[root]; s.Path != "" && command != "" {
+		return command + " --resume " + s.ID
+	}
+	command := "claude --resume " + s.ID
 	if def, err := claudeHome(); s.Path == "" || err == nil && filepath.Clean(def) == root {
 		return command
 	}

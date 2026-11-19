@@ -235,27 +235,31 @@ func TestListReadsEveryClaudeHomeOnce(t *testing.T) {
 	}
 }
 
-func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHome(t *testing.T) {
+func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHomeOrItsCommand(t *testing.T) {
 	claude, _, _ := agentHomes(t)
 	at := func(home string) string { return filepath.Join(home, "projects", "-work", "16f0057a-2970.jsonl") }
-	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(claude)}); err != nil || got != "claude --resume 16f0057a-2970" {
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(claude)}, nil); err != nil || got != "claude --resume 16f0057a-2970" {
 		t.Fatalf("Claude resumes from its default home with %q, %v", got, err)
 	}
 	other := filepath.Join(t.TempDir(), "Bob's config")
 	want := "CLAUDE_CONFIG_DIR='" + strings.ReplaceAll(other, "'", `'\''`) + "' claude --resume 16f0057a-2970"
-	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(other)}); err != nil || got != want {
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(other)}, nil); err != nil || got != want {
 		t.Fatalf("Claude resumes from another home with %q, %v", got, err)
 	}
-	if got, err := ResumeCommand(Session{Agent: "codex", ID: "01a19689-cb83"}); err != nil || got != "codex resume 01a19689-cb83" {
+	launched := map[string]string{other: "reclaude"}
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(other)}, launched); err != nil || got != "reclaude --resume 16f0057a-2970" {
+		t.Fatalf("Claude resumes from a home with a command with %q, %v", got, err)
+	}
+	if got, err := ResumeCommand(Session{Agent: "codex", ID: "01a19689-cb83"}, nil); err != nil || got != "codex resume 01a19689-cb83" {
 		t.Fatalf("Codex resumes with %q, %v", got, err)
 	}
 	file := filepath.Join(other, "--work--", "2026-11-03T02-59-02-133Z_01a19f58-8974.jsonl")
 	want = "pi --session '" + strings.ReplaceAll(file, "'", `'\''`) + "'"
-	if got, err := ResumeCommand(Session{Agent: "pi", ID: "01a19f58-8974", Path: file}); err != nil || got != want {
+	if got, err := ResumeCommand(Session{Agent: "pi", ID: "01a19f58-8974", Path: file}, nil); err != nil || got != want {
 		t.Fatalf("Pi resumes with %q, %v", got, err)
 	}
 	for _, id := range []string{"", "x; rm -rf ~", "$(id)", "-h"} {
-		if _, err := ResumeCommand(Session{Agent: "claude", ID: id}); err == nil {
+		if _, err := ResumeCommand(Session{Agent: "claude", ID: id}, nil); err == nil {
 			t.Fatalf("ID %q was taken", id)
 		}
 	}

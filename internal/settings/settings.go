@@ -30,8 +30,47 @@ type Settings struct {
 	Claude struct {
 		// ConfigDirs are the Claude Code configuration directories whose
 		// sessions Sessions lists; Claude Code's own when empty.
-		ConfigDirs []string `yaml:"configDirs,omitempty"`
+		ConfigDirs []ConfigDir `yaml:"configDirs,omitempty"`
 	} `yaml:"claude,omitempty"`
+}
+
+// ConfigDir is a Claude Code configuration directory, written as its path
+// alone or as {path, command}.
+type ConfigDir struct {
+	Path string
+	// Command starts Claude Code with this directory, as a launcher that
+	// sets it does: its sessions resume with it. None: claude, told the
+	// directory unless it is Claude Code's own.
+	Command string
+}
+
+// UnmarshalYAML takes the path alone, or a mapping of path and command,
+// refusing other keys as the rest of the file does.
+func (d *ConfigDir) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		return n.Decode(&d.Path)
+	}
+	if n.Kind != yaml.MappingNode {
+		return fmt.Errorf("line %d: a directory is a path, or a mapping of path and command", n.Line)
+	}
+	fields := map[string]*string{"path": &d.Path, "command": &d.Command}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		key, value := n.Content[i], n.Content[i+1]
+		field, ok := fields[key.Value]
+		if !ok {
+			return fmt.Errorf("line %d: field %s not found in a directory", key.Line, key.Value)
+		}
+		if err := value.Decode(field); err != nil {
+			return err
+		}
+	}
+	if d.Path == "" {
+		return fmt.Errorf("line %d: a directory has no path", n.Line)
+	}
+	if strings.ContainsAny(d.Command, "\r\n") {
+		return fmt.Errorf("line %d: a command is one line", n.Line)
+	}
+	return nil
 }
 
 // MarkdownWidths are the widths Markdown pages and session tabs read at,
@@ -53,6 +92,9 @@ const Template = `# Jun settings. Saved changes apply at once.
 # claude:
 #   configDirs:         # Claude Code configuration folders whose sessions
 #     - ~/.claude       # Sessions lists; Claude Code's own when none
+#     - path: ~/work/claude-team
+#       command: claude-team   # what starts Claude Code with this folder;
+#                              # its sessions resume with it
 `
 
 // Path is the settings file: JUN_SETTINGS_PATH, else
@@ -104,11 +146,11 @@ func Parse(data []byte) (Settings, error) {
 		return Settings{}, fmt.Errorf("markdown.width: %q is not one of %s", w, strings.Join(MarkdownWidths, ", "))
 	}
 	for i, dir := range s.Claude.ConfigDirs {
-		expanded, err := expand(dir)
+		expanded, err := expand(dir.Path)
 		if err != nil {
 			return Settings{}, fmt.Errorf("claude.configDirs: %w", err)
 		}
-		s.Claude.ConfigDirs[i] = expanded
+		s.Claude.ConfigDirs[i].Path = expanded
 	}
 	return s, nil
 }

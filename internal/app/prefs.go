@@ -148,3 +148,25 @@ func (a *app) watchPrefs() {
 		}
 	}()
 }
+
+// claudeHomes are the Claude Code configuration directories the settings
+// name, for Sessions to read; none means Claude Code's own.
+func (a *app) claudeHomes() map[string][]string {
+	homes := make([]string, len(a.prefs.Claude.ConfigDirs))
+	for i, d := range a.prefs.Claude.ConfigDirs {
+		homes[i] = d.Path
+	}
+	return map[string][]string{"claude": homes}
+}
+
+// resumeCommands are the commands that start Claude Code with the
+// configuration directories that have one, by the directory.
+func (a *app) resumeCommands() map[string]string {
+	commands := map[string]string{}
+	for _, d := range a.prefs.Claude.ConfigDirs {
+		if d.Command != "" {
+			commands[d.Path] = d.Command
+		}
+	}
+	return commands
+}
