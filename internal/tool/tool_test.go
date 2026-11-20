@@ -79,7 +79,7 @@ func TestMainUsage(t *testing.T) {
 		{"terminals", "update", "3", "--name", strings.Repeat("x", MaxName+1)}, {"terminals", "update", "3", "--name", "a", "b"},
 		{"terminals", "name", "3", "--name", "a"}, {"terminals", "update", "3", "--name", "a\tb"}, {"terminals", "update", "3", "--name", "a\x1b[2mb"},
 		{"terminals", "update", "3", "--every", "30s"}, {"terminals", "update", "3", "--every", "90.5s"}, {"terminals", "update", "3", "--every"},
-		{"terminals", "update", "3", "--at", "25:00"}, {"terminals", "update", "3", "--at", "9"}, {"terminals", "update", "3", "--text", "hi"},
+		{"terminals", "update", "3", "--at", "25:00"}, {"terminals", "update", "3", "--at", "9"}, {"terminals", "update", "3", "--text", "hi"}, {"terminals", "update", "3", "--text", ""},
 		{"terminals", "update", "3", "--no-timer", "--every", "5m"}, {"terminals", "update", "3", "--at", "09:00", "--no-timer"},
 		{"terminals", "update", "3", "--every", "5m", "--every", "1h"}, {"terminals", "update", "3", "--no-timer", "--no-timer"},
 		{"terminals", "update", "3", "--every", "5m", "--text", "a\nb"},

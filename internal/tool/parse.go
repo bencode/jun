@@ -259,7 +259,7 @@ func parseUpdateTerminal(args []string) (Request, error) {
 		rest = rest[2:]
 	}
 	timer := req.Every != 0 || !req.At.IsZero()
-	if text != "" && !timer {
+	if _, textLeft := options["--text"]; !textLeft && !timer {
 		return Request{}, errors.New("--text goes with --every or --at")
 	}
 	if req.NoTimer && timer {
