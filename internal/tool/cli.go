@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-const usage = "usage: jun tool help | terminals | terminals update <id> --name <name> | watch |\n" +
+const usage = "usage: jun tool help | terminals | watch |\n" +
+	"  terminals update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer] |\n" +
 	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
@@ -41,15 +42,32 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
         self     true for the terminal the caller runs in
         lead     the terminal of the agent that leads it, when one does:
                  the agent that ran it, or the one it joined
+        timer    its timer, when it has one: every (absent for one that
+                 fires once), next, the time it fires next, and text
       A name the user gives an agent is its name here: find its id by it.
-  jun tool terminals update <id> --name <name>
-      Names the terminal, for the user and agents to call its agent by,
-      in place of any name before; --name '' drops it. Any terminal may
-      name any running one. A name is one line of at most 64 bytes, not a
-      number, and no other running terminal's, whatever its case. Jun
-      shows it in Agents, beside the terminal's id, and forgets it when the
-      terminal ends or Jun quits. The other commands still take the id.
-      Prints nothing.
+  jun tool terminals update <id> [--name <name>] [--every <every>]
+                                 [--at <HH:MM>] [--text <text>] [--no-timer]
+      Changes the terminal, each option once, in any order; any terminal
+      may change any running one. Prints nothing.
+      --name    names it, for the user and agents to call its agent by, in
+                place of any name before; '' drops it. A name is one line
+                of at most 64 bytes, not a number, and no other running
+                terminal's, whatever its case. Jun shows it in Agents,
+                beside the terminal's id. The other commands still take
+                the id.
+      --every   sets its timer, in place of any before, for the agent in it
+                to be signaled every interval, as loop's: first after one
+                interval, or at --at.
+      --at      sets its timer to fire at the next HH:MM, local time, once,
+                unless --every goes with it.
+      --text    what the signal says after its tag, one line of at most
+                500 bytes: [jun-timer 30m] <text>, or [jun-timer 15:00]
+                <text> for one that fires once.
+      --no-timer drops the timer.
+      A timer needs an agent in the terminal. Jun signals it once it is
+      due and the agent idle, with nothing in its input: a signal missed
+      while it works comes once, when it is done. Jun forgets names and
+      timers when the terminal ends or Jun quits.
   jun tool watch
       Agents' status as it changes, a JSON object a line, until Jun quits
       or the reader falls behind; then status 1. It starts with each

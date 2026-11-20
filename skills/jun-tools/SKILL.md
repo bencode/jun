@@ -38,8 +38,9 @@ When a command fails, its error says what to do next: follow it.
 
 | Command | Does |
 |---|---|
-| `terminals` | Jun's terminals as JSON: `id`, `name`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead` |
+| `terminals` | Jun's terminals as JSON: `id`, `name`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead`, `timer` |
 | `terminals update <id> --name <name>` | Names that terminal, for the user and agents to call it by; `--name ''` drops the name |
+| `terminals update <id> --every <every> \| --at <HH:MM> [--text <text>]` / `… --no-timer` | Sets that terminal's timer, which signals its agent on a schedule, or drops it |
 | `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `lead`, `from`, `to` |
 | `screen <id> [--lines N]` | The last N lines of a terminal's text, scrollback included (default 40, at most 500) |
 | `send <id> <text>` / `send <id> -` | Submits the text to the agent in that terminal, as pasted then Enter; `-` reads standard input |
@@ -169,7 +170,17 @@ A session the user started and hands to you joins you itself: when the user tell
 
 It starts with a line for each agent, `from` empty. `idle` comes after it has held for 3 seconds, the rest at once. When Jun quits or the reader falls behind, it ends with status 1: run it again.
 
-**Check in on a schedule.**
+**Wake on a schedule.** A timer signals the agent in a terminal, yours or another's, every interval or once, when it is idle with nothing in its input: a signal missed while it works comes once, when it is done. Give it a text that says what to do, to know it after your context is compacted.
+
+```sh
+"$JUN_BIN" tool terminals update "$JUN_TERMINAL" --every 30m --text 'Look for new P1 and P2 tickets and hand them out'
+"$JUN_BIN" tool terminals update "$JUN_TERMINAL" --at 15:00 --text 'Check the PR for reviews'   # once, the next 15:00
+"$JUN_BIN" tool terminals update "$JUN_TERMINAL" --no-timer
+```
+
+A message that starts `[jun-timer 30m]` or `[jun-timer 15:00]` is that signal, from a timer you or another agent set, not the user: do what its text says. A terminal has one timer at most; a new one replaces it. `timer` in `terminals` shows `every`, `next` and `text`. Timers end with the terminal, or when Jun quits.
+
+**Check in on a schedule.** For a command on a schedule, or a check before a send, use a loop:
 
 ```sh
 tick='[ "$("$JUN_BIN" tool terminals | jq -r ".[] | select(.id==7) | .status")" = idle ] && "$JUN_BIN" tool send 7 "Report your progress and anything blocking you."'

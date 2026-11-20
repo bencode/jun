@@ -210,21 +210,105 @@ func parseUpdateMessage(args []string, stdin io.Reader) (Request, error) {
 	return req, nil
 }
 
-// parseUpdateTerminal reads what follows `terminals`: update, an id and
-// --name with the terminal's name, or none to drop it.
+// parseUpdateTerminal reads what follows `terminals`: update, an id, then
+// the options in any order, each once: --name, a timer's --every, --at and
+// --text, or --no-timer.
 func parseUpdateTerminal(args []string) (Request, error) {
-	if len(args) != 4 || args[0] != "update" || args[2] != "--name" {
-		return Request{}, errors.New("terminals takes update <id> --name <name>, or nothing to list them")
+	const usage = "terminals takes update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer], " +
+		"or nothing to list them"
+	if len(args) < 3 || args[0] != "update" {
+		return Request{}, errors.New(usage)
 	}
 	id, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil || id == 0 {
 		return Request{}, fmt.Errorf("terminal id must be a positive integer: %q", args[1])
 	}
-	name := strings.TrimSpace(args[3])
-	if err := CheckName(name); err != nil {
-		return Request{}, err
+	req, text := Request{Op: OpUpdateTerminal, Terminal: id}, ""
+	options := map[string]func(string) error{
+		"--name": func(name string) error {
+			name = strings.TrimSpace(name)
+			req.Name = &name
+			return CheckName(name)
+		},
+		"--every": func(every string) (err error) {
+			req.Every, err = parseEvery(every)
+			return err
+		},
+		"--at": func(clock string) (err error) {
+			req.At, err = nextAt(time.Now(), clock)
+			return err
+		},
+		"--text": func(t string) error {
+			text = t
+			return CheckTimerText(t)
+		},
 	}
-	return Request{Op: OpUpdateTerminal, Terminal: id, Name: name}, nil
+	for rest := args[2:]; len(rest) > 0; {
+		if rest[0] == "--no-timer" && !req.NoTimer {
+			req.NoTimer, rest = true, rest[1:]
+			continue
+		}
+		option := options[rest[0]]
+		if option == nil || len(rest) < 2 {
+			return Request{}, fmt.Errorf("unknown, repeated or incomplete option %q: %s", rest[0], usage)
+		}
+		if err := option(rest[1]); err != nil {
+			return Request{}, err
+		}
+		delete(options, rest[0])
+		rest = rest[2:]
+	}
+	timer := req.Every != 0 || !req.At.IsZero()
+	if text != "" && !timer {
+		return Request{}, errors.New("--text goes with --every or --at")
+	}
+	if req.NoTimer && timer {
+		return Request{}, errors.New("--no-timer goes with no --every or --at")
+	}
+	req.Text = text
+	return req, nil
+}
+
+func parseEvery(every string) (time.Duration, error) {
+	d, err := time.ParseDuration(every)
+	if err == nil {
+		err = CheckEvery(d)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("interval must be whole seconds, at least %s, as 90s, 5m or 1h: %q", MinEvery, every)
+	}
+	return d, nil
+}
+
+// CheckEvery tells whether a loop or a timer can go so often.
+func CheckEvery(every time.Duration) error {
+	if every < MinEvery || every%time.Second != 0 {
+		return fmt.Errorf("interval must be whole seconds, at least %s", MinEvery)
+	}
+	return nil
+}
+
+// CheckTimerText tells whether a timer can signal with the text: one line
+// of at most MaxTimerText bytes.
+func CheckTimerText(text string) error {
+	if strings.ContainsFunc(text, unicode.IsControl) || len(text) > MaxTimerText {
+		return fmt.Errorf("timer text must be one line of at most %d bytes", MaxTimerText)
+	}
+	return nil
+}
+
+// nextAt is the first time after now that the clock, HH:MM, reads so:
+// today, or tomorrow once past.
+func nextAt(now time.Time, clock string) (time.Time, error) {
+	t, err := time.Parse("15:04", clock)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("--at takes a time of day as HH:MM: %q", clock)
+	}
+	at := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+	if !at.After(now) {
+		at = at.AddDate(0, 0, 1)
+	}
+	return at, nil
 }
 
 // CheckName tells whether a terminal can be named so, trimmed: a line of
@@ -351,9 +435,9 @@ func parseLoop(args []string) (Request, error) {
 		}
 		return Request{Op: OpCancelLoop, Terminal: id}, nil
 	}
-	every, err := time.ParseDuration(args[0])
-	if err != nil || every < MinEvery || every%time.Second != 0 {
-		return Request{}, fmt.Errorf("interval must be whole seconds, at least %s, as 90s, 5m or 1h: %q", MinEvery, args[0])
+	every, err := parseEvery(args[0])
+	if err != nil {
+		return Request{}, err
 	}
 	req := Request{Op: OpLoop, Every: every}
 	if err := parseCommand(args[1:], &req, false); err != nil {

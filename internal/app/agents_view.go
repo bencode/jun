@@ -196,6 +196,7 @@ func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo,
 	a.terminalName(c, s)
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 	a.leadMark(c, s, groupLead)
+	a.timerMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 	ui.Box(c).Width(22).Height(16).Radius(4).Shrink(0).Background(projectColor(s.ProjectName)).Center().Children(func() {
 		ui.Text(c, projectAbbrev(s.ProjectName)).FontSize(theme.Caption).Bold().TextColor(ui.RGB(255, 255, 255))
@@ -234,6 +235,7 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, g
 		ui.Text(c, a.text("Peeking", "查看中")).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.Accent)
 	}
 	a.leadMark(c, s, groupLead)
+	a.timerMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 }
 
@@ -252,6 +254,25 @@ func (a *app) leadMark(c *ui.Context, s *terminal.Session, groupLead terminal.ID
 	}
 }
 
+// timerMark shows the agent's timer, if it has one: its interval and when
+// it fires next, or for one that fires once, when.
+func (a *app) timerMark(c *ui.Context, s *terminal.Session) {
+	if text := a.timerText(s.ID); text != "" {
+		ui.Text(c, "⏱ "+text).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.TextMuted)
+	}
+}
+
+func (a *app) timerText(id terminal.ID) string {
+	t, ok := a.timers[id]
+	if !ok {
+		return ""
+	}
+	if t.every == 0 {
+		return timerLabel(t)
+	}
+	return timerLabel(t) + " · " + t.next.Format("15:04")
+}
+
 func (a *app) agentTitle(s *terminal.Session) string {
 	if title := agent.DisplayTitle(s.Terminal.Title()); title != "" {
 		return title
@@ -267,6 +288,9 @@ func (a *app) agentLabel(s *terminal.Session) string {
 	}
 	if lead := a.lead(s.ID); lead != 0 {
 		label += fmt.Sprintf(a.text(", led by #%d", "，协调者 #%d"), lead)
+	}
+	if timer := a.timerText(s.ID); timer != "" {
+		label += a.text(", timer ", "，定时 ") + timer
 	}
 	if s.ID == a.lastTerminal {
 		label += a.text(", current", "，当前")

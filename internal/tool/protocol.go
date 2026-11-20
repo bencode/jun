@@ -25,6 +25,7 @@ const (
 	MaxTitle     = 200     // the bytes a message's title takes
 	MaxReplies   = 50      // the replies a message keeps, the latest
 	MaxName      = 64      // the bytes a terminal's name takes
+	MaxTimerText = 500     // the bytes a terminal's timer text takes
 )
 
 type Op string
@@ -50,11 +51,12 @@ const (
 	OpJoin          Op = "join"        // makes the terminal of Request.Terminal the caller's lead
 	OpLeave         Op = "leave"       // drops the caller's lead
 	// OpUpdateTerminal names the terminal of Request.Terminal Request.Name,
-	// or drops its name for none.
+	// or drops its name for none; sets its timer, from Request.Every,
+	// Request.At and Request.Text, or drops it with Request.NoTimer.
 	OpUpdateTerminal Op = "update-terminal"
 )
 
-// MinEvery is the shortest interval a loop takes.
+// MinEvery is the shortest interval a loop or a timer takes.
 const MinEvery = time.Minute
 
 type TargetKind string
@@ -129,7 +131,7 @@ type Request struct {
 	// selected, or made when there is none.
 	In    string      `json:"in,omitempty"`
 	Peek  bool        `json:"peek,omitempty"`  // open terminal: in the peek drawer
-	Text  string      `json:"text,omitempty"`  // send: to submit, its line breaks kept; message: to show
+	Text  string      `json:"text,omitempty"`  // send: to submit, its line breaks kept; message: to show; update-terminal: the timer's
 	Title string      `json:"title,omitempty"` // message
 	Kind  MessageKind `json:"kind,omitempty"`  // message, none being MessageInfo; update-message, none leaving it
 	// Message is the ID of the message update-message changes.
@@ -140,8 +142,10 @@ type Request struct {
 	Dir     string        `json:"dir,omitempty"`
 	Open    bool          `json:"open,omitempty"`    // run: in a tab, focused
 	Project string        `json:"project,omitempty"` // run: the project, else the caller's; an empty Dir is its directory
-	Every   time.Duration `json:"every,omitempty"`   // loop: at least MinEvery, in whole seconds
-	Name    string        `json:"name,omitempty"`    // update-terminal: the terminal's name, none to drop it
+	Every   time.Duration `json:"every,omitempty"`   // loop, a timer: at least MinEvery, in whole seconds
+	Name    *string       `json:"name,omitempty"`    // update-terminal: the terminal's name, empty to drop it
+	At      time.Time     `json:"at,omitzero"`       // update-terminal: when a timer first fires
+	NoTimer bool          `json:"noTimer,omitempty"` // update-terminal: drops the terminal's timer
 }
 
 type Response struct {
@@ -188,7 +192,15 @@ type Terminal struct {
 	Self    bool   `json:"self"`             // the caller runs in it
 	// Lead is the terminal of the agent that leads it: the agent that ran
 	// it, or the one it joined. None once that terminal ends.
-	Lead uint64 `json:"lead,omitempty"`
+	Lead  uint64 `json:"lead,omitempty"`
+	Timer *Timer `json:"timer,omitempty"` // set with terminals update
+}
+
+// Timer is when Jun next signals the agent in a terminal, and how.
+type Timer struct {
+	Every string    `json:"every,omitempty"` // as loop's; none: it fires once
+	Next  time.Time `json:"next"`
+	Text  string    `json:"text,omitempty"`
 }
 
 // EnvCommand prints a terminal's variables, for the user to run in it when a

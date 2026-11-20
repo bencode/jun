@@ -27,6 +27,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 - The agents are listed under a heading for each status, which counts the agents under it.
 - A row shows the agent's number, then its [name](agent-tools.md#terminals-update) in bold when it has one, then its title.
+- An agent with a [timer](agent-tools.md#timers) shows it before its status: `⏱ 30m · 12:30`, its interval and when it fires next, or `⏱ 15:00` for one that fires once.
 - With too many for normal rows, the list uses compact single-line rows. When even those do not fit, the idle ones are folded under their heading.
 
 ## Current agent

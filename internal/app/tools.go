@@ -248,7 +248,7 @@ func (a *app) toolTerminals(callers []int, named uint64) []tool.Terminal {
 			continue
 		}
 		t := tool.Terminal{ID: uint64(s.ID), Name: a.names[s.ID], Project: s.ProjectName, Dir: cmp.Or(s.Terminal.Dir(), s.CWD),
-			Title: a.sessionTitle(s), Self: s.ID == caller, Lead: uint64(a.lead(s.ID))}
+			Title: a.sessionTitle(s), Self: s.ID == caller, Lead: uint64(a.lead(s.ID)), Timer: a.toolTimer(s.ID)}
 		if info, ok := a.agents[s.ID]; ok {
 			t.Title, t.Agent, t.Status = a.agentTitle(s), string(info.Kind), string(info.Status)
 		}

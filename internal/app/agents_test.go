@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bencode/jun/internal/agent"
 	"github.com/bencode/jun/internal/terminal"
@@ -199,5 +200,22 @@ func TestAgentsGroupUnderTheirLead(t *testing.T) {
 	}
 	if mark(lead.ID) || !mark(m1.ID) || !mark(shell.ID) || !strings.Contains(a.agentLabel(m2), fmt.Sprintf("#%d", lead.ID)) {
 		t.Fatal("marks of leads: the group's lead is marked, or another lead is not")
+	}
+}
+
+func TestAgentsShowTimers(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	next := time.Date(2026, 11, 20, 12, 30, 0, 0, time.Local)
+	a.timers[sessions[0].ID] = agentTimer{every: 30 * time.Minute, next: next}
+	a.timers[sessions[1].ID] = agentTimer{next: next.Add(150 * time.Minute)}
+	tt.Frame()
+	for _, want := range []string{"⏱ 30m · 12:30", "⏱ 15:00"} {
+		if !tt.HasText(want) {
+			t.Errorf("%q not shown", want)
+		}
+	}
+	row(t, tt, a, sessions[0]) // its label tells the timer
+	if label := a.agentLabel(sessions[0]); !strings.Contains(label, "timer 30m · 12:30") {
+		t.Errorf("label %q", label)
 	}
 }

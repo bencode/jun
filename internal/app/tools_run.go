@@ -65,8 +65,8 @@ func (a *app) toolLoop(req tool.Request, callers []int) (terminal.ID, error) {
 	if strings.TrimSpace(req.Command) == "" {
 		return 0, errors.New("no command")
 	}
-	if req.Every < tool.MinEvery || req.Every%time.Second != 0 {
-		return 0, fmt.Errorf("interval must be whole seconds, at least %s", tool.MinEvery)
+	if err := tool.CheckEvery(req.Every); err != nil {
+		return 0, err
 	}
 	caller, _ := a.toolCaller(callers, req.Caller) // none: the current project
 	project, err := a.newTerminalProject(caller)

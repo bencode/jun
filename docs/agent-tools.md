@@ -25,7 +25,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 |---|---|
 | `jun tool help` | The commands, fields, environment and exit status |
 | `jun tool terminals` | Jun's running terminals, as a JSON array, by id |
-| `jun tool terminals update <id> --name <name>` | Names the terminal, or drops its name for `''`. Prints nothing. |
+| `jun tool terminals update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer]` | Names the terminal, or drops its name for `''`; sets or drops its timer. Prints nothing. |
 | `jun tool watch` | Agents' status as it changes, as JSON, a line each, until it ends |
 | `jun tool screen <id> [--lines N]` | The last N lines of the terminal's text, as plain text |
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
@@ -57,7 +57,8 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
     "agent": "claude",
     "status": "waiting",
     "self": false,
-    "lead": 2
+    "lead": 2,
+    "timer": { "every": "30m", "next": "2026-11-20T12:30:00+08:00", "text": "Look for new P1 and P2 tickets" }
   }
 ]
 ```
@@ -73,17 +74,36 @@ Run them as `"$JUN_BIN" tool …`, which works whatever `PATH` and aliases say.
 | `status` | `waiting`, `working` or `idle`, as the [Agents](agents-view.md) view shows it; with `agent` only |
 | `self` | `true` for the terminal the caller runs in |
 | `lead` | The terminal of the agent that [leads](#join-and-leave) it, when one does |
+| `timer` | Its [timer](#timers), when it has one: `every`, absent for one that fires once; `next`, when it fires next; `text`, absent for none |
 
 Terminals with closed tabs are listed too: their shells keep running. Terminals whose shell has ended are not.
 
 ### terminals update
 
-`terminals update <id> --name <name>` names a terminal, for you and agents to call it by, as in "hand this to Euler" or "what is Euler doing?". An agent finds the id in `terminals` by the name, then uses the id: the other commands take ids only.
+`terminals update <id>` changes a terminal: its name, its timer or both. Each option comes once, in any order. Any terminal may change any running one.
 
-- **Who**: any terminal may name any running one, a lead the terminals it runs above all. A new name takes the place of the one before; `--name ''` drops it.
+`--name <name>` names a terminal, for you and agents to call it by, as in "hand this to Euler" or "what is Euler doing?". An agent finds the id in `terminals` by the name, then uses the id: the other commands take ids only.
+
+- **Who**: a lead names the terminals it runs above all. A new name takes the place of the one before; `--name ''` drops it.
 - **A name** is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case.
 - **Shown** in [Agents](agents-view.md#order-and-status), beside the terminal's number, and given as `name` by `terminals` and `watch`.
 - **It ends** with the terminal, or when Jun quits.
+
+#### Timers
+
+A timer wakes the agent in a terminal on a schedule, as a lead that looks for new tickets every 30 minutes. Jun only signals it; what it does then is its own to know, from its skill and context.
+
+```sh
+"$JUN_BIN" tool terminals update 7 --every 30m --text 'Look for new P1 and P2 tickets'
+"$JUN_BIN" tool terminals update 7 --at 15:00 --text 'Check the PR for reviews'
+```
+
+- **`--every <every>`** signals the agent every interval, written as `loop`'s: `90s`, `5m` or `1h`, at least `1m`. The first comes one interval on, or at `--at`.
+- **`--at <HH:MM>`** signals it once, at the next time the clock reads so, local time: today, or tomorrow once past. With `--every`, it is the first of them.
+- **`--text <text>`** follows the signal's tag, one line of at most 500 bytes. The signal is `[jun-timer 30m] <text>`, or `[jun-timer 15:00] <text>` for one that fires once.
+- **`--no-timer`** drops the timer. A new timer takes the place of the one before: a terminal has one at most.
+- **When**: once it is due, and the agent idle with nothing in its input. A signal missed while the agent works or you type in its input comes once, when it can; then the next is an interval on. One that fires once goes.
+- **Needs an agent** in the terminal to be set. Jun shows it in [Agents](agents-view.md#layout), and forgets it with the terminal, or when Jun quits.
 
 ### watch
 
@@ -240,7 +260,7 @@ Jun runs what it is asked: a loop may run `run`, or start another loop. A loop t
 "$JUN_BIN" tool loop 10m "$JUN_BIN" tool send 7 "'How is it going? Report anything blocking you.'"
 ```
 
-`send` presses Enter whatever the agent shows, so a loop that may meet a question should check the agent's `status` first.
+`send` presses Enter whatever the agent shows, so a loop that may meet a question should check the agent's `status` first. To wake an agent on a schedule, a [timer](#timers) does that, idle only; a loop is for commands.
 
 ### loop
 
