@@ -58,6 +58,14 @@ func TestSendHoldsWhileTheUserHasADraft(t *testing.T) {
 	if got := a.heldSends[target.ID]; len(got) != 2 {
 		t.Fatalf("held %q", got)
 	}
+	// The user sees them wait, over the terminal and in Agents.
+	shows := func(want string) bool {
+		tt.Frame()
+		return tt.HasText(want)
+	}
+	if !shows("✉ 2 waiting") || !strings.Contains(a.agentLabel(target), "2 waiting to send") {
+		t.Fatalf("not shown held: %q", a.agentLabel(target))
+	}
 
 	show("still typing")
 	a.sendHeld()
@@ -67,6 +75,9 @@ func TestSendHoldsWhileTheUserHasADraft(t *testing.T) {
 	show("")
 	a.sendHeld()
 	eventually(t, "the first text to run", func() bool { return strings.Contains(target.Terminal.Text(), "\ngot one") })
+	if !shows("✉ 1 waiting") {
+		t.Fatal("the count not down to one")
+	}
 	if strings.Contains(target.Terminal.Text(), "\ngot two") {
 		t.Fatal("submitted both at once")
 	}
@@ -75,6 +86,9 @@ func TestSendHoldsWhileTheUserHasADraft(t *testing.T) {
 	eventually(t, "the second text to run", func() bool { return strings.Contains(target.Terminal.Text(), "\ngot two") })
 	if _, ok := a.heldSends[target.ID]; ok {
 		t.Fatal("held texts left after all were sent")
+	}
+	if shows("✉ 1 waiting") || strings.Contains(a.agentLabel(target), "waiting to send") {
+		t.Fatal("still shown held once all were sent")
 	}
 
 	show("typing")

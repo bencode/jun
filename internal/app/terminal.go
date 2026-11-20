@@ -60,23 +60,27 @@ func (a *app) terminalView(c *ui.Context, v *layout.View) {
 	focus := a.state.Region(a.pendingFocus)
 	requested := focus != nil && focus.Active == v.ID
 	if session := a.sessionFor(v.ID); session != nil {
-		element := ghostty.View(c.Key(v.ID), session.Terminal).Fill().
-			Label(fmt.Sprintf("%s %d", a.text("Terminal content", "终端内容"), session.ID))
-		// Peek shows the terminal at this size, for its grid to stay.
-		if size := element.LayoutBounds(); size.W > 0 && size.H > 0 {
-			a.viewSizes[session.ID] = size
-		}
-		if requested {
-			element.Focus()
-			a.pendingFocus = 0
-		}
-		if element.FocusWithin() {
-			a.focusedTerminal = v.ID
-			if a.lastTerminal != session.ID {
-				a.lastTerminal = session.ID
-				c.Invalidate() // an Agents view built earlier this frame marks the old one
+		// The box holds what shows over the terminal.
+		ui.Box(c).Fill().Children(func() {
+			element := ghostty.View(c.Key(v.ID), session.Terminal).Fill().
+				Label(fmt.Sprintf("%s %d", a.text("Terminal content", "终端内容"), session.ID))
+			// Peek shows the terminal at this size, for its grid to stay.
+			if size := element.LayoutBounds(); size.W > 0 && size.H > 0 {
+				a.viewSizes[session.ID] = size
 			}
-		}
+			if requested {
+				element.Focus()
+				a.pendingFocus = 0
+			}
+			if element.FocusWithin() {
+				a.focusedTerminal = v.ID
+				if a.lastTerminal != session.ID {
+					a.lastTerminal = session.ID
+					c.Invalidate() // an Agents view built earlier this frame marks the old one
+				}
+			}
+			a.heldBadge(c, session, element.LayoutBounds().H)
+		})
 		return
 	}
 	ui.Column(c.Key(v.ID)).Fill().Padding(28).Gap(12).Children(func() {

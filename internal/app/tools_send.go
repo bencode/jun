@@ -5,7 +5,9 @@ import (
 
 	"github.com/bencode/jun/internal/agent"
 	"github.com/bencode/jun/internal/terminal"
+	"github.com/bencode/jun/internal/theme"
 	"github.com/bencode/jun/internal/tool"
+	"github.com/egoist/mygo/ui"
 )
 
 // toolSend submits the text to the agent in the terminal, whatever the
@@ -52,6 +54,30 @@ func (a *app) sendHeld() {
 			a.heldSends[id] = texts[1:]
 		}
 	}
+}
+
+// heldBadge tells the user, over the agent's terminal at its bottom right,
+// how many texts wait for their draft to go: the terminal keeps its size.
+// It sits on the second row from the bottom, the input box's lower edge in
+// the agents, leaving the last, their footer, to read: height is the
+// terminal's, none before it is laid out.
+func (a *app) heldBadge(c *ui.Context, s *terminal.Session, height float32) {
+	n := len(a.heldSends[s.ID])
+	if n == 0 {
+		return
+	}
+	const badge = 18
+	row := float32(badge)
+	if _, rows := s.Terminal.Size(); rows > 0 && height > 0 {
+		row = height / float32(rows)
+	}
+	text := fmt.Sprintf(a.text("✉ %d waiting", "✉ %d 条待发"), n)
+	color := a.statusColor(agent.Waiting)
+	ui.Box(c).Absolute().Right(12).Bottom(row+(row-badge)/2).Height(badge).Padding(0, 8).Radius(badge/2).Center().
+		Background(a.theme.Surface).Border(1, color).
+		Tooltip(a.text("Sent while you were typing; they go in once you send or clear your input",
+			"你输入时发来的消息，发出或清空输入后送达")).
+		Children(func() { ui.Text(c, text).FontSize(theme.Caption).TextColor(color) })
 }
 
 // hasDraft reports whether the agent's input holds text the user has not
