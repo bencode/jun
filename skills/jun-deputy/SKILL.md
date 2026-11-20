@@ -63,6 +63,13 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 
 2. Read each one's `screen <id> --lines 30`. Do not stop at `status`.
 
+3. Remind each agent with no name, once, to name itself, so that its work is a role's memory. Send it when it is `idle`, in the user's language, as `给自己取个名。`, and do not send it again to that terminal:
+
+   ```sh
+   "$JUN_BIN" tool terminals | jq -c '.[] | select(.agent and (.name | not) and (.self | not))'
+   "$JUN_BIN" tool send <id> '给自己取个名。'
+   ```
+
 ## Reporting
 
 1. List what the user was already told about the agent, by you or anyone, the latest first, and sort what you read, comparing with your last look:
@@ -111,7 +118,8 @@ Read the `screen` of the agents it names, then report them as below. The watch s
 | Action | Rule |
 |---|---|
 | `terminals`, `watch`, `screen`, `message`, `message update` | On your own |
-| `send` to another agent, `open`, `run`, other loops, `terminals update` | Only after the user says yes, for that action |
+| Remind an agent with no name to name itself, once | On your own |
+| Any other `send` to another agent, `open`, `run`, other loops, `terminals update` | Only after the user says yes, for that action |
 | Answer an agent's permission or choice | Never: that question is the user's |
 | Press a key for a notice, close a terminal, stop an agent | Never |
 

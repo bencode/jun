@@ -54,7 +54,33 @@ const (
 	// or drops its name for none; sets its timer, from Request.Every,
 	// Request.At and Request.Text, or drops it with Request.NoTimer.
 	OpUpdateTerminal Op = "update-terminal"
+	// OpRoles lists the roles, or with Request.Name, that role's sessions;
+	// with Request.Mine, the role of the caller's session, if any.
+	OpRoles Op = "roles"
 )
+
+// Sessions are the ids of the agent sessions a command runs in, from the
+// variables agents give their commands: a name given from there records
+// the session as the role's.
+type Sessions struct {
+	Claude string `json:"claude,omitempty"` // CLAUDE_CODE_SESSION_ID
+	Codex  string `json:"codex,omitempty"`  // CODEX_THREAD_ID
+	Pi     string `json:"pi,omitempty"`     // PI_SESSION_ID
+}
+
+// SessionsFrom reads the sessions' variables.
+func SessionsFrom(getenv func(string) string) Sessions {
+	return Sessions{Claude: getenv("CLAUDE_CODE_SESSION_ID"), Codex: getenv("CODEX_THREAD_ID"), Pi: getenv("PI_SESSION_ID")}
+}
+
+// Of is the agent's session id; none when the command runs in none of it.
+func (s Sessions) Of(agent string) string {
+	return map[string]string{"claude": s.Claude, "codex": s.Codex, "pi": s.Pi}[agent]
+}
+
+// DefaultRoleSessions is how many of a role's sessions roles <name> gives,
+// the latest.
+const DefaultRoleSessions = 20
 
 // MinEvery is the shortest interval a loop or a timer takes.
 const MinEvery = time.Minute
@@ -143,9 +169,14 @@ type Request struct {
 	Open    bool          `json:"open,omitempty"`    // run: in a tab, focused
 	Project string        `json:"project,omitempty"` // run: the project, else the caller's; an empty Dir is its directory
 	Every   time.Duration `json:"every,omitempty"`   // loop, a timer: at least MinEvery, in whole seconds
-	Name    *string       `json:"name,omitempty"`    // update-terminal: the terminal's name, empty to drop it
-	At      time.Time     `json:"at,omitzero"`       // update-terminal: when a timer first fires
-	NoTimer bool          `json:"noTimer,omitempty"` // update-terminal: drops the terminal's timer
+	Name    *string       `json:"name,omitempty"`    // update-terminal: the terminal's name, empty to drop it; roles: the role
+	// Sessions are the caller's: update-terminal records the one of the
+	// terminal's agent, when the terminal is the caller's.
+	Sessions Sessions  `json:"sessions,omitzero"`
+	Limit    int       `json:"limit,omitempty"`   // roles <name>: at most this many sessions
+	Mine     bool      `json:"mine,omitempty"`    // roles: the role of the caller's session, from Sessions
+	At       time.Time `json:"at,omitzero"`       // update-terminal: when a timer first fires
+	NoTimer  bool      `json:"noTimer,omitempty"` // update-terminal: drops the terminal's timer
 }
 
 type Response struct {
@@ -157,6 +188,26 @@ type Response struct {
 	Loops     []Loop     `json:"loops,omitempty"`
 	Created   uint64     `json:"created,omitempty"` // message: the new message's ID
 	Messages  []Message  `json:"messages,omitempty"`
+	Roles     []Role     `json:"roles,omitempty"`
+}
+
+// Role is a name that lasts, as its sessions are its memory.
+type Role struct {
+	Name     string `json:"name"`
+	Terminal uint64 `json:"terminal,omitempty"` // the running terminal of that name, if any
+	Count    int    `json:"count"`              // its sessions
+	// Last is its latest session; Sessions, for roles <name>, the latest
+	// ones, first.
+	Last     *RoleSession  `json:"last,omitempty"`
+	Sessions []RoleSession `json:"sessions,omitempty"`
+}
+
+// RoleSession is one of a role's sessions.
+type RoleSession struct {
+	Agent string    `json:"agent"` // claude, codex or pi
+	ID    string    `json:"id"`
+	Dir   string    `json:"dir"`
+	At    time.Time `json:"at"` // when it took the role
 }
 
 // Loop is a command Jun runs again and again in a terminal of its own.

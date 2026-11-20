@@ -27,6 +27,9 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 		}
 		return parseUpdateTerminal(rest)
 	}
+	if command == "roles" {
+		return parseRoles(rest)
+	}
 	if command == "watch" && len(rest) == 0 {
 		return Request{Op: OpWatch}, nil
 	}
@@ -266,6 +269,35 @@ func parseUpdateTerminal(args []string) (Request, error) {
 		return Request{}, errors.New("--no-timer goes with no --every or --at")
 	}
 	req.Text = text
+	return req, nil
+}
+
+// parseRoles reads what follows `roles`: nothing, --mine, or a role's
+// name and --limit.
+func parseRoles(args []string) (Request, error) {
+	const usage = "roles takes nothing, --mine, or a role's name and --limit <n>"
+	if len(args) == 0 {
+		return Request{Op: OpRoles}, nil
+	}
+	if len(args) == 1 && args[0] == "--mine" {
+		return Request{Op: OpRoles, Mine: true, Limit: DefaultRoleSessions}, nil
+	}
+	name := strings.TrimSpace(args[0])
+	if err := CheckName(name); err != nil || name == "" {
+		return Request{}, errors.New(usage)
+	}
+	req := Request{Op: OpRoles, Name: &name, Limit: DefaultRoleSessions}
+	if len(args) == 1 {
+		return req, nil
+	}
+	if len(args) != 3 || args[1] != "--limit" {
+		return Request{}, errors.New(usage)
+	}
+	limit, err := strconv.Atoi(args[2])
+	if err != nil || limit < 1 {
+		return Request{}, fmt.Errorf("limit must be a positive integer: %q", args[2])
+	}
+	req.Limit = limit
 	return req, nil
 }
 

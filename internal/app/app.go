@@ -8,6 +8,7 @@ import (
 	"github.com/bencode/jun/internal/config"
 	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
+	"github.com/bencode/jun/internal/roles"
 	"github.com/bencode/jun/internal/settings"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/theme"
@@ -81,6 +82,8 @@ type app struct {
 	loops           map[terminal.ID]loop        // by the terminal each runs in
 	leads           map[terminal.ID]terminal.ID // each terminal's lead, by the terminal led
 	names           map[terminal.ID]string      // what agents call terminals, given with terminals update
+	roles           roles.Book                  // names that last, with their sessions
+	rolesDir        string                      // where roles are kept; none: they are not
 	timers          map[terminal.ID]agentTimer  // when to signal the agents in terminals, set with terminals update
 	ttys            map[terminal.ID]string
 	agentPolling    bool
@@ -150,6 +153,7 @@ func Run() error {
 		a.report(fmt.Errorf("%s: %w", a.text("Configuration path unavailable; saving is disabled for this session", "配置路径不可用；本次运行已停用保存"), err))
 	} else {
 		a.restoreConfig(path)
+		a.restoreRoles(path)
 	}
 	removeOldMessages(path)
 	a.startPrefs()

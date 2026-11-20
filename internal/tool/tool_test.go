@@ -73,6 +73,7 @@ func TestMainUsage(t *testing.T) {
 		{"loop", "5"}, {"loop", "30s", "x"}, {"loop", "90.5s", "x"}, {"loop", "5m"}, {"loop", "5m", "--open", "x"},
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
 		{"run", "--project"}, {"run", "--project", " ", "x"}, {"run", "--project", "a", "--project", "b", "x"}, {"loop", "5m", "--project", "a", "x"},
+		{"roles", "42"}, {"roles", "a", "b"}, {"roles", "--mine", "x"}, {"roles", "a", "--limit"}, {"roles", "a", "--limit", "0"}, {"roles", "a", "--limit", "x"},
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
 		{"terminals", "update"}, {"terminals", "update", "3"}, {"terminals", "update", "3", "达芬奇"}, {"terminals", "update", "0", "--name", "a"},
 		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
@@ -127,6 +128,9 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		}
 		if req.Op == OpMessages {
 			return Response{Messages: []Message{{ID: 7, Kind: MessageAsk, Link: "terminal:3", Replies: []Reply{{Text: "Answered"}}}}}
+		}
+		if req.Op == OpRoles {
+			return Response{Roles: []Role{{Name: "欧拉", Count: 1, Last: &RoleSession{Agent: "codex", ID: "t1"}}}}
 		}
 		if req.Op != OpTerminals {
 			return Response{}
@@ -255,6 +259,27 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 			t.Fatalf("%q: %d %q", args, code, out)
 		}
 	}
+	// A name goes with the caller's agent sessions, as their variables tell.
+	withSessions := func(args ...string) int {
+		return Main(args, strings.NewReader(""), &bytes.Buffer{}, &bytes.Buffer{}, func(name string) string {
+			return map[string]string{EnvAPI: path, "CODEX_THREAD_ID": "t1", "CLAUDE_CODE_SESSION_ID": "c1"}[name]
+		})
+	}
+	if withSessions("terminals", "update", "3", "--name", "欧拉") != 0 || withSessions("terminals", "update", "3", "--every", "5m") != 0 {
+		t.Fatal("update with sessions")
+	}
+	var roles []Role
+	if code, out, _ := run(path, "roles"); code != 0 || json.Unmarshal([]byte(out), &roles) != nil || len(roles) != 1 || roles[0].Last.ID != "t1" {
+		t.Fatalf("roles: %d %q", code, out)
+	}
+	for _, args := range [][]string{{"roles", " 欧拉 "}, {"roles", "欧拉", "--limit", "3"}} {
+		if code, _, _ := run(path, args...); code != 0 {
+			t.Fatalf("%q: %d", args, code)
+		}
+	}
+	if withSessions("roles", "--mine") != 0 {
+		t.Fatal("roles --mine")
+	}
 	if code, out, _ := run(path, "open", "file:docs/a.md"); code != 0 || out != "" {
 		t.Fatalf("open file: %d %q", code, out)
 	}
@@ -274,6 +299,10 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("达芬奇")}, {Op: OpUpdateTerminal, Terminal: 3, Name: ptr("")},
 		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Every: 30 * time.Minute, Text: "看看新工单"},
 		{Op: OpUpdateTerminal, Terminal: 3, NoTimer: true},
+		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Sessions: Sessions{Codex: "t1", Claude: "c1"}},
+		{Op: OpUpdateTerminal, Terminal: 3, Every: 5 * time.Minute},
+		{Op: OpRoles}, {Op: OpRoles, Name: ptr("欧拉"), Limit: DefaultRoleSessions}, {Op: OpRoles, Name: ptr("欧拉"), Limit: 3},
+		{Op: OpRoles, Mine: true, Limit: DefaultRoleSessions, Sessions: Sessions{Codex: "t1", Claude: "c1"}},
 		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)

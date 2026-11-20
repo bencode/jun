@@ -15,7 +15,7 @@ func TestTerminalNamesAreUniqueWhileTheTerminalRuns(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	first, second := sessions[0], sessions[1]
 	name := func(s *terminal.Session, name string) error {
-		return a.toolUpdateTerminal(tool.Request{Op: tool.OpUpdateTerminal, Terminal: uint64(s.ID), Name: &name})
+		return a.toolUpdateTerminal(tool.Request{Op: tool.OpUpdateTerminal, Terminal: uint64(s.ID), Name: &name}, nil)
 	}
 	listed := func(id terminal.ID) string {
 		t.Helper()
@@ -92,7 +92,7 @@ func TestTerminalTimersAreSetOnAgentsOnly(t *testing.T) {
 	delete(a.agents, shell.ID)
 	update := func(req tool.Request) error {
 		req.Op = tool.OpUpdateTerminal
-		return a.toolUpdateTerminal(req)
+		return a.toolUpdateTerminal(req, nil)
 	}
 	listed := func(id terminal.ID) *tool.Timer {
 		t.Helper()

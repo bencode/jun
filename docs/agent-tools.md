@@ -26,6 +26,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool help` | The commands, fields, environment and exit status |
 | `jun tool terminals` | Jun's running terminals, as a JSON array, by id |
 | `jun tool terminals update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer]` | Names the terminal, or drops its name for `''`; sets or drops its timer. Prints nothing. |
+| `jun tool roles` / `roles --mine` / `roles <name> [--limit <n>]` | The [roles](#roles), as a JSON array, by name / the role of the caller's session / that role with its latest sessions |
 | `jun tool watch` | Agents' status as it changes, as JSON, a line each, until it ends |
 | `jun tool screen <id> [--lines N]` | The last N lines of the terminal's text, as plain text |
 | `jun tool open <target> [--in <perspective>] [--peek]` | Shows the target. Prints nothing. |
@@ -84,10 +85,23 @@ Terminals with closed tabs are listed too: their shells keep running. Terminals 
 
 `--name <name>` names a terminal, for you and agents to call it by, as in "hand this to Euler" or "what is Euler doing?". An agent finds the id in `terminals` by the name, then uses the id: the other commands take ids only.
 
-- **Who**: a lead names the terminals it runs above all. A new name takes the place of the one before; `--name ''` drops it.
+- **Who**: an agent names itself, which makes the name a [role](#roles); a lead may also name the terminals it runs. A new name takes the place of the one before; `--name ''` drops it.
 - **A name** is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case.
 - **Shown** in [Agents](agents-view.md#order-and-status), beside the terminal's number, and given as `name` by `terminals` and `watch`.
-- **It ends** with the terminal, or when Jun quits.
+- **It ends** with the terminal, or when Jun quits; a role stays.
+
+#### Roles
+
+A name is a role: an entity that lasts, and the sessions that took it are its memory. When an agent names its own terminal, Jun records the agent's session as the role's: Claude Code, Codex and Pi give their commands its id, in `CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID` and `PI_SESSION_ID`, and `jun tool` sends it along. A name given to another agent's terminal records no session.
+
+- **Kept** beside Jun's configuration, a file for each role that changes are only added to, so a role with many sessions costs no more to change. A role lasts while it has a session, across Jun's runs.
+- **Renamed**, the agent's session moves to the new role; `--name ''` takes it out. A role with no session left goes, and its name with it.
+- **Taken on**: naming a terminal a role's name that no running terminal has makes the agent's session part of that role. Do so to carry a role on, not by chance: look at `roles` first.
+- **Resumed**, a session keeps its id: `roles --mine` finds its role, for the agent to take the name back.
+
+`roles` lists each role with `name`, `terminal` (the running one of that name, if any), `count` (its sessions) and `last`, its latest session: `agent`, `id`, `dir`, and `at`, when it took the role. `roles <name>` gives that role with its latest `sessions`, the latest first, 20 unless `--limit` says, and `roles --mine` the same for the role of the caller's session, or an empty array.
+
+Jun does not read the sessions: the [jun-tools](#as-a-skill) skill tells an agent where each agent keeps them and how much of them to read.
 
 #### Timers
 
