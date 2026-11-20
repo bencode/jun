@@ -197,6 +197,7 @@ func (a *app) compactHeading(c *ui.Context, s *terminal.Session, info agentInfo,
 	ui.Text(c, a.agentTitle(s)).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 	a.leadMark(c, s, groupLead)
 	a.timerMark(c, s)
+	a.heldMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 	ui.Box(c).Width(22).Height(16).Radius(4).Shrink(0).Background(projectColor(s.ProjectName)).Center().Children(func() {
 		ui.Text(c, projectAbbrev(s.ProjectName)).FontSize(theme.Caption).Bold().TextColor(ui.RGB(255, 255, 255))
@@ -236,6 +237,7 @@ func (a *app) agentHeading(c *ui.Context, s *terminal.Session, info agentInfo, g
 	}
 	a.leadMark(c, s, groupLead)
 	a.timerMark(c, s)
+	a.heldMark(c, s)
 	ui.Text(c, a.statusName(info.Status)).FontSize(theme.Caption).Shrink(0).TextColor(a.statusColor(info.Status))
 }
 
@@ -259,6 +261,13 @@ func (a *app) leadMark(c *ui.Context, s *terminal.Session, groupLead terminal.ID
 func (a *app) timerMark(c *ui.Context, s *terminal.Session) {
 	if text := a.timerText(s.ID); text != "" {
 		ui.Text(c, "⏱ "+text).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.TextMuted)
+	}
+}
+
+// heldMark counts the texts held for the agent until the user's draft goes.
+func (a *app) heldMark(c *ui.Context, s *terminal.Session) {
+	if n := len(a.heldSends[s.ID]); n > 0 {
+		ui.Text(c, fmt.Sprintf("✉ %d", n)).FontSize(theme.Caption).Shrink(0).TextColor(a.theme.TextMuted)
 	}
 }
 
@@ -291,6 +300,9 @@ func (a *app) agentLabel(s *terminal.Session) string {
 	}
 	if timer := a.timerText(s.ID); timer != "" {
 		label += a.text(", timer ", "，定时 ") + timer
+	}
+	if n := len(a.heldSends[s.ID]); n > 0 {
+		label += fmt.Sprintf(a.text(", %d waiting to send", "，%d 条待发"), n)
 	}
 	if s.ID == a.lastTerminal {
 		label += a.text(", current", "，当前")

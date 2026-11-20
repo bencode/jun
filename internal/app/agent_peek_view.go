@@ -77,6 +77,7 @@ func (a *app) peekOverlay(c *ui.Context, area ui.Rect) {
 			// An edge over the terminal's padding, not beside it: the
 			// terminal keeps the drawer's width.
 			ui.Box(c).Absolute().Left(0).Top(0).Bottom(0).Width(2).Background(edge)
+			a.heldBadge(c, session, area.H-peekHeader)
 		})
 	})
 }

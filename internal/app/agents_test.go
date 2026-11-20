@@ -203,13 +203,14 @@ func TestAgentsGroupUnderTheirLead(t *testing.T) {
 	}
 }
 
-func TestAgentsShowTimers(t *testing.T) {
+func TestAgentsShowTimersAndHeldTexts(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	next := time.Date(2026, 11, 20, 12, 30, 0, 0, time.Local)
 	a.timers[sessions[0].ID] = agentTimer{every: 30 * time.Minute, next: next}
 	a.timers[sessions[1].ID] = agentTimer{next: next.Add(150 * time.Minute)}
+	a.heldSends[sessions[2].ID] = []string{"a"} // and one with a text held
 	tt.Frame()
-	for _, want := range []string{"⏱ 30m · 12:30", "⏱ 15:00"} {
+	for _, want := range []string{"⏱ 30m · 12:30", "⏱ 15:00", "✉ 1"} {
 		if !tt.HasText(want) {
 			t.Errorf("%q not shown", want)
 		}

@@ -177,7 +177,7 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - With `-`, the text is standard input, for long or multi-line messages. Line breaks at its end go; at most 1 MiB.
 - Any agent takes it, whatever it is doing, the caller's own terminal too. A terminal running no agent does not: text there would run as a command.
 - Once sent, Jun waits up to 5 seconds for the agent to work. If it does not by then, `send` prints `sent, not started yet`, still with status 0.
-- While the user has typed something in the agent's input and not submitted it, Enter would submit it with the text. Jun holds the text instead, and submits it once the input is empty, as the user submits or clears it; `send` prints `held: …` at once, with status 0. Texts sent to an agent while others are held follow them, in order. Held texts go if the agent or Jun quits first. Placeholders and suggested prompts, which agents show dim, are not the user's.
+- While the user has typed something in the agent's input and not submitted it, Enter would submit it with the text. Jun holds the text instead, and submits it once the input is empty, as the user submits or clears it; `send` prints `held: …` at once, with status 0. Texts sent to an agent while others are held follow them, in order. Held texts go if the agent or Jun quits first. Placeholders and suggested prompts, which agents show dim, are not the user's. While texts are held, the agent's terminal shows how many at its bottom right, as `✉ 2 waiting`, and so does its row in [Agents](agents-view.md#layout).
 
 ### message
 
