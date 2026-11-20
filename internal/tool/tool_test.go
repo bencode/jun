@@ -78,6 +78,12 @@ func TestMainUsage(t *testing.T) {
 		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
 		{"terminals", "update", "3", "--name", strings.Repeat("x", MaxName+1)}, {"terminals", "update", "3", "--name", "a", "b"},
 		{"terminals", "name", "3", "--name", "a"}, {"terminals", "update", "3", "--name", "a\tb"}, {"terminals", "update", "3", "--name", "a\x1b[2mb"},
+		{"terminals", "update", "3", "--every", "30s"}, {"terminals", "update", "3", "--every", "90.5s"}, {"terminals", "update", "3", "--every"},
+		{"terminals", "update", "3", "--at", "25:00"}, {"terminals", "update", "3", "--at", "9"}, {"terminals", "update", "3", "--text", "hi"}, {"terminals", "update", "3", "--text", ""},
+		{"terminals", "update", "3", "--no-timer", "--every", "5m"}, {"terminals", "update", "3", "--at", "09:00", "--no-timer"},
+		{"terminals", "update", "3", "--every", "5m", "--every", "1h"}, {"terminals", "update", "3", "--no-timer", "--no-timer"},
+		{"terminals", "update", "3", "--every", "5m", "--text", "a\nb"},
+		{"terminals", "update", "3", "--every", "5m", "--text", strings.Repeat("x", MaxTimerText+1)},
 	} {
 		if code, _, stderr := run("/nowhere", args...); code != 2 || !strings.Contains(stderr, usage) {
 			t.Errorf("%q: exit %d, %q", args, code, stderr)
@@ -243,7 +249,8 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "loop", "cancel", "12"); code != 0 || out != "" {
 		t.Fatalf("loop cancel: %d %q", code, out)
 	}
-	for _, args := range [][]string{{"terminals", "update", "3", "--name", " 达芬奇 "}, {"terminals", "update", "3", "--name", ""}} {
+	for _, args := range [][]string{{"terminals", "update", "3", "--name", " 达芬奇 "}, {"terminals", "update", "3", "--name", ""},
+		{"terminals", "update", "3", "--text", "看看新工单", "--every", "30m", "--name", "欧拉"}, {"terminals", "update", "3", "--no-timer"}} {
 		if code, out, _ := run(path, args...); code != 0 || out != "" {
 			t.Fatalf("%q: %d %q", args, code, out)
 		}
@@ -264,7 +271,9 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpJoin, Terminal: 3}, {Op: OpLeave},
 		{Op: OpLoop, Command: "echo hi", Dir: filepath.Join(here, "sub"), Every: 5 * time.Minute},
 		{Op: OpLoops}, {Op: OpCancelLoop, Terminal: 12},
-		{Op: OpUpdateTerminal, Terminal: 3, Name: "达芬奇"}, {Op: OpUpdateTerminal, Terminal: 3},
+		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("达芬奇")}, {Op: OpUpdateTerminal, Terminal: 3, Name: ptr("")},
+		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Every: 30 * time.Minute, Text: "看看新工单"},
+		{Op: OpUpdateTerminal, Terminal: 3, NoTimer: true},
 		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)
@@ -389,5 +398,25 @@ func TestTail(t *testing.T) {
 	}
 	if got := Tail("\n \n", 5); got != "" {
 		t.Fatalf("blank: %q", got)
+	}
+}
+
+func ptr(s string) *string { return &s }
+
+func TestAtIsTheNextTimeTheClockReadsSo(t *testing.T) {
+	now := time.Date(2026, 11, 20, 14, 30, 0, 0, time.Local)
+	for clock, want := range map[string]time.Time{
+		"15:00": time.Date(2026, 11, 20, 15, 0, 0, 0, time.Local),
+		"14:30": time.Date(2026, 11, 21, 14, 30, 0, 0, time.Local), // now is past
+		"09:05": time.Date(2026, 11, 21, 9, 5, 0, 0, time.Local),
+	} {
+		if at, err := nextAt(now, clock); err != nil || !at.Equal(want) {
+			t.Errorf("%s: %v %v, want %v", clock, at, err, want)
+		}
+	}
+	// --at goes on its own, or first before --every.
+	req, err := parse([]string{"terminals", "update", "3", "--at", "15:00", "--every", "1h"}, nil)
+	if err != nil || req.At.IsZero() || !req.At.After(time.Now()) || req.Every != time.Hour {
+		t.Fatalf("--at with --every: %+v %v", req, err)
 	}
 }

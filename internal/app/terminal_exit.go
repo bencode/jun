@@ -16,6 +16,7 @@ func (a *app) reapExitedTerminals(focused layout.ViewID) bool {
 	}
 	maps.DeleteFunc(a.leads, func(led, lead terminal.ID) bool { return slices.Contains(closed, led) || slices.Contains(closed, lead) })
 	maps.DeleteFunc(a.names, func(id terminal.ID, _ string) bool { return slices.Contains(closed, id) })
+	maps.DeleteFunc(a.timers, func(id terminal.ID, _ agentTimer) bool { return slices.Contains(closed, id) })
 	var destination layout.RegionID
 	modal := a.palette.open || a.projectForm.open || a.perspectiveForm.open || a.projectRename.open || a.confirmation.open || a.errorOpen ||
 		a.persistence != nil && a.persistence.errorOpen
