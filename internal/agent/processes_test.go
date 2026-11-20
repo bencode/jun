@@ -36,3 +36,11 @@ func TestParseBusy(t *testing.T) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseCWDs(t *testing.T) {
+	output := "p70001\nfcwd\nn/Users/me/work/jun wt\np70002\nfcwd\nn/\np70003\n"
+	want := map[int]string{70001: "/Users/me/work/jun wt", 70002: "/"}
+	if got := ParseCWDs(output); !maps.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}

@@ -51,8 +51,9 @@ type kind struct {
 	// dirs, summarizing changed files with c.
 	list func(root string, dirs []string, c *cache) ([]Session, error)
 	read func(path string) ([]Message, error)
-	// resume is the shell command that resumes the session.
-	resume func(s Session) string
+	// resume is the shell command that resumes the session, started by
+	// commands' command for its agent directory, if any.
+	resume func(s Session, commands map[string]string) string
 }
 
 var kinds = []kind{claudeKind, codexKind, piKind}
@@ -130,8 +131,10 @@ var validID = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z-]*$`)
 // one plain word.
 func ValidID(id string) bool { return validID.MatchString(id) }
 
-// ResumeCommand is the shell command that resumes the session.
-func ResumeCommand(s Session) (string, error) {
+// ResumeCommand is the shell command that resumes the session. Commands
+// are what start the agent with an agent directory, by the directory, as
+// a launcher that sets one does; the agent's own name for the others.
+func ResumeCommand(s Session, commands map[string]string) (string, error) {
 	k, ok := kindOf(s.Agent)
 	if !ok {
 		return "", fmt.Errorf("unknown agent %q", s.Agent)
@@ -139,7 +142,7 @@ func ResumeCommand(s Session) (string, error) {
 	if !ValidID(s.ID) {
 		return "", fmt.Errorf("invalid session ID %q", s.ID)
 	}
-	return k.resume(s), nil
+	return k.resume(s, commands), nil
 }
 
 // shellQuote is s as one word of a POSIX shell's command.

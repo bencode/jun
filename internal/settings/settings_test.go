@@ -21,12 +21,16 @@ func TestLoadDefaultsChecksAndExpands(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := Parse([]byte("language: zh\nfont:\n  size: 15\nclaude:\n  configDirs: [~/.claude, /opt/claude/]\n"))
-	if err != nil || s.Language != "zh" || s.Font.Size != 15 ||
-		!slices.Equal(s.Claude.ConfigDirs, []string{filepath.Join(home, ".claude"), "/opt/claude"}) {
+	s, err := Parse([]byte("language: zh\nfont:\n  size: 15\nclaude:\n  configDirs:\n    - ~/.claude\n    - path: /opt/claude/\n      command: reclaude\n"))
+	want := []ConfigDir{{Path: filepath.Join(home, ".claude")}, {Path: "/opt/claude", Command: "reclaude"}}
+	if err != nil || s.Language != "zh" || s.Font.Size != 15 || !slices.Equal(s.Claude.ConfigDirs, want) {
 		t.Fatalf("loaded %+v, %v", s, err)
 	}
-	for _, bad := range []string{"langauge: zh\n", "language: fr\n", "font:\n  size: 99\n", "claude:\n  configDirs: [rel]\n", "markdown:\n  width: huge\n", "theme: [\n"} {
+	for _, bad := range []string{"langauge: zh\n", "language: fr\n", "font:\n  size: 99\n", "claude:\n  configDirs: [rel]\n", "markdown:\n  width: huge\n", "theme: [\n",
+		"claude:\n  configDirs:\n    - {path: /opt/claude, comand: reclaude}\n",
+		"claude:\n  configDirs:\n    - {command: reclaude}\n",
+		"claude:\n  configDirs:\n    - {path: /opt/claude, command: \"a\\nb\"}\n",
+		"claude:\n  configDirs:\n    - [/opt/claude]\n"} {
 		if _, err := Parse([]byte(bad)); err == nil {
 			t.Fatalf("%q was taken", bad)
 		}

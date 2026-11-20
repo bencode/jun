@@ -4,14 +4,18 @@ import (
 	"cmp"
 	"fmt"
 	"log"
+	"maps"
+	"os"
+	"slices"
 
+	"github.com/bencode/jun/internal/agent"
 	"github.com/bencode/jun/internal/layout"
 )
 
 func (a *app) startTerminal(v *layout.View) error { return a.startTerminalIn(v, "") }
 
-// startTerminalIn starts the terminal view's shell in dir, or in its
-// project's directory when dir is "".
+// startTerminalIn starts the terminal view's shell in dir; when dir is "",
+// where its shell was when Jun last quit, else in its project's directory.
 func (a *app) startTerminalIn(v *layout.View, dir string) error {
 	if v.Kind != layout.ViewTerminal {
 		return fmt.Errorf("view %d is not a terminal", v.ID)
@@ -27,7 +31,7 @@ func (a *app) startTerminalIn(v *layout.View, dir string) error {
 		if project.Name != v.ProjectName {
 			continue
 		}
-		session, err := a.terminals.Create(project.Name, cmp.Or(dir, project.CWD), invalidate)
+		session, err := a.terminals.Create(project.Name, cmp.Or(dir, existingDir(v.Dir), project.CWD), invalidate)
 		if err != nil {
 			a.terminalErrors[v.ID] = err
 			return err
@@ -42,6 +46,16 @@ func (a *app) startTerminalIn(v *layout.View, dir string) error {
 }
 
 func (a *app) restoreTerminals() {
+	for _, view := range a.terminalViews() {
+		if err := a.startTerminal(view); err != nil {
+			log.Printf("restore terminal %d: %v", view.ID, err)
+		}
+	}
+}
+
+// terminalViews are the terminal views of every region, hidden ones and
+// other projects' included.
+func (a *app) terminalViews() []*layout.View {
 	regions := []*layout.Region{a.state.Global}
 	for _, project := range a.state.Projects {
 		for _, p := range project.Perspectives {
@@ -49,15 +63,43 @@ func (a *app) restoreTerminals() {
 			regions = append(regions, p.Bottom)
 		}
 	}
+	var views []*layout.View
 	for _, region := range regions {
-		for _, view := range region.Views {
-			if view.Kind == layout.ViewTerminal {
-				if err := a.startTerminal(view); err != nil {
-					log.Printf("restore terminal %d: %v", view.ID, err)
-				}
+		views = append(views, slices.DeleteFunc(slices.Clone(region.Views), func(v *layout.View) bool { return v.Kind != layout.ViewTerminal })...)
+	}
+	return views
+}
+
+// recordTerminalDirs notes on each terminal view where its shell is, for
+// the next start; a shell Jun cannot read keeps the note it had.
+func (a *app) recordTerminalDirs() {
+	shells := map[*layout.View]int{}
+	for _, v := range a.terminalViews() {
+		if s := a.sessionFor(v.ID); s != nil && !s.Exited() {
+			if pid, ok := s.ShellPID(); ok {
+				shells[v] = pid
 			}
 		}
 	}
+	dirs, err := agent.CWDs(slices.Collect(maps.Values(shells)))
+	if err != nil {
+		log.Printf("Jun: note terminals' directories: %v", err)
+		return
+	}
+	for v, pid := range shells {
+		if dir, ok := dirs[pid]; ok && dir != v.Dir {
+			v.Dir = dir
+			a.layoutChanged()
+		}
+	}
+}
+
+// existingDir is dir while it is a directory, else "".
+func existingDir(dir string) string {
+	if info, err := os.Stat(dir); dir == "" || err != nil || !info.IsDir() {
+		return ""
+	}
+	return dir
 }
 
 func (a *app) closeTerminals() {

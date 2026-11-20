@@ -19,7 +19,7 @@ var piKind = kind{
 	home:   piHome,
 	list:   piList,
 	read:   piRead,
-	resume: func(s Session) string { return "pi --session " + shellQuote(s.Path) },
+	resume: func(s Session, _ map[string]string) string { return "pi --session " + shellQuote(s.Path) },
 }
 
 // piHome is the sessions directory Pi uses by default:

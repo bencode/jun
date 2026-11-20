@@ -22,10 +22,13 @@ markdown:
 claude:
   configDirs:      # Claude Code configuration folders Sessions lists
     - ~/.claude
-    - ~/work/claude-accounts/team
+    - path: ~/work/claude-accounts/team
+      command: claude-team   # starts Claude Code with this folder
 ```
 
-`claude.configDirs` lists the folders whose sessions Sessions shows, each the folder Claude Code would be given in `CLAUDE_CONFIG_DIR`. When it is unset, Sessions reads Claude Code's own: `CLAUDE_CONFIG_DIR` from Jun's environment, else `~/.claude`. An app opened from the Dock does not see variables a shell or a launcher sets, which is what the setting is for. Resuming a session from another folder starts Claude Code with `CLAUDE_CONFIG_DIR` set to it.
+`claude.configDirs` lists the folders whose sessions Sessions shows, each the folder Claude Code would be given in `CLAUDE_CONFIG_DIR`. When it is unset, Sessions reads Claude Code's own: `CLAUDE_CONFIG_DIR` from Jun's environment, else `~/.claude`. An app opened from the Dock does not see variables a shell or a launcher sets, which is what the setting is for.
+
+A folder is its path, or `path` and `command`. The command is what starts Claude Code with that folder, such as a launcher that sets `CLAUDE_CONFIG_DIR` and more: its sessions resume with it, as `claude-team --resume <id>`. A folder without one resumes with `claude`, given `CLAUDE_CONFIG_DIR` unless the folder is Claude Code's own. The command is one line, typed into the terminal's shell, so the shell's functions and aliases work.
 
 ## Quick entries
 

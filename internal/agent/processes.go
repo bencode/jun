@@ -96,6 +96,38 @@ func TTYs(pids []int) (map[int]string, error) {
 	return result, nil
 }
 
+// ParseCWDs reads `lsof -a -d cwd -Fn -p …` output: a p line with each
+// process's ID, then an n line with its directory.
+func ParseCWDs(output string) map[int]string {
+	result := map[int]string{}
+	pid := 0
+	for _, line := range strings.Split(output, "\n") {
+		if rest, ok := strings.CutPrefix(line, "p"); ok {
+			pid, _ = strconv.Atoi(rest)
+		} else if dir, ok := strings.CutPrefix(line, "n"); ok && pid > 0 && filepath.IsAbs(dir) {
+			result[pid] = dir
+		}
+	}
+	return result
+}
+
+// CWDs returns the current directory of each running process.
+func CWDs(pids []int) (map[int]string, error) {
+	if len(pids) == 0 {
+		return map[int]string{}, nil
+	}
+	list := make([]string, len(pids))
+	for i, pid := range pids {
+		list[i] = strconv.Itoa(pid)
+	}
+	out, err := exec.Command("lsof", "-a", "-d", "cwd", "-Fn", "-p", strings.Join(list, ",")).Output()
+	var exit *exec.ExitError
+	if err != nil && !(errors.As(err, &exit) && exit.ExitCode() == 1) {
+		return nil, fmt.Errorf("list current directories: %w", err)
+	}
+	return ParseCWDs(string(out)), nil
+}
+
 // ps runs ps. It exits 1 when some of the processes or terminals asked
 // for are gone, still printing the others.
 func ps(args ...string) (string, error) {

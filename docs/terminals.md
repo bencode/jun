@@ -34,7 +34,8 @@ Jun's terminals run your login shell. Agents such as Claude Code, Codex and Pi r
 
 - **Quitting Jun**, or closing its window, ends every shell. Jun has no background daemon.
 - When programs still run in some terminals, Jun lists them first ("codex — project · tab") and asks. Cancel takes Enter and Esc.
-- **On the next start**, Jun starts a fresh shell for every saved terminal tab, in each tab's own project directory. This includes tabs in hidden regions and in other projects and perspectives.
+- **On quitting**, Jun notes the directory each tab's shell is in.
+- **On the next start**, Jun starts a fresh shell for every saved terminal tab, in the directory its shell was in, or the tab's project directory when that directory is gone or was never noted. This includes tabs in hidden regions and in other projects and perspectives.
 - Earlier processes and their output are not restored.
 - A directory that no longer exists keeps its tab, with a **Retry** button.
 

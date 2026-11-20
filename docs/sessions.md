@@ -52,5 +52,6 @@
   - opens a terminal in the session's directory;
   - runs `claude --resume <id>`, `codex resume <id>` or `pi --session <file>` there.
 - **Claude Code sessions from another folder** resume with `CLAUDE_CONFIG_DIR` set to that folder, such as `CLAUDE_CONFIG_DIR='…' claude --resume <id>`. The default folder needs no prefix.
+- **A folder with a `command`** in `claude.configDirs` resumes its sessions with that command, such as `reclaude --resume <id>`: see [Settings](settings.md#keys).
 - **Copy Session ID**, in the header or the context menu, copies the session's ID.
 - **A directory that no longer exists** cannot be resumed, and Jun says why.

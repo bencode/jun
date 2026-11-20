@@ -21,7 +21,7 @@ var codexKind = kind{
 	home:   func() (string, error) { return home("CODEX_HOME", ".codex") },
 	list:   codexList,
 	read:   codexRead,
-	resume: func(s Session) string { return "codex resume " + s.ID },
+	resume: func(s Session, _ map[string]string) string { return "codex resume " + s.ID },
 }
 
 type codexRecord struct {
