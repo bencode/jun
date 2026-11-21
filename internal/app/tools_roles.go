@@ -75,6 +75,20 @@ func (a *app) reloadRoles() {
 	a.roles = book
 }
 
+// releaseRoles drops the name of each terminal whose agent is gone, as next
+// polls them, when the name is a role: a role is its agent's, not the
+// shell's, and the session resumed elsewhere takes it back. Other names
+// stay with their terminal.
+func (a *app) releaseRoles(next map[terminal.ID]agentInfo) {
+	for id, name := range a.names {
+		_, was := a.agents[id]
+		_, still := next[id]
+		if _, role := a.roles[roles.Key(name)]; was && !still && role {
+			delete(a.names, id)
+		}
+	}
+}
+
 // toolRoles lists the roles by name, or the one named, or the caller's,
 // with its latest sessions.
 func (a *app) toolRoles(req tool.Request) ([]tool.Role, error) {

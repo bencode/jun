@@ -94,7 +94,7 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 "$JUN_BIN" tool terminals update "$JUN_TERMINAL" --name Euler
 ```
 
-A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Renamed, your session moves to the new role; `--name ''` takes it out. A role with no session left goes.
+A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Renamed, your session moves to the new role; `--name ''` takes it out. A role with no session left goes. When you end, your terminal gives the name up, for your session to take it back when resumed.
 
 **Name another agent.** A name you give another terminal lasts while it runs, with no memory. For a role, ask the agent to name itself, with the name if the user chose one, once `terminals` shows its `agent`:
 

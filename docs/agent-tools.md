@@ -88,7 +88,7 @@ Terminals with closed tabs are listed too: their shells keep running. Terminals 
 - **Who**: an agent names itself, which makes the name a [role](#roles); a lead may also name the terminals it runs. A new name takes the place of the one before; `--name ''` drops it.
 - **A name** is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case.
 - **Shown** in [Agents](agents-view.md#order-and-status), beside the terminal's number, and given as `name` by `terminals` and `watch`.
-- **It ends** with the terminal, or when Jun quits; a role stays.
+- **It ends** with the terminal, or when Jun quits; a role stays. A name that is a role also ends when the agent in the terminal does, for the session resumed elsewhere to take it back.
 
 #### Roles
 

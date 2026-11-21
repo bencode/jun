@@ -1,9 +1,11 @@
 package app
 
 import (
+	"maps"
 	"path/filepath"
 	"testing"
 
+	"github.com/bencode/jun/internal/agent"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
 )
@@ -76,6 +78,25 @@ func TestRolesKeepTheSessionsOfAgentsThatNameThemselves(t *testing.T) {
 	if r := listed(a, "狄仁杰", 1); r.Count != 2 || len(r.Sessions) != 1 || r.Sessions[0].ID != "s4" {
 		t.Fatalf("taken again: %+v", r)
 	}
+	// Its agent gone, a terminal gives its role up, for the session resumed
+	// elsewhere; a name that is no role stays.
+	other := sessions[1]
+	if err := name(a, sessions[2], nil, "高斯", ""); err != nil {
+		t.Fatal(err)
+	}
+	gone := maps.Clone(a.agents)
+	delete(gone, claude.ID)
+	delete(gone, sessions[2].ID)
+	gone[other.ID] = agentInfo{agent.Claude, agent.Idle} // where the session is resumed
+	a.releaseRoles(gone)
+	a.agents = gone
+	if a.names[claude.ID] != "" || a.names[sessions[2].ID] != "高斯" {
+		t.Fatalf("names after the agents went: %v", a.names)
+	}
+	if err := name(a, other, shellOf(t, other), "狄仁杰", "s4"); err != nil || a.names[other.ID] != "狄仁杰" || listed(a, "狄仁杰", 0).Count != 2 {
+		t.Fatalf("the role taken back elsewhere: %v", err)
+	}
+	claude = other
 	// Renamed, the session moves; dropped, it leaves, and an empty role goes.
 	if err := name(a, claude, shellOf(t, claude), "Huygens", "s4"); err != nil {
 		t.Fatal(err)

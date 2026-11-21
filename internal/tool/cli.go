@@ -60,7 +60,8 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
                 variables, out of any role it had, and '' takes it out.
                 A role is kept while it has a session, after the terminal
                 ends and Jun quits; naming a terminal a role's name, when
-                no running terminal has it, takes that role on.
+                no running terminal has it, takes that role on. A
+                terminal whose agent ends gives up a name that is a role.
       --every   sets its timer, in place of any before, for the agent in it
                 to be signaled every interval, as loop's: first after one
                 interval, or at --at.
