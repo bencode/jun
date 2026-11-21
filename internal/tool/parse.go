@@ -272,19 +272,29 @@ func parseUpdateTerminal(args []string) (Request, error) {
 	return req, nil
 }
 
-// parseRoles reads what follows `roles`: nothing, --mine, or a role's
-// name and --limit.
+// parseRoles reads what follows `roles`: nothing, --mine, --open,
+// --team and a role's name, or a role's name and --limit.
 func parseRoles(args []string) (Request, error) {
-	const usage = "roles takes nothing, --mine, or a role's name and --limit <n>"
+	const usage = "roles takes nothing, --mine, --open, --team <name>, or a role's name and --limit <n>"
 	if len(args) == 0 {
 		return Request{Op: OpRoles}, nil
 	}
 	if len(args) == 1 && args[0] == "--mine" {
 		return Request{Op: OpRoles, Mine: true, Limit: DefaultRoleSessions}, nil
 	}
-	name := strings.TrimSpace(args[0])
-	if err := CheckName(name); err != nil || name == "" {
-		return Request{}, errors.New(usage)
+	if len(args) == 1 && args[0] == "--open" {
+		return Request{Op: OpRoles, Away: true}, nil
+	}
+	if args[0] == "--team" {
+		if len(args) != 2 {
+			return Request{}, errors.New(usage)
+		}
+		name, err := roleName(args[1], usage)
+		return Request{Op: OpRoles, Team: &name}, err
+	}
+	name, err := roleName(args[0], usage)
+	if err != nil {
+		return Request{}, err
 	}
 	req := Request{Op: OpRoles, Name: &name, Limit: DefaultRoleSessions}
 	if len(args) == 1 {
@@ -299,6 +309,15 @@ func parseRoles(args []string) (Request, error) {
 	}
 	req.Limit = limit
 	return req, nil
+}
+
+// roleName is the argument as a role's name, one a terminal can take.
+func roleName(arg, usage string) (string, error) {
+	name := strings.TrimSpace(arg)
+	if err := CheckName(name); err != nil || name == "" {
+		return "", errors.New(usage)
+	}
+	return name, nil
 }
 
 func parseEvery(every string) (time.Duration, error) {

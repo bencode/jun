@@ -74,6 +74,7 @@ func TestMainUsage(t *testing.T) {
 		{"loop", "cancel"}, {"loop", "cancel", "0"}, {"loop", "cancel", "1", "2"},
 		{"run", "--project"}, {"run", "--project", " ", "x"}, {"run", "--project", "a", "--project", "b", "x"}, {"loop", "5m", "--project", "a", "x"},
 		{"roles", "42"}, {"roles", "a", "b"}, {"roles", "--mine", "x"}, {"roles", "a", "--limit"}, {"roles", "a", "--limit", "0"}, {"roles", "a", "--limit", "x"},
+		{"roles", "--open", "x"}, {"roles", "--team"}, {"roles", "--team", "a", "b"}, {"roles", "--team", "42"},
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
 		{"terminals", "update"}, {"terminals", "update", "3"}, {"terminals", "update", "3", "达芬奇"}, {"terminals", "update", "0", "--name", "a"},
 		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
@@ -262,7 +263,8 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	// A name goes with the caller's agent sessions, as their variables tell.
 	withSessions := func(args ...string) int {
 		return Main(args, strings.NewReader(""), &bytes.Buffer{}, &bytes.Buffer{}, func(name string) string {
-			return map[string]string{EnvAPI: path, "CODEX_THREAD_ID": "t1", "CLAUDE_CODE_SESSION_ID": "c1"}[name]
+			return map[string]string{EnvAPI: path, "CODEX_THREAD_ID": "t1", "CODEX_HOME": "/h/codex", "CLAUDE_CODE_SESSION_ID": "c1",
+				"PI_SESSION_ID": "p1", "PI_SESSION_FILE": "/h/pi/p1.jsonl"}[name]
 		})
 	}
 	if withSessions("terminals", "update", "3", "--name", "欧拉") != 0 || withSessions("terminals", "update", "3", "--every", "5m") != 0 {
@@ -272,7 +274,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "roles"); code != 0 || json.Unmarshal([]byte(out), &roles) != nil || len(roles) != 1 || roles[0].Last.ID != "t1" {
 		t.Fatalf("roles: %d %q", code, out)
 	}
-	for _, args := range [][]string{{"roles", " 欧拉 "}, {"roles", "欧拉", "--limit", "3"}} {
+	for _, args := range [][]string{{"roles", " 欧拉 "}, {"roles", "欧拉", "--limit", "3"}, {"roles", "--open"}, {"roles", "--team", "欧拉"}} {
 		if code, _, _ := run(path, args...); code != 0 {
 			t.Fatalf("%q: %d", args, code)
 		}
@@ -283,6 +285,8 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, out, _ := run(path, "open", "file:docs/a.md"); code != 0 || out != "" {
 		t.Fatalf("open file: %d %q", code, out)
 	}
+	sessions := Sessions{Claude: AgentSession{ID: "c1"}, Codex: AgentSession{ID: "t1", Home: "/h/codex"},
+		Pi: AgentSession{ID: "p1", Path: "/h/pi/p1.jsonl"}}
 	want := []Request{{Op: OpTerminals}, {Op: OpScreen, Terminal: 3, Lines: 2}, {Op: OpScreen, Terminal: 9, Lines: DefaultLines},
 		{Op: OpOpen, Target: &Target{Kind: TargetDiff, ID: 7}, In: "Review"},
 		{Op: OpClose, Target: &Target{Kind: TargetPerspective, Name: "Review"}}, {Op: OpBack}, {Op: OpBack, Caller: 5},
@@ -299,10 +303,11 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("达芬奇")}, {Op: OpUpdateTerminal, Terminal: 3, Name: ptr("")},
 		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Every: 30 * time.Minute, Text: "看看新工单"},
 		{Op: OpUpdateTerminal, Terminal: 3, NoTimer: true},
-		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Sessions: Sessions{Codex: "t1", Claude: "c1"}},
+		{Op: OpUpdateTerminal, Terminal: 3, Name: ptr("欧拉"), Sessions: sessions},
 		{Op: OpUpdateTerminal, Terminal: 3, Every: 5 * time.Minute},
 		{Op: OpRoles}, {Op: OpRoles, Name: ptr("欧拉"), Limit: DefaultRoleSessions}, {Op: OpRoles, Name: ptr("欧拉"), Limit: 3},
-		{Op: OpRoles, Mine: true, Limit: DefaultRoleSessions, Sessions: Sessions{Codex: "t1", Claude: "c1"}},
+		{Op: OpRoles, Away: true}, {Op: OpRoles, Team: ptr("欧拉")},
+		{Op: OpRoles, Mine: true, Limit: DefaultRoleSessions, Sessions: sessions},
 		{Op: OpOpen, Target: &Target{Kind: TargetFile, Name: filepath.Join(here, "docs", "a.md")}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("requests %+v", got)

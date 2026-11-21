@@ -25,6 +25,7 @@ type Session struct {
 	Agent       string // a kind's name: "claude", "codex" or "pi"
 	ID          string
 	Path        string // the session's file
+	Home        string // the agent's directory it is in, when known without Path
 	Title       string // the agent's, or the first prompt's first line
 	CWD         string
 	Branch      string // checked out when the session started; "" when unknown

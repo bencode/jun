@@ -250,6 +250,13 @@ func TestResumeCommandTakesOnlyPlainIDsAndTheSessionsHomeOrItsCommand(t *testing
 	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Path: at(other)}, launched); err != nil || got != "reclaude --resume 16f0057a-2970" {
 		t.Fatalf("Claude resumes from a home with a command with %q, %v", got, err)
 	}
+	// Known by its home, not its file, as a role keeps it.
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Home: other}, launched); err != nil || got != "reclaude --resume 16f0057a-2970" {
+		t.Fatalf("Claude resumes from a home given with %q, %v", got, err)
+	}
+	if got, err := ResumeCommand(Session{Agent: "claude", ID: "16f0057a-2970", Home: claude}, launched); err != nil || got != "claude --resume 16f0057a-2970" {
+		t.Fatalf("Claude resumes from its default home given with %q, %v", got, err)
+	}
 	if got, err := ResumeCommand(Session{Agent: "codex", ID: "01a19689-cb83"}, nil); err != nil || got != "codex resume 01a19689-cb83" {
 		t.Fatalf("Codex resumes with %q, %v", got, err)
 	}
