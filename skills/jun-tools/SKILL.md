@@ -40,7 +40,8 @@ When a command fails, its error says what to do next: follow it.
 |---|---|
 | `terminals` | Jun's terminals as JSON: `id`, `name`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead`, `timer` |
 | `terminals update <id> --name <name>` | Names that terminal, for the user and agents to call it by; `--name ''` drops the name. Naming your own terminal gives the role of that name your session |
-| `roles` / `roles --mine` / `roles <name> [--limit <n>]` | The roles as JSON: `name`, `terminal`, `count`, `last` / the role of your session / that role with its latest `sessions`, 20 unless `--limit` says |
+| `roles` / `roles --mine` / `roles <name> [--limit <n>]` | The roles as JSON: `name`, `lead`, `open`, `terminal`, `count`, `last` / the role of your session / that role with its latest `sessions`, 20 unless `--limit` says |
+| `roles --team <name>` / `roles --open` | That role, then the roles reporting to it / the open roles no running terminal has, leads first |
 | `terminals update <id> --every <every> \| --at <HH:MM> [--text <text>]` / `… --no-timer` | Sets that terminal's timer, which signals its agent on a schedule, or drops it |
 | `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `lead`, `from`, `to` |
 | `screen <id> [--lines N]` | The last N lines of a terminal's text, scrollback included (default 40, at most 500) |
@@ -85,7 +86,7 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 **Name yourself.** A name is a role: it lasts, and the sessions that took it are its memory. When you name your own terminal, Jun records your session as the role's, from the variable your agent gives your commands (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID` or `PI_SESSION_ID`). When the user, your lead or the deputy asks you to name yourself:
 
-1. `roles --mine`. A role there is yours, as when your session was resumed: take its name back.
+1. `roles --mine`. A role there is yours, as when your session was resumed: take its name back. When it has a `lead` and a terminal in `terminals` has that name, `join` it.
 2. Otherwise `roles` and `terminals` show the names taken. Pick one that is neither, from the theme you were given if any.
 3. A role's name that no running terminal has takes that role on: your session joins its memory. Do so only when the user or your lead asks you to carry that role on, and then read its memory first, as below.
 
@@ -96,6 +97,8 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Renamed, your session moves to the new role; `--name ''` takes it out. A role with no session left goes. When you end, your terminal gives the name up, for your session to take it back when resumed.
 
+Your role keeps its lead: `join` makes the role of the terminal you join your role's lead, and `leave` drops it. A role is `open` from when you name yourself until you end; one still open after Jun quit was at work then.
+
 **Name another agent.** A name you give another terminal lasts while it runs, with no memory. For a role, ask the agent to name itself, with the name if the user chose one, once `terminals` shows its `agent`:
 
 ```sh
@@ -103,15 +106,29 @@ id=$("$JUN_BIN" tool run --project web claude)
 "$JUN_BIN" tool send "$id" 'Name yourself Euler, as jun-tools says.'
 ```
 
-**Read a role's memory.** `roles <name> --limit 3` gives its latest sessions, the latest first: `agent`, `id`, `dir` and `at`, when it took the role. Find each one's file by its id:
+**Read a role's memory.** `roles <name> --limit 3` gives its latest sessions, the latest first: `agent`, `id`, `home`, `dir` and `at`, when it took the role. Find each one's file by its id, in its `home` when it has one, else the agent's default directory:
 
-| Agent | File |
-|---|---|
-| `claude` | `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/*/<id>.jsonl` |
-| `codex` | `${CODEX_HOME:-~/.codex}/sessions/*/*/*/rollout-*-<id>.jsonl` |
-| `pi` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/sessions/*/*_<id>.jsonl` |
+| Agent | Default directory | File in it |
+|---|---|---|
+| `claude` | `~/.claude` | `projects/*/<id>.jsonl` |
+| `codex` | `~/.codex` | `sessions/*/*/*/rollout-*-<id>.jsonl` |
+| `pi` | `~/.pi/agent` | `sessions/*/*_<id>.jsonl` |
 
 Read the end of the latest: its last prompts and replies say what the role was doing. Sessions can be long and a role can have many: do not read whole files or every session. Go further back only for something you look for, choosing by `dir` and `at` with a larger `--limit`.
+
+**Bring roles back.** Jun does not resume roles itself; do it when the user asks. Each session in `roles` has `resume`, the command that resumes it, and `dir`, where it ran.
+
+- **A role**: run its latest session's `resume` in its `dir`, in the project the user names or the one `terminals` shows for that `dir`. The agent finds its name with `roles --mine` and joins its lead, as **Name yourself** says; to be sure, send it that once `terminals` shows its `agent`.
+- **A team**: `roles --team <lead>`. Bring the lead back first, then the others, for them to find their lead running.
+- **All that was open**: `roles --open` lists the open roles no terminal has, leads first: bring each back in that order. Ask the user before starting many.
+
+```sh
+r=$("$JUN_BIN" tool roles 狄仁杰 --limit 1)
+id=$("$JUN_BIN" tool run --project web --dir "$(jq -r '.[0].last.dir' <<<"$r")" "$(jq -r '.[0].last.resume' <<<"$r")")
+"$JUN_BIN" tool send "$id" 'You are resumed: take your name back and join your lead, as jun-tools says.'
+```
+
+A role you start this way reports to you while it runs, but keeps the lead it had: joining its lead puts that back. Codex otherwise runs in its shared background server, whose commands get the variables of the terminal that started it: append `--no-daemon` to a Codex `resume` for its commands to find their own terminal.
 
 **See how it is going.** `screen <id> --lines 80`. The text includes the agent's frames, status bar and input box; its last reply is near the bottom.
 

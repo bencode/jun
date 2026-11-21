@@ -49,11 +49,12 @@ func (a *app) toolUpdateTerminal(req tool.Request, callers []int) error {
 		return errors.New("a timer's text goes with an interval or a time")
 	}
 	if req.Name != nil {
-		name := *req.Name
+		name, book := *req.Name, a.roles
 		if hasOwn {
-			if name, err = a.nameRole(own, name); err != nil {
-				return err
-			}
+			book, name = takeRole(book, own, name)
+		}
+		if err := a.setRoles(a.renameRoles(book, s.ID, a.names[s.ID], name, hasOwn)); err != nil {
+			return fmt.Errorf("role not kept: %w", err)
 		}
 		if name == "" {
 			delete(a.names, s.ID)

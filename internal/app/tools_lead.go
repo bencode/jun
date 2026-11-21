@@ -19,7 +19,7 @@ func (a *app) lead(id terminal.ID) terminal.ID {
 }
 
 // toolJoin makes the agent in the terminal of the request the caller's
-// lead, in place of any other.
+// lead, in place of any other, and its role the lead of the caller's.
 func (a *app) toolJoin(req tool.Request, callers []int) error {
 	caller, err := a.toolCaller(callers, req.Caller)
 	if err != nil {
@@ -41,15 +41,15 @@ func (a *app) toolJoin(req tool.Request, callers []int) error {
 		}
 	}
 	a.leads[caller] = lead.ID
-	return nil
+	return a.keepLead(caller, lead.ID)
 }
 
-// toolLeave drops the caller's lead, if it has one.
+// toolLeave drops the caller's lead, if it has one, and its role's.
 func (a *app) toolLeave(req tool.Request, callers []int) error {
 	caller, err := a.toolCaller(callers, req.Caller)
 	if err != nil {
 		return err
 	}
 	delete(a.leads, caller)
-	return nil
+	return a.keepLead(caller, 0)
 }

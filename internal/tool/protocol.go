@@ -54,28 +54,43 @@ const (
 	// or drops its name for none; sets its timer, from Request.Every,
 	// Request.At and Request.Text, or drops it with Request.NoTimer.
 	OpUpdateTerminal Op = "update-terminal"
-	// OpRoles lists the roles, or with Request.Name, that role's sessions;
-	// with Request.Mine, the role of the caller's session, if any.
+	// OpRoles lists the roles; with Request.Name, that role and its
+	// latest sessions; with Request.Team, a role and the ones it leads;
+	// with Request.Away, the open roles no running terminal has, each lead
+	// before the ones it leads; with Request.Mine, the role of the caller's
+	// session, if any.
 	OpRoles Op = "roles"
 )
 
-// Sessions are the ids of the agent sessions a command runs in, from the
-// variables agents give their commands: a name given from there records
-// the session as the role's.
+// Sessions are the agent sessions a command runs in, from the variables
+// agents give their commands: a name given from there records the session
+// as the role's.
 type Sessions struct {
-	Claude string `json:"claude,omitempty"` // CLAUDE_CODE_SESSION_ID
-	Codex  string `json:"codex,omitempty"`  // CODEX_THREAD_ID
-	Pi     string `json:"pi,omitempty"`     // PI_SESSION_ID
+	Claude AgentSession `json:"claude,omitzero"` // CLAUDE_CODE_SESSION_ID, CLAUDE_CONFIG_DIR
+	Codex  AgentSession `json:"codex,omitzero"`  // CODEX_THREAD_ID, CODEX_HOME
+	Pi     AgentSession `json:"pi,omitzero"`     // PI_SESSION_ID, PI_CODING_AGENT_DIR, PI_SESSION_FILE
+}
+
+// AgentSession is an agent's session: its id, the agent's directory when
+// another than its default, and for Pi, the session's file.
+type AgentSession struct {
+	ID   string `json:"id,omitempty"`
+	Home string `json:"home,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 // SessionsFrom reads the sessions' variables.
 func SessionsFrom(getenv func(string) string) Sessions {
-	return Sessions{Claude: getenv("CLAUDE_CODE_SESSION_ID"), Codex: getenv("CODEX_THREAD_ID"), Pi: getenv("PI_SESSION_ID")}
+	return Sessions{
+		Claude: AgentSession{ID: getenv("CLAUDE_CODE_SESSION_ID"), Home: getenv("CLAUDE_CONFIG_DIR")},
+		Codex:  AgentSession{ID: getenv("CODEX_THREAD_ID"), Home: getenv("CODEX_HOME")},
+		Pi:     AgentSession{ID: getenv("PI_SESSION_ID"), Home: getenv("PI_CODING_AGENT_DIR"), Path: getenv("PI_SESSION_FILE")},
+	}
 }
 
-// Of is the agent's session id; none when the command runs in none of it.
-func (s Sessions) Of(agent string) string {
-	return map[string]string{"claude": s.Claude, "codex": s.Codex, "pi": s.Pi}[agent]
+// Of is the agent's session; none when the command runs in none of it.
+func (s Sessions) Of(agent string) AgentSession {
+	return map[string]AgentSession{"claude": s.Claude, "codex": s.Codex, "pi": s.Pi}[agent]
 }
 
 // DefaultRoleSessions is how many of a role's sessions roles <name> gives,
@@ -175,6 +190,8 @@ type Request struct {
 	Sessions Sessions  `json:"sessions,omitzero"`
 	Limit    int       `json:"limit,omitempty"`   // roles <name>: at most this many sessions
 	Mine     bool      `json:"mine,omitempty"`    // roles: the role of the caller's session, from Sessions
+	Team     *string   `json:"team,omitempty"`    // roles: the role whose team to list
+	Away     bool      `json:"away,omitempty"`    // roles: the open roles no running terminal has
 	At       time.Time `json:"at,omitzero"`       // update-terminal: when a timer first fires
 	NoTimer  bool      `json:"noTimer,omitempty"` // update-terminal: drops the terminal's timer
 }
@@ -194,20 +211,24 @@ type Response struct {
 // Role is a name that lasts, as its sessions are its memory.
 type Role struct {
 	Name     string `json:"name"`
+	Lead     string `json:"lead,omitempty"`     // the role it reports to
+	Open     bool   `json:"open"`               // an agent took it and has not ended
 	Terminal uint64 `json:"terminal,omitempty"` // the running terminal of that name, if any
 	Count    int    `json:"count"`              // its sessions
-	// Last is its latest session; Sessions, for roles <name>, the latest
-	// ones, first.
+	// Last is its latest session; Sessions, for roles <name> and --mine,
+	// the latest ones, first.
 	Last     *RoleSession  `json:"last,omitempty"`
 	Sessions []RoleSession `json:"sessions,omitempty"`
 }
 
 // RoleSession is one of a role's sessions.
 type RoleSession struct {
-	Agent string    `json:"agent"` // claude, codex or pi
-	ID    string    `json:"id"`
-	Dir   string    `json:"dir"`
-	At    time.Time `json:"at"` // when it took the role
+	Agent  string    `json:"agent"` // claude, codex or pi
+	ID     string    `json:"id"`
+	Home   string    `json:"home,omitempty"` // the agent's directory, when not its default
+	Dir    string    `json:"dir"`
+	At     time.Time `json:"at"`               // when it took the role
+	Resume string    `json:"resume,omitempty"` // the shell command that resumes it
 }
 
 // Loop is a command Jun runs again and again in a terminal of its own.

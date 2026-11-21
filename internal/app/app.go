@@ -83,7 +83,7 @@ type app struct {
 	leads           map[terminal.ID]terminal.ID // each terminal's lead, by the terminal led
 	names           map[terminal.ID]string      // what agents call terminals, given with terminals update
 	roles           roles.Book                  // names that last, with their sessions
-	rolesDir        string                      // where roles are kept; none: they are not
+	rolesPath       string                      // the file roles are kept in; none: they are not
 	timers          map[terminal.ID]agentTimer  // when to signal the agents in terminals, set with terminals update
 	ttys            map[terminal.ID]string
 	agentPolling    bool

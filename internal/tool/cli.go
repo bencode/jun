@@ -20,7 +20,7 @@ const usage = "usage: jun tool help | terminals | watch |\n" +
 	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
-	"  roles | roles --mine | roles <name> [--limit <n>] |\n" +
+	"  roles | roles --mine | roles --open | roles --team <name> | roles <name> [--limit <n>] |\n" +
 	"  run [--project <name>] [--dir <path>] [--open] <command…> | join <id> | leave |\n" +
 	"  loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
@@ -76,12 +76,21 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
       while it works comes once, when it is done. Jun forgets names and
       timers when the terminal ends or Jun quits; roles stay.
   jun tool roles
-      The roles, as a JSON array, by name: name, terminal (the running
-      one of that name, if any), count (its sessions) and last (its
-      latest session: agent, id, dir, and at, when it took the role).
+      The roles, as a JSON array, by name: name, lead (the role it
+      reports to, if any), open (an agent took it and has not ended;
+      one still open after Jun quit was at work then), terminal (the
+      running one of that name, if any), count (its sessions) and last
+      (its latest session: agent, id, home (the agent's directory, when
+      not its default), dir, at, when it took the role, and resume, the
+      shell command that resumes it).
   jun tool roles <name> [--limit <n>]
       That role, with its latest sessions in sessions, the latest first:
       20 unless --limit says.
+  jun tool roles --team <name>
+      That role, then the roles that report to it.
+  jun tool roles --open
+      The open roles no running terminal has: the ones to bring back,
+      each lead before the roles that report to it.
   jun tool roles --mine
       The role of the agent session the command runs in, as roles <name>
       gives it, from the agent's variables: an empty array when it has
@@ -200,7 +209,8 @@ Leading, for an agent that has others work for it:
       one the caller leads, however far down, are refused.
   jun tool leave
       Drops the caller's lead. A terminal that ends drops its own, and
-      those of the terminals it leads. Leads last until Jun quits.
+      those of the terminals it leads. Leads last until Jun quits; a
+      role's, set by join and dropped by leave, stays (see roles).
 
 Environment, set in each of Jun's terminals:
   JUN_API       the socket of the Jun that runs the terminal; nothing else
