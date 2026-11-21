@@ -80,6 +80,7 @@ func (a *app) pollAgents(job agentJob) {
 			log.Printf("Jun: poll agents: %v", err)
 			return
 		}
+		a.releaseRoles(agents)
 		a.ttys, a.agents = ttys, agents
 		a.sendHeld()
 		now := time.Now()

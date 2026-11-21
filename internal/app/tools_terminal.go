@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bencode/jun/internal/agent"
+	"github.com/bencode/jun/internal/roles"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/bencode/jun/internal/tool"
 )
@@ -22,14 +23,20 @@ type agentTimer struct {
 // toolUpdateTerminal names the terminal, or drops its name for none, and
 // sets or drops its timer. It checks all first, to change nothing when it
 // refuses any. A name is no other running terminal's, whatever its case:
-// agents find a terminal by it.
-func (a *app) toolUpdateTerminal(req tool.Request) error {
+// agents find a terminal by it. An agent naming its own terminal gives the
+// role of the name its session, or takes it out of its role for none.
+func (a *app) toolUpdateTerminal(req tool.Request, callers []int) error {
 	s, err := a.toolTerminal(req.Terminal)
 	if err != nil {
 		return err
 	}
+	var own roles.Session
+	var hasOwn bool
 	if req.Name != nil {
 		if err := a.checkTerminalName(s, *req.Name); err != nil {
+			return err
+		}
+		if own, hasOwn, err = a.ownSession(s, req, callers); err != nil {
 			return err
 		}
 	}
@@ -42,10 +49,16 @@ func (a *app) toolUpdateTerminal(req tool.Request) error {
 		return errors.New("a timer's text goes with an interval or a time")
 	}
 	if req.Name != nil {
-		if *req.Name == "" {
+		name := *req.Name
+		if hasOwn {
+			if name, err = a.nameRole(own, name); err != nil {
+				return err
+			}
+		}
+		if name == "" {
 			delete(a.names, s.ID)
 		} else {
-			a.names[s.ID] = *req.Name
+			a.names[s.ID] = name
 		}
 	}
 	if req.NoTimer {

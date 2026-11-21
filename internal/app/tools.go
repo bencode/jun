@@ -149,7 +149,14 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpCancelLoop:     func() tool.Response { return outcome(a.toolCancelLoop(terminal.ID(req.Terminal))) },
 		tool.OpJoin:           func() tool.Response { return outcome(a.toolJoin(req, callers)) },
 		tool.OpLeave:          func() tool.Response { return outcome(a.toolLeave(req, callers)) },
-		tool.OpUpdateTerminal: func() tool.Response { return outcome(a.toolUpdateTerminal(req)) },
+		tool.OpUpdateTerminal: func() tool.Response { return outcome(a.toolUpdateTerminal(req, callers)) },
+		tool.OpRoles: func() tool.Response {
+			list, err := a.toolRoles(req)
+			if err != nil {
+				return outcome(err)
+			}
+			return tool.Response{Roles: list}
+		},
 	}
 }
 

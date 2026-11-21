@@ -20,6 +20,7 @@ const usage = "usage: jun tool help | terminals | watch |\n" +
 	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
 	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
+	"  roles | roles --mine | roles <name> [--limit <n>] |\n" +
 	"  run [--project <name>] [--dir <path>] [--open] <command…> | join <id> | leave |\n" +
 	"  loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
 
@@ -54,7 +55,13 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
                 of at most 64 bytes, not a number, and no other running
                 terminal's, whatever its case. Jun shows it in Agents,
                 beside the terminal's id. The other commands still take
-                the id.
+                the id. A name is a role: an agent naming its own
+                terminal gives the role its session, from the agent's
+                variables, out of any role it had, and '' takes it out.
+                A role is kept while it has a session, after the terminal
+                ends and Jun quits; naming a terminal a role's name, when
+                no running terminal has it, takes that role on. A
+                terminal whose agent ends gives up a name that is a role.
       --every   sets its timer, in place of any before, for the agent in it
                 to be signaled every interval, as loop's: first after one
                 interval, or at --at.
@@ -67,7 +74,18 @@ Run it as "$JUN_BIN" tool …, which works whatever PATH says.
       A timer needs an agent in the terminal. Jun signals it once it is
       due and the agent idle, with nothing in its input: a signal missed
       while it works comes once, when it is done. Jun forgets names and
-      timers when the terminal ends or Jun quits.
+      timers when the terminal ends or Jun quits; roles stay.
+  jun tool roles
+      The roles, as a JSON array, by name: name, terminal (the running
+      one of that name, if any), count (its sessions) and last (its
+      latest session: agent, id, dir, and at, when it took the role).
+  jun tool roles <name> [--limit <n>]
+      That role, with its latest sessions in sessions, the latest first:
+      20 unless --limit says.
+  jun tool roles --mine
+      The role of the agent session the command runs in, as roles <name>
+      gives it, from the agent's variables: an empty array when it has
+      none. A resumed session finds its name here.
   jun tool watch
       Agents' status as it changes, a JSON object a line, until Jun quits
       or the reader falls behind; then status 1. It starts with each
@@ -261,6 +279,9 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 		fmt.Fprintf(stderr, "jun tool: %v\n", watch(path, stdout))
 		return 1
 	}
+	if req.Op == OpUpdateTerminal && req.Name != nil || req.Mine {
+		req.Sessions = SessionsFrom(getenv)
+	}
 	if named := getenv(EnvTerminal); named != "" {
 		if req.Caller, err = strconv.ParseUint(named, 10, 64); err != nil {
 			fmt.Fprintf(stderr, "jun tool: %s=%q is not a terminal id: set it to what echo $%s prints in the terminal your session runs in\n",
@@ -307,6 +328,8 @@ func output(w io.Writer, op Op, resp Response) error {
 		list = append([]Loop{}, resp.Loops...)
 	} else if op == OpMessages {
 		list = append([]Message{}, resp.Messages...)
+	} else if op == OpRoles {
+		list = append([]Role{}, resp.Roles...)
 	} else {
 		if resp.Message != "" {
 			_, err = fmt.Fprintln(w, resp.Message)

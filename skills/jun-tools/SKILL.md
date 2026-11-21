@@ -39,7 +39,8 @@ When a command fails, its error says what to do next: follow it.
 | Command | Does |
 |---|---|
 | `terminals` | Jun's terminals as JSON: `id`, `name`, `project`, `dir`, `title`, `agent` (`claude`, `codex`, `pi`), `status`, `self`, `lead`, `timer` |
-| `terminals update <id> --name <name>` | Names that terminal, for the user and agents to call it by; `--name ''` drops the name |
+| `terminals update <id> --name <name>` | Names that terminal, for the user and agents to call it by; `--name ''` drops the name. Naming your own terminal gives the role of that name your session |
+| `roles` / `roles --mine` / `roles <name> [--limit <n>]` | The roles as JSON: `name`, `terminal`, `count`, `last` / the role of your session / that role with its latest `sessions`, 20 unless `--limit` says |
 | `terminals update <id> --every <every> \| --at <HH:MM> [--text <text>]` / `… --no-timer` | Sets that terminal's timer, which signals its agent on a schedule, or drops it |
 | `watch` | Runs until Jun quits: agents' status as it changes, a JSON line each with `id`, `project`, `agent`, `title`, `lead`, `from`, `to` |
 | `screen <id> [--lines N]` | The last N lines of a terminal's text, scrollback included (default 40, at most 500) |
@@ -82,12 +83,35 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 **Find an agent.** Run `terminals` and pick by `name`, `project`, `dir`, `title` and `agent`. `self: true` is your own terminal. When the user calls an agent by name, as in "what is Euler doing?" or "hand this to Euler", find the terminal with that `name`, then use its `id`: the other commands take ids only. The agents it leads are those whose `lead` is its `id`.
 
-**Name agents.** Give a terminal a name when the user asks for one, or when you lead terminals and the user gave you names or a theme for them, such as mathematicians: `run` prints the new terminal's id, then name it. A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Names last while the terminal runs, until Jun quits.
+**Name yourself.** A name is a role: it lasts, and the sessions that took it are its memory. When you name your own terminal, Jun records your session as the role's, from the variable your agent gives your commands (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID` or `PI_SESSION_ID`). When the user, your lead or the deputy asks you to name yourself:
+
+1. `roles --mine`. A role there is yours, as when your session was resumed: take its name back.
+2. Otherwise `roles` and `terminals` show the names taken. Pick one that is neither, from the theme you were given if any.
+3. A role's name that no running terminal has takes that role on: your session joins its memory. Do so only when the user or your lead asks you to carry that role on, and then read its memory first, as below.
+
+```sh
+"$JUN_BIN" tool roles --mine | jq -r '.[0].name // empty'
+"$JUN_BIN" tool terminals update "$JUN_TERMINAL" --name Euler
+```
+
+A name is one line of at most 64 bytes, not a number, and no other running terminal's, whatever its case. Renamed, your session moves to the new role; `--name ''` takes it out. A role with no session left goes. When you end, your terminal gives the name up, for your session to take it back when resumed.
+
+**Name another agent.** A name you give another terminal lasts while it runs, with no memory. For a role, ask the agent to name itself, with the name if the user chose one, once `terminals` shows its `agent`:
 
 ```sh
 id=$("$JUN_BIN" tool run --project web claude)
-"$JUN_BIN" tool terminals update "$id" --name Euler
+"$JUN_BIN" tool send "$id" 'Name yourself Euler, as jun-tools says.'
 ```
+
+**Read a role's memory.** `roles <name> --limit 3` gives its latest sessions, the latest first: `agent`, `id`, `dir` and `at`, when it took the role. Find each one's file by its id:
+
+| Agent | File |
+|---|---|
+| `claude` | `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/*/<id>.jsonl` |
+| `codex` | `${CODEX_HOME:-~/.codex}/sessions/*/*/*/rollout-*-<id>.jsonl` |
+| `pi` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/sessions/*/*_<id>.jsonl` |
+
+Read the end of the latest: its last prompts and replies say what the role was doing. Sessions can be long and a role can have many: do not read whole files or every session. Go further back only for something you look for, choosing by `dir` and `at` with a larger `--limit`.
 
 **See how it is going.** `screen <id> --lines 80`. The text includes the agent's frames, status bar and input box; its last reply is near the bottom.
 
@@ -210,7 +234,7 @@ fi'
 - **Loops cost.** Each run that sends wakes an agent and spends its tokens. Send only what needs an agent's judgement, choose the interval for the task, and cancel loops you no longer need: they last until cancelled or Jun quits.
 - **Only agents take `send`.** A terminal running no agent refuses it, since the text would run as a command.
 - **`send` does not look.** It pastes and presses Enter whatever the agent shows: on a `waiting` question, that Enter can answer it. Read the `screen` before you send, and have a scheduled send check the status.
-- **Drafts.** `send` goes into the agent's input box as is. Text already there, such as the user's draft or a prompt Claude Code put back after Esc, comes first in the message. When that matters, read the input box on `screen` before sending.
+- **Drafts.** While the user has text in the agent's input box, Jun holds what you send, prints `held: …`, and submits it once the input is empty. Do not send it again.
 - **Questions are the user's.** A `waiting` agent asks the user; do not answer its permissions or choices with `send`. Tell the user with `message --kind ask --link terminal:<id>`: a click peeks it.
 - **A file shown outside the project does not follow its changes.** After writing to it, `open file:` again.
 - **Changing what the user sees.** `open`, `close`, `back`, `forward` and `run --open` work only for the terminal the user is with (shown in the peek drawer, or last focused), and not while a Jun dialog is open. Otherwise they are refused: tell the user what you would show.
