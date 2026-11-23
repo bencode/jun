@@ -34,7 +34,7 @@ const idleMarker = "✳"
 
 var (
 	claudeWaiting      = regexp.MustCompile(`❯\s+\d+\.`)
-	claudeNotice       = regexp.MustCompile(`Enter to continue · Esc to cancel\s*$`) // the screen's last line
+	claudeNotice       = regexp.MustCompile(`Enter to (?:continue|confirm) · Esc to cancel\s*$`) // the screen's last line
 	codexActionTitle   = regexp.MustCompile(`^\[\s*[!.]\s*\]\s*Action Required(?:\s*\|.*)?\s*$`)
 	codexWaitingCursor = regexp.MustCompile(`(?m)^\s*›\s+\d+\.`)
 	codexWaitingFooter = regexp.MustCompile(`(?i)\benter to (?:submit answer|select|confirm)\b`)

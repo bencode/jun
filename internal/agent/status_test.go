@@ -31,6 +31,7 @@ func TestDetectStatus(t *testing.T) {
 		{"claude numbered prose without cursor", Claude, "✳ fix", "Do you want to:\n1. Log in\n2. Hold\n───\n❯\n───", Idle},
 		{"claude dialog without idle title", Claude, "project", fixture(t, "waiting.txt"), Idle},
 		{"claude notice waiting for a key", Claude, "Claude Code", "Nothing breaks.\n\n  Enter to continue · Esc to cancel\n\n", Waiting},
+		{"claude trust dialog before its title", Claude, "claude", fixture(t, "trust.txt"), Waiting},
 		{"claude notice dismissed", Claude, "Claude Code", "  Enter to continue · Esc to cancel\n───\n❯\n───", Idle},
 		{"codex action required title", Codex, "[ . ] Action Required | yimi", "", Waiting},
 		{"codex selection control", Codex, "⠹ yimi", fixture(t, "codex-waiting.txt"), Waiting},
