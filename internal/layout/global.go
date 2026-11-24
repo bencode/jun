@@ -14,7 +14,7 @@ const (
 )
 
 // globalShares are the views' weights until the user drags them.
-var globalShares = map[ViewKind]float32{ViewAgents: 60, ViewMessages: 40}
+var globalShares = map[ViewKind]float32{ViewAgents: 60, ViewTasks: 40, ViewMessages: 40}
 
 // maximumShare is far past what drags reach, for the weights to add up.
 const maximumShare float32 = 1e6

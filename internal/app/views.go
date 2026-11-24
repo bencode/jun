@@ -47,6 +47,14 @@ func (a *app) viewContent(c *ui.Context, v *layout.View) {
 		a.reviewView(c, v)
 		return
 	}
+	if v.Kind == layout.ViewTasks {
+		a.tasksView(c)
+		return
+	}
+	if v.Kind == layout.ViewAllTasks {
+		a.allTasksView(c, v)
+		return
+	}
 	if v.Kind == layout.ViewSettings {
 		a.settingsView(c, v)
 		return

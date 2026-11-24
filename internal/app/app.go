@@ -56,6 +56,11 @@ type app struct {
 	messagesList    ui.ListState
 	messageSelected int
 	messagesWidth   float32 // the list's, for the rows to tell which texts fold
+	selectedTask    int     // the task chosen in Tasks, whose messages and agent stand out; 0 none
+	tasksList       ui.ListState
+	taskRowSel      int       // the row chosen in Tasks
+	taskFolds       taskFolds // which folds of Tasks are open
+	allTasks        map[layout.ViewID]*allTasksState
 	perspectiveForm struct {
 		open        bool
 		project     string

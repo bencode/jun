@@ -12,13 +12,13 @@ const DefaultSideWidth float32 = 260
 // moved and closed. Fixed regions (Global and the side regions) hold their
 // preset's views, in its order.
 var (
-	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript, ViewSettings, ViewReview}
+	tabKinds     = []ViewKind{ViewTerminal, ViewFile, ViewDiff, ViewTranscript, ViewSettings, ViewReview, ViewAllTasks}
 	sidePreset   = []ViewKind{ViewSessions, ViewTree, ViewReviews}
-	globalPreset = []ViewKind{ViewAgents, ViewMessages}
+	globalPreset = []ViewKind{ViewAgents, ViewTasks, ViewMessages}
 	fixedKinds   = slices.Concat(sidePreset, globalPreset, []ViewKind{ViewSkills})
 	// shownKinds are the fixed views a region starts showing; any other
 	// waits to be shown. A side region always shows its own.
-	shownKinds = []ViewKind{ViewSessions, ViewTree, ViewAgents, ViewMessages}
+	shownKinds = []ViewKind{ViewSessions, ViewTree, ViewAgents, ViewTasks, ViewMessages}
 )
 
 // Fixed reports whether the region is Global or a side region.

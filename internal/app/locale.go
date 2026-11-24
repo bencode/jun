@@ -25,6 +25,7 @@ func (a *app) kindName(kind layout.ViewKind) string {
 		layout.ViewAgents: {"Agents", "Agents"}, layout.ViewMessages: {"Messages", "消息"}, layout.ViewSessions: {"Sessions", "会话"},
 		layout.ViewTranscript: {"Session", "会话"}, layout.ViewSettings: {"Settings", "设置"},
 		layout.ViewReviews: {"Reviews", "Reviews"}, layout.ViewReview: {"Review", "Review"},
+		layout.ViewTasks: {"Tasks", "任务"}, layout.ViewAllTasks: {"All Tasks", "全部任务"},
 	}
 	pair := names[kind]
 	return a.text(pair[0], pair[1])
@@ -53,7 +54,7 @@ func (a *app) title(v *layout.View) string {
 		}
 		return a.kindName(v.Kind)
 	}
-	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewMessages, layout.ViewTree, layout.ViewSessions, layout.ViewReviews}, v.Kind) {
+	if slices.Contains([]layout.ViewKind{layout.ViewAgents, layout.ViewTasks, layout.ViewMessages, layout.ViewTree, layout.ViewSessions, layout.ViewReviews, layout.ViewAllTasks}, v.Kind) {
 		return a.kindName(v.Kind)
 	}
 	return fmt.Sprintf("%s %d", a.kindName(v.Kind), v.ID)

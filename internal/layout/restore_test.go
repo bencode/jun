@@ -143,7 +143,7 @@ func TestRestoreMovesWhatEarlierVersionsKept(t *testing.T) {
 	if err := s.Restore(); err != nil {
 		t.Fatal(err)
 	}
-	agents, messages := s.Global.Views[0], s.Global.Views[1]
+	agents, messages := globalOf(s, ViewAgents), globalOf(s, ViewMessages)
 	if agents.Share != 70 || messages.Share != 30 || !agents.Show || messages.Show {
 		t.Fatalf("agents %+v, messages %+v", agents, messages)
 	}
@@ -248,7 +248,7 @@ func TestRestoreGivesFixedRegionsTheirPresets(t *testing.T) {
 	if !reflect.DeepEqual(kinds, sidePreset) || side.Views[0] != sessions || side.Views[1] != files || side.Active != sessions.ID {
 		t.Fatalf("side region restored as %v, active %d", kinds, side.Active)
 	}
-	if len(s.Global.Views) != 2 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {
+	if len(s.Global.Views) != len(globalPreset) || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID || s.Validate() != nil {
 		t.Fatal("Global did not get its views")
 	}
 	id, err := s.OpenView(s.CurrentPerspective().Columns[0].ID, ViewTerminal, "Jun")

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bencode/jun/internal/agent"
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -58,7 +59,9 @@ func resize(tt *ui.Tester, width, height int) {
 func TestAgentsListFitsRoom(t *testing.T) {
 	a, tt, sessions := agentsApp(t)
 	a.state.CenterPercent = 76
-	a.toggleGlobalView(a.state.Global.Views[1].ID) // the room is all Agents'
+	for _, k := range []layout.ViewKind{layout.ViewTasks, layout.ViewMessages} {
+		a.toggleGlobalView(a.globalOf(k).ID) // the room is all Agents'
+	}
 	addAgents(t, a, agent.Working, agent.Idle, agent.Idle)
 	resize(tt, 1440, 900)
 	idle, working, waiting := row(t, tt, a, sessions[0]), row(t, tt, a, sessions[1]), row(t, tt, a, sessions[2])
@@ -119,7 +122,7 @@ func TestAgentCommandClickReopensClosedTabInItsProject(t *testing.T) {
 	column := a.state.CurrentPerspective().Columns[0]
 	view := column.Views[len(column.Views)-1]
 	if a.state.CurrentProject() != jun || column.Active != view.ID || a.bindings[view.ID] != hidden.ID ||
-		view.ProjectName != "Jun" || len(a.state.Global.Views) != 2 || !tt.Focused(contentLabel(a, view)) {
+		view.ProjectName != "Jun" || len(a.state.Global.Views) != 3 || !tt.Focused(contentLabel(a, view)) {
 		t.Fatal("click did not reopen the agent's session in its project's column")
 	}
 }

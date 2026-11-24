@@ -19,6 +19,8 @@ const (
 	ViewSettings   ViewKind = "settings"   // the settings file, to edit
 	ViewReviews    ViewKind = "reviews"    // the project's reviews, in the side region, until shown hidden
 	ViewReview     ViewKind = "review"     // a review, read in a tab
+	ViewTasks      ViewKind = "tasks"      // goals and their tasks, in Global
+	ViewAllTasks   ViewKind = "all-tasks"  // every task, searched, in a tab
 )
 
 type View struct {

@@ -18,8 +18,8 @@ type messageLink struct {
 	// project is the resource's project, or why there is no such resource.
 	project func(a *app, t tool.Target, sender *layout.Project) (*layout.Project, error)
 	label   func(a *app, m message) string
-	live    func(a *app, m message) bool // whether it still leads somewhere
-	show    func(a *app, m message, reveal bool) error
+	live    func(a *app, m message) bool                                      // whether it still leads somewhere
+	show    func(a *app, t tool.Target, p *layout.Project, reveal bool) error // takes the user there
 }
 
 var messageLinks = map[tool.TargetKind]messageLink{
@@ -46,8 +46,8 @@ func terminalProject(a *app, t tool.Target, _ *layout.Project) (*layout.Project,
 
 func terminalLabel(_ *app, m message) string { return fmt.Sprintf("#%d %s", m.Link.ID, m.Project.Name) }
 
-func showTerminal(a *app, m message, reveal bool) error {
-	id := terminal.ID(m.Link.ID)
+func showTerminal(a *app, t tool.Target, _ *layout.Project, reveal bool) error {
+	id := terminal.ID(t.ID)
 	if _, isAgent := a.agents[id]; isAgent {
 		a.clickAgent(id, reveal)
 		return nil
@@ -71,8 +71,8 @@ func diffLabel(a *app, m message) string { return terminalLabel(a, m) + " · Dif
 
 // showDiffLink goes to the tab of the Diff, wherever it is, else opens one
 // in the terminal's project.
-func showDiffLink(a *app, m message, _ bool) error {
-	s, err := a.toolTerminal(m.Link.ID)
+func showDiffLink(a *app, t tool.Target, _ *layout.Project, _ bool) error {
+	s, err := a.toolTerminal(t.ID)
 	if err != nil {
 		return err
 	}
@@ -113,12 +113,12 @@ func fileLabel(_ *app, m message) string { return m.Project.Name + " · " + file
 
 // showFileLink goes to the tab of the file, wherever it is, and reads it
 // again, else opens one in the message's project.
-func showFileLink(a *app, m message, _ bool) error {
-	if err := a.checkFile(m.Link.Name); err != nil {
+func showFileLink(a *app, t tool.Target, p *layout.Project, _ bool) error {
+	if err := a.checkFile(t.Name); err != nil {
 		return err
 	}
-	project := m.Project.Name
-	n := a.fileAt(project, m.Link.Name)
+	project := p.Name
+	n := a.fileAt(project, t.Name)
 	if view := a.state.FindFile(project, layout.FileRef{Source: n.source, Path: n.path}); view != 0 {
 		if st := a.fileViews[view]; st != nil {
 			st.read = false
@@ -128,7 +128,7 @@ func showFileLink(a *app, m message, _ bool) error {
 	if !a.enterProject(project) {
 		return nil
 	}
-	return a.showFile(project, m.Link.Name)
+	return a.showFile(project, t.Name)
 }
 
 func namedProject(a *app, t tool.Target, _ *layout.Project) (*layout.Project, error) {
@@ -141,7 +141,7 @@ func namedProject(a *app, t tool.Target, _ *layout.Project) (*layout.Project, er
 
 func projectLabel(_ *app, m message) string { return m.Project.Name }
 
-func showProject(a *app, m message, _ bool) error {
-	a.selectProject(m.Project.Name)
+func showProject(a *app, t tool.Target, p *layout.Project, _ bool) error {
+	a.selectProject(p.Name)
 	return nil
 }

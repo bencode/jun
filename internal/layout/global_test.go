@@ -8,11 +8,38 @@ import (
 
 func near(a, b float32) bool { return math.Abs(float64(a-b)) < 0.001 }
 
+// globalState is Global showing two views, Agents and Messages, as these
+// tests need.
 func globalState(t *testing.T) (*State, *View, *View) {
 	t.Helper()
 	s := New()
 	s.GlobalVisible = true
-	return s, s.Global.Views[0], s.Global.Views[1]
+	globalOf(s, ViewTasks).Show = false
+	return s, globalOf(s, ViewAgents), globalOf(s, ViewMessages)
+}
+
+func globalOf(s *State, kind ViewKind) *View {
+	return s.Global.Views[slices.IndexFunc(s.Global.Views, func(v *View) bool { return v.Kind == kind })]
+}
+
+// A layout saved before Tasks was a view gets it between Agents and
+// Messages, shown, and keeps what the user gave the others.
+func TestRestoreAddsTasksBetweenAgentsAndMessages(t *testing.T) {
+	s := New()
+	s.Global.Views = slices.DeleteFunc(s.Global.Views, func(v *View) bool { return v.Kind == ViewTasks })
+	s.Global.Views[0].Share, s.Global.Views[0].Width, s.Global.Views[1].Share = 55, 420, 45
+	if err := s.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	var kinds []ViewKind
+	for _, v := range s.Global.Views {
+		kinds = append(kinds, v.Kind)
+	}
+	agents, tasks, messages := globalOf(s, ViewAgents), globalOf(s, ViewTasks), globalOf(s, ViewMessages)
+	if !slices.Equal(kinds, []ViewKind{ViewAgents, ViewTasks, ViewMessages}) || !tasks.Show || tasks.Share != globalShares[ViewTasks] ||
+		agents.Share != 55 || agents.Width != 420 || messages.Share != 45 {
+		t.Fatalf("Global restored as %v: %+v %+v %+v", kinds, agents, tasks, messages)
+	}
 }
 
 func TestToggleGlobalView(t *testing.T) {

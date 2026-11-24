@@ -95,7 +95,11 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 	if m.Link != nil && m.Link.Kind == tool.TargetTerminal && terminal.ID(m.Link.ID) == a.peek.id {
 		border = a.theme.Accent
 	}
-	row := ui.Column(c).FillWidth().Gap(4).Padding(6, messagePadding).Radius(6).Border(messageBorder, border).Children(func() {
+	row := ui.Column(c).FillWidth().Gap(4).Padding(6, messagePadding).Radius(6).Border(messageBorder, border)
+	if m.Task != 0 && m.Task == a.selectedTask {
+		row.Background(a.taskTint())
+	}
+	row.Children(func() {
 		ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Start).Children(func() {
 			a.messageIcon(c, m.Kind, chosen)
 			a.messageNumber(c, m, chosen)
@@ -131,13 +135,35 @@ func (a *app) messageFoot(c *ui.Context, m message, now time.Time, folds, chosen
 			ui.Text(c, messageLinks[m.Link.Kind].label(a, m)).FontSize(caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…").
 				MinWidth(0).Padding(1, 6).Radius(4).Background(a.theme.Surface)
 		}
+		if m.Task != 0 {
+			clicked = a.messageTask(c, m.Task) || clicked
+		}
 		if folds {
-			clicked = a.foldControl(c, m, muted)
+			clicked = a.foldControl(c, m, muted) || clicked
 		}
 		ui.Spacer(c)
 		ui.Text(c, a.messageAge(now, m.Time)).FontSize(caption).TextColor(muted).Shrink(0)
 	})
 	return clicked
+}
+
+// messageTask is the tag of the task the message is about, which shows it
+// in Tasks; it reports its click, which is not the row's. A task taken out
+// leaves its number.
+func (a *app) messageTask(c *ui.Context, id int) bool {
+	t, ok := a.goals.Task(id)
+	label := taskNumber(id)
+	if ok {
+		label += " " + t.Title
+	}
+	tag := ui.Box(c).MinWidth(0).Shrink(1).Padding(1, 6).Radius(4).Background(a.theme.Surface).Children(func() {
+		ui.Text(c, label).FontSize(a.messageCaption()).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
+	})
+	if !ok || !tag.Clicked() {
+		return false
+	}
+	a.revealTask(id)
+	return true
 }
 
 // name is what the message goes by, for the list and assistive technology.

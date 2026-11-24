@@ -16,6 +16,7 @@ func globalApp(t *testing.T) (*app, *ui.Tester) {
 	t.Helper()
 	a, tt, _ := agentsApp(t)
 	a.state.GlobalVisible = true
+	a.toggleGlobalView(a.globalOf(layout.ViewTasks).ID) // the tests here are of two views
 	tt.Frame()
 	tt.Frame()
 	return a, tt
@@ -98,23 +99,23 @@ func TestCycleTabSkipsHiddenViews(t *testing.T) {
 	a.cycleTab(1)
 	tt.Frame()
 	tt.Frame()
-	if !tt.Focused("Messages") || a.state.Global.Active != a.state.Global.Views[1].ID {
+	if !tt.Focused("Messages") || a.state.Global.Active != a.globalOf(layout.ViewMessages).ID {
 		t.Fatal("the shortcut did not move to Messages")
 	}
-	a.toggleGlobalView(a.state.Global.Views[0].ID)
+	a.toggleGlobalView(a.globalOf(layout.ViewAgents).ID)
 	tt.Frame()
 	a.cycleTab(1)
-	if a.state.Global.Active != a.state.Global.Views[1].ID {
+	if a.state.Global.Active != a.globalOf(layout.ViewMessages).ID {
 		t.Fatal("the shortcut went to a hidden view")
 	}
 }
 
 func TestNumberedTabsCountTheViewsShown(t *testing.T) {
 	a, tt := globalApp(t)
-	messages := a.state.Global.Views[1]
+	messages := a.globalOf(layout.ViewMessages)
 	a.focusRegion(a.state.Global.ID)
 	tt.Frame()
-	a.toggleGlobalView(a.state.Global.Views[0].ID)
+	a.toggleGlobalView(a.globalOf(layout.ViewAgents).ID)
 	tt.Frame()
 	tt.Frame()
 	a.selectTabAt(0)
@@ -132,23 +133,23 @@ func TestNumberedTabsCountTheViewsShown(t *testing.T) {
 func TestDraggingBetweenGlobalsViews(t *testing.T) {
 	a, tt := globalApp(t)
 	_, messages := titles(t, tt)
-	before := a.state.Global.Views[0].Share
+	before := a.globalOf(layout.ViewAgents).Share
 	tt.Press(messages.X-1, 300)
 	tt.Move(messages.X-101, 300)
 	tt.Release(messages.X-101, 300)
 	tt.Frame()
-	share := a.state.Global.Views[0].Share
-	width := a.state.Global.Views[0].Width
+	share := a.globalOf(layout.ViewAgents).Share
+	width := a.globalOf(layout.ViewAgents).Width
 	if share >= before {
 		t.Fatalf("Agents' share went from %v to %v", before, share)
 	}
-	if got := savedAndLoaded(t, a).Global.Views[0]; got.Share != share || got.Width != width || width <= 0 {
+	if got := savedAndLoaded(t, a).Global.Views[slices.IndexFunc(a.state.Global.Views, func(v *layout.View) bool { return v.Kind == layout.ViewAgents })]; got.Share != share || got.Width != width || width <= 0 {
 		t.Fatalf("saved %+v, dragged to share %v, width %v", got, share, width)
 	}
 	a.toggleGlobalArrange()
 	tt.Frame()
 	tt.Frame()
-	if a.state.Global.Views[0].Share != share {
+	if a.globalOf(layout.ViewAgents).Share != share {
 		t.Fatal("the other layout has another share")
 	}
 }
@@ -189,10 +190,10 @@ func TestGlobalKeepsDraggedWidthAsItsRoomChanges(t *testing.T) {
 		t.Fatalf("restored room: left width %v, want %v", messages.X-agents.X, width)
 	}
 
-	a.toggleGlobalView(a.state.Global.Views[1].ID)
+	a.toggleGlobalView(a.globalOf(layout.ViewMessages).ID)
 	tt.Frame()
 	a.state = savedAndLoaded(t, a)
-	a.toggleGlobalView(a.state.Global.Views[1].ID)
+	a.toggleGlobalView(a.globalOf(layout.ViewMessages).ID)
 	tt.Frame()
 	tt.Frame()
 	agents, messages = titles(t, tt)
@@ -208,21 +209,21 @@ func TestGlobalKeepsItsColumnsUsableAndTheirShares(t *testing.T) {
 	if messages.X-agents.X < minimumRegionWidth || messages.W < minimumRegionWidth {
 		t.Fatalf("columns at %+v and %+v", agents, messages)
 	}
-	if a.state.Global.Views[0].Share != 60 {
-		t.Fatalf("a small room changed Agents' share to %v", a.state.Global.Views[0].Share)
+	if a.globalOf(layout.ViewAgents).Share != 60 {
+		t.Fatalf("a small room changed Agents' share to %v", a.globalOf(layout.ViewAgents).Share)
 	}
 }
 
 func TestOpeningGlobalsMenuKeepsTheActiveView(t *testing.T) {
 	a, tt := globalApp(t)
-	a.selectTab(a.state.Global, a.state.Global.Views[1].ID)
+	a.selectTab(a.state.Global, a.globalOf(layout.ViewMessages).ID)
 	tt.Frame()
 	tt.Frame()
 	click(t, tt, fmt.Sprintf("Region menu %d", a.state.Global.ID))
 	tt.Frame()
 	tt.CloseMenu()
 	tt.Frame()
-	if a.state.Global.Active != a.state.Global.Views[1].ID {
+	if a.state.Global.Active != a.globalOf(layout.ViewMessages).ID {
 		t.Fatal("the menu, on the first view, made it the active one")
 	}
 }
@@ -240,14 +241,14 @@ func TestADividerThatCannotMoveLeavesTheShares(t *testing.T) {
 		tt.Release(messages.X-41, 300)
 		tt.Frame()
 	}
-	if a.state.Global.Views[0].Share != 60 {
-		t.Fatalf("Agents' share is %v", a.state.Global.Views[0].Share)
+	if a.globalOf(layout.ViewAgents).Share != 60 {
+		t.Fatalf("Agents' share is %v", a.globalOf(layout.ViewAgents).Share)
 	}
 }
 
 func TestPeekNeedsNoAgentsView(t *testing.T) {
 	a, tt := globalApp(t)
-	a.toggleGlobalView(a.state.Global.Views[0].ID)
+	a.toggleGlobalView(a.globalOf(layout.ViewAgents).ID)
 	tt.Frame()
 	tt.Frame()
 	tt.Key(ui.Super, ui.KeyJ)
@@ -260,7 +261,7 @@ func TestPeekNeedsNoAgentsView(t *testing.T) {
 func TestEveryViewOfGlobalHasACommand(t *testing.T) {
 	a, tt := globalApp(t)
 	commands := a.commands()
-	for _, title := range []string{"Toggle Agents", "Toggle Messages", "Toggle Global Layout"} {
+	for _, title := range []string{"Toggle Agents", "Toggle Tasks", "Toggle Messages", "Toggle Global Layout"} {
 		if !slices.ContainsFunc(commands, func(p paletteItem) bool { return p.title == title }) {
 			t.Fatalf("no command %q", title)
 		}
@@ -268,7 +269,7 @@ func TestEveryViewOfGlobalHasACommand(t *testing.T) {
 	i := slices.IndexFunc(commands, func(p paletteItem) bool { return p.title == "Toggle Messages" })
 	commands[i].run()
 	tt.Frame()
-	if a.state.Global.Views[1].Show {
+	if a.globalOf(layout.ViewMessages).Show {
 		t.Fatal("the command did not hide Messages")
 	}
 }
