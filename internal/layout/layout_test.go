@@ -29,7 +29,7 @@ func project(t *testing.T, s *State, name string) *Project {
 
 func TestProjectPerspectiveAndGlobalIsolation(t *testing.T) {
 	s := New()
-	if s.CurrentProject() != nil || len(s.Global.Views) != 2 || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID {
+	if s.CurrentProject() != nil || len(s.Global.Views) != len(globalPreset) || s.Global.Views[0].Kind != ViewAgents || s.Global.Active != s.Global.Views[0].ID {
 		t.Fatal("Global should start with its preset, on Agents")
 	}
 	a := project(t, s, "Jun")
@@ -238,7 +238,7 @@ func TestInvalidOperationsDoNotMutate(t *testing.T) {
 
 func TestNewProjectStartsWithOneTerminalView(t *testing.T) {
 	s := New()
-	if s.GlobalVisible || len(s.Global.Views) != 2 {
+	if s.GlobalVisible || len(s.Global.Views) != len(globalPreset) {
 		t.Fatal("Global should start hidden, with its preset")
 	}
 	if err := s.AddProject("Jun", "/Jun"); err != nil {
@@ -401,7 +401,7 @@ func TestRenameAndRemoveProjectFollowItsViews(t *testing.T) {
 	}
 	removed, err := s.RemoveProject("Lesscap")
 	// Work's terminal, Review's and the one moved into Brain, besides each perspective's Files, Sessions and Reviews.
-	if err != nil || len(removed) != 9 || s.ActiveProject != "Brain" || len(s.Global.Views) != 2 || s.Validate() != nil {
+	if err != nil || len(removed) != 9 || s.ActiveProject != "Brain" || len(s.Global.Views) != len(globalPreset) || s.Validate() != nil {
 		t.Fatalf("removed %d views, active %q: %v, %v", len(removed), s.ActiveProject, err, s.Validate())
 	}
 	for _, name := range []string{"Brain", "Docs"} {

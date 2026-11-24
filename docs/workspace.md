@@ -52,7 +52,7 @@ A perspective is a named layout within a project, such as one for working and on
 | Columns (1–3) | center | tabs: terminals, files, sessions, diffs, settings | the perspective |
 | Bottom | below the columns | tabs, like a column | the perspective |
 | Side bar | left of the columns | **Sessions**, **Files**, and when shown **[Reviews](reviews.md)** (fixed) | the perspective |
-| Global | right of the columns | **Agents** and [Messages](agents-view.md#messages) (fixed), shown together | every project |
+| Global | right of the columns | **Agents**, [Tasks](agents-view.md#tasks) and [Messages](agents-view.md#messages) (fixed), shown together | every project |
 
 - **Columns**: each column's **⋯** offers **Add Column to Right** and **Remove This Column**.
   - Removing a column moves its tabs to the column on its left; the first column's tabs go to the right instead. Its terminals keep running.

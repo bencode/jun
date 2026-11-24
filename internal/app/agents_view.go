@@ -182,6 +182,8 @@ func (a *app) agentRow(c *ui.Context, s *terminal.Session, compact bool, groupLe
 	}
 	if info.Status == agent.Waiting {
 		row.Background(a.statusColor(agent.Waiting).Alpha(0.14))
+	} else if a.taskOwnerChosen(s.ID) {
+		row.Background(a.taskTint())
 	}
 	if s.ID == a.peek.id {
 		row.Border(2, a.theme.Accent)

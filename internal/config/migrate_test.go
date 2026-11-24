@@ -82,7 +82,7 @@ func TestLoadV1PreservesStateAndSavesV4(t *testing.T) {
 		}
 	}
 	if s.ActiveProject != "Brain" || s.Projects[0].Perspective(s.Projects[0].ActivePerspective).Name != "Review" ||
-		s.CurrentPerspective().Name != "Work" || len(s.Global.Views) != 2 || s.Global.Views[0].Kind != layout.ViewAgents ||
+		s.CurrentPerspective().Name != "Work" || len(s.Global.Views) != 3 || s.Global.Views[0].Kind != layout.ViewAgents ||
 		s.GlobalVisible || !s.RailExpanded || s.CenterPercent != 71 {
 		t.Fatal("migration lost selection or global state")
 	}
@@ -202,7 +202,7 @@ func TestLoadV2MovesGlobalViewsAndAddsSideRegions(t *testing.T) {
 		{"Jun Work bottom", work.Bottom, nil, 0},
 		{"Jun Review column", review.Columns[0], []layout.ViewID{16}, 16},
 		{"Brain Work column", brain.Perspectives[0].Columns[0], []layout.ViewID{14, 18}, 14},
-		{"Global", s.Global, []layout.ViewID{17, 23}, 17},
+		{"Global", s.Global, []layout.ViewID{17, 23, 24}, 17}, // Agents, then Tasks and Messages added
 	}
 	for _, c := range cases {
 		if got := ids(c.region); !reflect.DeepEqual(got, c.views) || c.region.Active != c.active {
@@ -316,7 +316,7 @@ func TestLoadV3TurnsWhatItHidIntoWhatItShows(t *testing.T) {
 	if got := shows(p.Side.Views); !reflect.DeepEqual(got, []bool{true, true, false}) {
 		t.Fatalf("side shows %v", got)
 	}
-	if got := shows(s.Global.Views); !reflect.DeepEqual(got, []bool{true, false}) {
+	if got := shows(s.Global.Views); !reflect.DeepEqual(got, []bool{true, true, false}) { // Agents, Tasks added shown, Messages hidden
 		t.Fatalf("Global shows %v", got)
 	}
 	tab := p.Columns[0].Views[0]

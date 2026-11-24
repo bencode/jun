@@ -43,6 +43,29 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
   - When its tab was closed, the terminal reopens in its project, in the column or bottom region you focused last.
 - **Right-click an agent** → **Review Changes** opens a [Diff](diff.md) of the branch the agent works on. This is offered for agents of the current project.
 
+## Tasks
+
+**Tasks**, in Global between Agents and Messages, is the goals and tasks agents keep with [`jun tool goal` and `task`](agent-tools.md#goal-and-task). It only shows them: agents change them.
+
+- The bar counts the tasks doing and to do, and **All Tasks** opens the [tab of every task](#all-tasks).
+- **Now**, on top, is the tasks doing, however long ago they started, and those that ended today, each with the title of its goal.
+- **Goals** is the open goals as a tree, each with its tasks to do and doing. Goals show their number, such as `G2`, their period and their due date.
+  - A task shows its state (○ to do, ◐ doing, ✓ done, × dropped), its number, such as `T4`, its title, `ask N` when N messages about it still ask for you, and who follows it.
+  - **Ended N** under a goal folds its tasks done and dropped; **Ended goals N**, at the bottom, folds the goals done and dropped with all their tasks.
+- **Click a task** to choose it: the messages about it and the row of the agent that follows it light up. Click a fold, or a goal for its ended tasks, to open or close it.
+- **Tab** from the title of Tasks, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** opens what the task links to, else [peeks](#peek) at the agent that follows it, and **→** and **←** open and close a fold, or a goal's ended tasks.
+- A message about a task has a tag with its number and title, such as `T4 Draft the plan`. Click the tag to show the task in Tasks, chosen, with Global and Tasks shown and its folds open.
+- What is chosen and open lasts until Jun quits.
+
+### All Tasks
+
+**All Tasks**, in the command palette or the bar of Tasks, opens a tab of every task, ended ones too. Each perspective has one at most: opened again, it shows the one there.
+
+- The filter: text found in the title, the outcome or the text; any of the four states, all when none is on; who follows it; its project.
+- Tasks not ended come first, then those ended, by month, the latest first. Only those not ended show until you open a month; with text in the filter, all show.
+- Each task shows its goal, its project and the day it ended.
+- **↩** on a task shows it in Tasks. **→** and **←** open and close a month, as a click does.
+
 ## Messages
 
 **Messages**, in Global, is what agents and loops tell you, so you need not open them to see how it goes. They send it with [`jun tool message`](agent-tools.md#message).
@@ -69,11 +92,11 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
 Global shows its views together, without tabs:
 
-- **⋯ → Agents** and **Messages** show or hide each view. Its room goes to the other views. Hiding the last one hides Global, and it comes back with Global.
+- **⋯ → Agents**, **Tasks** and **Messages** show or hide each view. Its room goes to the other views. Hiding the last one hides Global, and it comes back with Global.
   - Messages keep coming while hidden.
 - **⋯ → Side by Side** puts the views in columns, each as high as Global, and **Stacked** puts them one above the other.
 - Drag the line between two views to resize them. Side by side, the left view keeps its dragged width as Global or the window changes; the right view takes the remaining room. When space is short, the left view temporarily narrows and returns to its saved width once there is room. Stacked views share the height by proportion.
-- **Toggle Agents**, **Toggle Messages** and **Toggle Global Layout** are in the View menu and the command palette. With Global hidden, the first two show it too.
+- **Toggle Agents**, **Toggle Tasks**, **Toggle Messages** and **Toggle Global Layout** are in the View menu and the command palette. With Global hidden, the first three show it too.
 - **⌃Tab** and **⌘1**–**⌘9** move between the views shown.
 
 ## Peek

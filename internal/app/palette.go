@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
@@ -182,6 +183,7 @@ func (a *app) commands() []paletteItem {
 		{title: a.text("Toggle Global", "展开或收起 Global"), run: a.toggleGlobal},
 		{title: a.toggleArrangeLabel(), run: a.toggleGlobalArrange},
 		{title: a.text("Toggle Side Bar", "展开或收起侧边栏"), keys: toggleSideKeys.String(), run: a.toggleSide},
+		{title: a.kindName(layout.ViewAllTasks), keywords: "all tasks goals 任务 目标", run: a.openAllTasks},
 		{title: a.text("Show Reviews", "显示 Reviews"), keywords: "reviews notes 标注", run: a.showReviews},
 		{title: a.text("Add Note", "添加标注"), keys: noteKeys.String(), keywords: "review note 标注", run: a.noteHere},
 		{title: a.text("Toggle Project Names", "展开或收起项目名称"), run: a.toggleRail},

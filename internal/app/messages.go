@@ -158,5 +158,5 @@ func (a *app) messageLive(m message) bool {
 // openMessage takes the user to what the message links to. With reveal, a
 // terminal shows in its tab even when an agent runs in it.
 func (a *app) openMessage(m message, reveal bool) {
-	a.report(messageLinks[m.Link.Kind].show(a, m, reveal))
+	a.report(messageLinks[m.Link.Kind].show(a, *m.Link, m.Project, reveal))
 }

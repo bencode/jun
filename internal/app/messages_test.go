@@ -372,10 +372,10 @@ func TestKeysGoThroughMessages(t *testing.T) {
 	tt.Frame()
 	a.focusRegion(a.state.Global.ID)
 	tt.Frame()
-	tt.Key(ui.Super, ui.Key2)
+	tt.Key(ui.Super, ui.Key3)
 	tt.Frame()
 	if !tt.Focused("Messages") {
-		t.Fatal("⌘2 did not reach Messages")
+		t.Fatal("⌘3 did not reach Messages")
 	}
 	tt.Key(0, ui.KeyTab)
 	tt.Frame()
@@ -503,14 +503,14 @@ func TestHiddenMessagesKeepComing(t *testing.T) {
 	if tt.HasText("Before hiding") {
 		t.Fatal("hidden messages show")
 	}
-	if !tt.Focused(a.title(a.state.Global.Views[0])) {
+	if !tt.Focused(a.title(a.globalOf(layout.ViewAgents))) {
 		t.Fatal("the focus did not come back to Global")
 	}
 	path := filepath.Join(t.TempDir(), "config.json")
 	if err := config.Save(path, a.state); err != nil {
 		t.Fatal(err)
 	}
-	if s, err := config.Load(path); err != nil || s.Global.Views[1].Show {
+	if s, err := config.Load(path); err != nil || s.Global.Views[slices.IndexFunc(s.Global.Views, func(v *layout.View) bool { return v.Kind == layout.ViewMessages })].Show {
 		t.Fatalf("restored %v: %v", s, err)
 	}
 
@@ -546,7 +546,7 @@ func TestAReplyBringsItsMessageUp(t *testing.T) {
 	tt.Frame()
 	a.focusRegion(a.state.Global.ID)
 	tt.Frame()
-	tt.Key(ui.Super, ui.Key2)
+	tt.Key(ui.Super, ui.Key3)
 	tt.Frame()
 	tt.Key(0, ui.KeyTab)
 	tt.Frame()
