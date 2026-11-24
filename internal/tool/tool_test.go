@@ -78,7 +78,7 @@ func TestMainUsage(t *testing.T) {
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
 		{"message", "--task", "0", "hi"}, {"message", "update", "3", "--task", "x"},
 		{"goal", "0"}, {"goal", "x"}, {"goal", "--all", "--state", "open"}, {"goal", "--state", "later"}, {"goal", "--owner", "a"},
-		{"goal", "add", "x"}, {"goal", "add", "--outcome", "o"}, {"goal", "add", "--outcome", "o", "a", "b"}, {"goal", "add", "--goal", "1", "--outcome", "o", "x"},
+		{"goal", "add"}, {"task", "update"}, {"goal", "add", "x"}, {"goal", "add", "--outcome", "o"}, {"goal", "add", "--outcome", "o", "a", "b"}, {"goal", "add", "--goal", "1", "--outcome", "o", "x"},
 		{"goal", "add", "--outcome", "a\nb", "x"}, {"goal", "add", "--outcome", "o", "--link", "terminal:3", "x"}, {"goal", "add", "--outcome", "o", "--parent", "-1", "x"},
 		{"goal", "update", "1"}, {"goal", "update", "1", "x"}, {"goal", "update", "1", "--state", "doing"}, {"goal", "update", "1", "--rank", "0"},
 		{"goal", "update", "1", "--title", ""}, {"goal", "update", "1", "--title", "a", "--title", "b"}, {"goal", "delete"}, {"goal", "delete", "1", "2"},

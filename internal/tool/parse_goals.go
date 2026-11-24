@@ -51,7 +51,7 @@ func parseItem(args []string, stdin io.Reader, c itemCommand) (Request, error) {
 	if len(args) == 0 || isFlag(args[0]) {
 		return parseItemFilter(args, c)
 	}
-	if len(args) == 1 {
+	if len(args) == 1 && !slices.Contains([]string{"add", "update", "delete"}, args[0]) {
 		id, err := itemID(c.name, args[0])
 		return Request{Op: c.one, Item: &Item{ID: id}}, err
 	}
