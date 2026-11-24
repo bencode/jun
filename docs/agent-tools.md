@@ -9,7 +9,7 @@ Programs in Jun's terminals, agents above all, can ask the Jun that runs them ab
 Two skills build on these tools, in the [Agent Skills](https://agentskills.io) format, which Claude Code, Codex and Pi read:
 
 - [`jun-tools`](../skills/jun-tools/SKILL.md) teaches an agent the tools: when to use them, the common work, and the pitfalls.
-- [`jun-deputy`](../skills/jun-deputy/SKILL.md) makes a session your deputy: it hears of your agents as they change, looks them over on a schedule, and reports what needs you.
+- [`jun-lead`](../skills/jun-lead/SKILL.md) makes an agent a team's lead: it hears when the agents it leads wait for you or seem stuck, decides what it can, and brings you the rest in Messages, one message a matter.
 
 Install them for your user with the [skills](https://github.com/vercel-labs/skills) CLI:
 
