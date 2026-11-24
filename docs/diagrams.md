@@ -25,10 +25,10 @@ Participants and actors, activations, notes, numbering, and `loop`, `alt`, `opt`
 sequenceDiagram
     autonumber
     actor U as You
-    participant D as Deputy
+    participant D as Lead
     participant J as Jun
     participant C as Codex
-    U->>D: Watch my agents
+    U->>D: Lead the team
     D->>+J: watch
     loop each status change
         J-->>D: Codex: working → waiting
@@ -78,7 +78,7 @@ stateDiagram-v2
         Thinking --> Tool: a tool call
         Tool --> Thinking: its result
     }
-    note right of Waiting: The deputy reports it as an ask
+    note right of Waiting: The lead reports it as an ask
 ```
 
 ## Class

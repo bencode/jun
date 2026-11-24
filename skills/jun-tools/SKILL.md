@@ -76,7 +76,7 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 | To | Use |
 |---|---|
 | Answer the user you are talking with | Your reply: no `message` as well |
-| Tell the user something they are not here to read | `message` |
+| Tell the user something they are not here to read | `message`; with a lead, `send` it to your lead instead |
 | Show the user something they asked to see | `open`, which works only while they are with you |
 | Have another agent do something | `send` |
 
@@ -84,7 +84,7 @@ Ids are terminal ids, the same for every command. They last while Jun runs.
 
 **Find an agent.** Run `terminals` and pick by `name`, `project`, `dir`, `title` and `agent`. `self: true` is your own terminal. When the user calls an agent by name, as in "what is Euler doing?" or "hand this to Euler", find the terminal with that `name`, then use its `id`: the other commands take ids only. The agents it leads are those whose `lead` is its `id`.
 
-**Name yourself.** A name is a role: it lasts, and the sessions that took it are its memory. When you name your own terminal, Jun records your session as the role's, from the variable your agent gives your commands (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID` or `PI_SESSION_ID`). When the user, your lead or the deputy asks you to name yourself:
+**Name yourself.** A name is a role: it lasts, and the sessions that took it are its memory. When you name your own terminal, Jun records your session as the role's, from the variable your agent gives your commands (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID` or `PI_SESSION_ID`). When the user or your lead asks you to name yourself:
 
 1. `roles --mine`. A role there is yours, as when your session was resumed: take its name back. When it has a `lead` and a terminal in `terminals` has that name, `join` it.
 2. Otherwise `roles` and `terminals` show the names taken. Pick one that is neither, from the theme you were given if any.
@@ -201,7 +201,9 @@ The new terminal belongs to your project, or the one named, and has no tab: foll
 "$JUN_BIN" tool watch | jq --unbuffered -c "select(.lead == $JUN_TERMINAL)"
 ```
 
-A session the user started and hands to you joins you itself: when the user tells you to work for terminal 3, run `join 3`. `leave` ends it; so does either terminal ending. A lead is a mark, not a lock: anyone may still `send` to your agents.
+A session the user started and hands to you joins you itself: when the user tells you to work for terminal 3, run `join 3`. `leave` ends it; so does either terminal ending. A lead is a mark, not a lock: anyone may still `send` to your agents. To lead a team, hearing when its agents wait or seem stuck, follow the `jun-lead` skill.
+
+**Report to your lead.** When you have a `lead`, take to it with `send` what needs a decision, and your result when you finish, rather than `message`: your lead decides what it can and tells the user the rest. Answer the user you are talking with in your reply, as before.
 
 **Hear of changes as they happen.** For an event, use `watch`, not a short loop:
 
