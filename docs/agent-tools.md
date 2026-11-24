@@ -34,8 +34,12 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool back` / `jun tool forward` | One step back or forward through where you have been, as ⌘[ and ⌘] go. Prints nothing. |
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal, or holds it while the user is typing there. Prints nothing, `sent, not started yet` or `held: …`. |
 | `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints the message's id. |
-| `jun tool message update <id> [--kind <kind>] [<text>]`, or `-` for the text | Changes the message's kind, adds a reply, or both. Prints nothing. |
+| `jun tool message update <id> [--kind <kind>] [--task <id>] [<text>]`, or `-` for the text | Changes the message's kind or task, adds a reply, or any of them. Prints nothing. |
 | `jun tool message` | The messages, as a JSON array, the latest first |
+| `jun tool goal [--all \| --state <state>…] [--match <text>]` / `goal <id>` | The [goals](#goal-and-task), as a JSON array, each followed by those under it / a goal with those above it and its tasks |
+| `jun tool goal add …` / `goal update <id> …` / `goal delete <id>` | Adds a goal and prints its id / changes it / takes it out. The others print nothing. |
+| `jun tool task [--all \| --state <state>…] [--owner <role>] [--project <name>] [--goal <id>] [--match <text>]` / `task <id>` | The tasks, as a JSON array, by their goals / a task, whole, with its goals |
+| `jun tool task add …` / `task update <id> …` / `task delete <id>` | Adds a task and prints its id / changes it / takes it out. The others print nothing. |
 | `jun tool run [--project <name>] [--dir <path>] [--open] <command…>` | Starts a terminal running the command. Prints its id. |
 | `jun tool join <id>` | Makes the agent in that terminal the caller's lead. Prints nothing. |
 | `jun tool leave` | Drops the caller's lead. Prints nothing. |
@@ -213,6 +217,7 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - **The text**: with `-`, standard input. Line breaks at its end go; at most 4 KiB.
 - **How long it stays**: Jun keeps the last 500, until it quits. A terminal's id lasts as long, so a message's link never points at another terminal.
 - **Its id**: `message` prints it. Jun shows it as `M12`; the commands take `12`.
+- **`--task`**: the [task](#goal-and-task) the message is about, by its id. A task that does not exist is status 1. `message update <id> --task <id>` sets it later.
 
 #### Updating a message
 
@@ -256,6 +261,59 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 ```
 
 `link` is as `--link` takes it; `title`, `text`, `project`, `link` and `replies` are absent when there are none.
+
+### goal and task
+
+Goals and tasks are what the user means to get done, kept in `goals.json` beside the [layout file](configuration.md), across Jun's runs. A goal is a tree of what and why: each serves the goal above it, if any. A task is a piece of one goal, followed by one role. Agents read and change them here; the user tells an agent what to change.
+
+```sh
+"$JUN_BIN" tool goal add --outcome 'Agents use goals in Jun' --period 2026-W48 'Goals and tasks'
+"$JUN_BIN" tool task add --goal 3 --owner 高斯 'Write the model and the tools'
+"$JUN_BIN" tool task update 8 --owner 高斯 --state doing
+"$JUN_BIN" tool task 8 | jq '.goals[].title'
+```
+
+- **Ids**: Jun shows a goal as `G3` and a task as `T8`; the commands take `3` and `8`. An id is never given again, even once its goal or task is gone, so `T8` in a document or a commit stays that task.
+- **Order**: goals of one parent come in the order of their importance, tasks of one goal in the order to do them. `--rank <n>` places one among its siblings, from 1; moved to another goal or parent, it goes last there unless `--rank` says.
+- **A goal** has a `title` and an `outcome`, one line each, at most 200 and 500 bytes: what counts as done. Optional: `--text`, at most 4 KiB, with `-` for standard input; `--link`; `--due`, a date as `2026-11-28`; `--period`, the user's plan for it: a month as `2026-11`, an ISO week as `2026-W48` or a day as `2026-11-23`. Its `state` is `open`, `done` or `dropped`: whoever judges the outcome sets it, not its tasks.
+- **A task** has a `goal` and a `title`. Optional: `--outcome`, `--text`, `--link`, `--owner`, a role's name as [roles](#roles) lists them, and `--project`, the caller's unless given. Its `state` is `todo`, `doing`, `done` or `dropped`.
+- **Details** go elsewhere: `--link` takes `file:<path>` or `project:<name>`, the [resources](#resources) that last; a text longer than 4 KiB is refused, for it to go in that file.
+- **Taking a task**: `task update <id> --owner <your name> --state doing`, in so many words.
+- **Times**: Jun keeps them. `createdAt`; `startedAt`, when it first became `doing`; `endedAt`, when it became `done` or `dropped`, cleared when it opens again. `todo` starts it over. A goal has `createdAt` and `endedAt`.
+- **Sessions**: an agent that adds or changes a task is recorded in its `sessions`, once a session, with its role then, from its variables as a name is. `task <id>` gives each with `resume`, the command that resumes it, as [roles](#roles) does: the way back to who did what.
+- **`''`** clears an optional field: `--link ''`, `--owner ''`. `goal update --parent 0` makes a goal a top one.
+- **Taking out**: `goal delete` only a goal with no goals or tasks under it, `task delete` only a task still `todo`. Drop any other, for its history to stay.
+- **Who may change them**: any terminal of Jun. Outside Jun's terminals it is refused.
+
+#### Reading goals and tasks
+
+`goal` and `task` list the open goals and the tasks not ended: `--all` lists them all, `--state` those in the states given, again for more. The other options narrow the list, all together: `--owner` and `--project`, whatever their case; `--goal <id>`, that goal's tasks and those of the goals under it; `--match <text>`, in the title, outcome or text, whatever its case. A list leaves out a task's `text` and `sessions`; `task <id>` has them.
+
+```sh
+"$JUN_BIN" tool task --owner 高斯
+"$JUN_BIN" tool task --all | jq -c '.[] | select(.endedAt >= "2026-11-24")'
+```
+
+`goal <id>` and `task <id>` give an object: `goals`, the goal and those above it, the top one first, and `tasks`, the goal's own or the one task.
+
+```json
+{
+  "goals": [
+    { "id": 3, "title": "Goals and tasks", "outcome": "Agents use goals in Jun", "period": "2026-W48", "state": "open", "createdAt": "2026-11-24T10:00:00+08:00" }
+  ],
+  "tasks": [
+    {
+      "id": 8, "goal": 3, "title": "Write the model and the tools", "project": "jun", "owner": "高斯", "state": "doing",
+      "createdAt": "2026-11-24T10:05:00+08:00", "startedAt": "2026-11-24T10:06:00+08:00",
+      "sessions": [
+        { "role": "高斯", "agent": "claude", "id": "4f6e2a10-…", "dir": "/Users/me/work/jun", "at": "2026-11-24T10:05:00+08:00", "resume": "claude --resume 4f6e2a10-…" }
+      ]
+    }
+  ]
+}
+```
+
+Absent fields have no value. Jun reads `goals.json` at startup only: quit it before editing the file by hand. A file it cannot read is left as it is and reported, and changes then last while Jun runs.
 
 ### run and loop
 

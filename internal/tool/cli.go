@@ -19,7 +19,10 @@ const usage = "usage: jun tool help | terminals | watch |\n" +
 	"  terminals update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer] |\n" +
 	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
-	"  message | message update <id> [--kind <kind>] [<text|->] |\n" +
+	"  message | message update <id> [--kind <kind>] [--task <id>] [<text|->] |\n" +
+	"  goal [--all | --state <state>…] [--match <text>] | goal <id> | goal add … <title> | goal update <id> … | goal delete <id> |\n" +
+	"  task [--all | --state <state>…] [--owner <role>] [--project <name>] [--goal <id>] [--match <text>] |\n" +
+	"  task <id> | task add --goal <id> … <title> | task update <id> … | task delete <id> |\n" +
 	"  roles | roles --mine | roles --open | roles --team <name> | roles <name> [--limit <n>] |\n" +
 	"  run [--project <name>] [--dir <path>] [--open] <command…> | join <id> | leave |\n" +
 	"  loop <every> [--dir <path>] <command…> | loop | loop cancel <id>"
@@ -154,8 +157,8 @@ Sending:
       typed in the agent's input and not submitted it, Jun holds the
       text, after any held before, and submits it once the input is
       empty; it prints "held: ..." at once.
-  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>
-  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] -
+  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] [--task <id>] <text>
+  jun tool message [--title <title>] [--kind <kind>] [--link <resource>] [--task <id>] -
       Shows the text to the user, in Messages in Global, without
       disturbing them: any terminal may, at any time. A title of one
       line, at most 200 bytes, goes above it; with a title the text may
@@ -164,20 +167,83 @@ Sending:
       project:<name>, is where it takes the user, and Jun tells the
       project from it; report on another agent with terminal:<its id>.
       Without one it is plain news, leading nowhere. A resource that
-      does not exist is status 1 and shows nothing. With -, the text is
-      standard input.
+      does not exist is status 1 and shows nothing. --task names the task
+      it is about (see task). With -, the text is standard input.
       Line breaks at its end go; at most 4 KiB. Jun keeps the last 500,
       until it quits. Prints the message's id, which shows as M<id>.
-  jun tool message update <id> [--kind <kind>] [<text>]
-  jun tool message update <id> [--kind <kind>] -
-      Changes the message's kind, adds the text as a reply below it, or
-      both: ask becoming done tells the user it is handled. A reply moves
+  jun tool message update <id> [--kind <kind>] [--task <id>] [<text>]
+  jun tool message update <id> [--kind <kind>] [--task <id>] -
+      Changes the message's kind or task, adds the text as a reply below
+      it, or any of them: ask becoming done tells the user it is handled. A reply moves
       the message to the top; a message keeps its last 50. Any terminal
       may, whoever sent it. No such message is status 1. Prints nothing.
   jun tool message
       The messages, the latest first, as a JSON array: id, time, kind,
-      title, text, project, link, as --link takes it, and replies, each
-      with time and text.
+      title, text, project, link, as --link takes it, task, and replies,
+      each with time and text.
+
+Goals and tasks, what the user means to get done, kept across Jun's runs.
+A goal serves the goal above it, if any; a task is a piece of one goal,
+followed by one role. Jun shows a goal as G<id> and a task as T<id>; the
+commands take the id. An id is never given again. Goals of one parent
+come in the order of their importance, tasks of one goal in the order to
+do them. Any terminal may change any of them.
+  jun tool goal [--all | --state <state>…] [--match <text>]
+      The goals, as a JSON array, each followed by those under it: open
+      ones, unless --all or --state says (open, done, dropped; again for
+      more). --match keeps those with the text in their title, outcome or
+      text, whatever its case. Each has id, parent (absent for none),
+      title, outcome (when it is done), text, link, due, period, state,
+      createdAt and endedAt (when it became done or dropped).
+  jun tool goal <id>
+      {"goals": the goal and those above it, the top one first, "tasks":
+      the goal's own tasks, whatever their state}.
+  jun tool goal add [--parent <id>] --outcome <outcome> [--due <date>]
+                    [--period <period>] [--link <resource>] [--text <text>|-] <title>
+      Adds an open goal, the last of its siblings, and prints its id.
+      The title and outcome are one line each, at most 200 and 500 bytes;
+      the text at most 4 KiB: more goes in a file the link names. The
+      link is file:<path> or project:<name>, which last. --due is a date
+      as 2026-11-28; --period the user's plan for it: a month as 2026-11,
+      an ISO week as 2026-W48, or a day as 2026-11-23.
+  jun tool goal update <id> [--title <title>] [--outcome <outcome>] [--parent <id>]
+                    [--due <date>] [--period <period>] [--link <resource>]
+                    [--text <text>|-] [--rank <n>] [--state open|done|dropped]
+      Changes the goal: '' clears due, period, link and text; --parent 0
+      makes it a top one. --rank places it among its siblings, from 1;
+      moved to another parent, it goes last there unless --rank says.
+      done or dropped is for whoever judges the outcome, not the tasks.
+  jun tool goal delete <id>
+      Takes out a goal with no goals or tasks under it; drop any other.
+  jun tool task [--all | --state <state>…] [--owner <role>] [--project <name>]
+                [--goal <id>] [--match <text>]
+      The tasks, as a JSON array, by their goals in order: the ones to do
+      and doing, unless --all or --state says (todo, doing, done,
+      dropped). --goal keeps that goal's and those of the goals under it;
+      the others as goal's; all of them together. Each has id, goal,
+      title, outcome, link, project, owner, state, createdAt, startedAt
+      (when it first became doing) and endedAt; task <id> adds text and
+      sessions.
+  jun tool task <id>
+      {"goals": the task's goal and those above it, the top one first,
+      "tasks": the task}, with sessions: the agents' sessions that touched
+      it, the first first, each with its role then, agent, id, home, dir,
+      at and resume, the shell command that resumes it.
+  jun tool task add --goal <id> [--owner <role>] [--project <name>] [--outcome <outcome>]
+                    [--link <resource>] [--text <text>|-] <title>
+      Adds a task to do, the last of its goal's, and prints its id. The
+      owner is a role's name; the project is the caller's unless given.
+  jun tool task update <id> [--state todo|doing|done|dropped] [--owner <role>]
+                    [--goal <id>] [--project <name>] [--title <title>]
+                    [--outcome <outcome>] [--link <resource>] [--text <text>|-] [--rank <n>]
+      Changes the task, as goal update does; '' clears owner, outcome,
+      link and text. To take one: --owner <your name> --state doing. Jun
+      keeps its times: doing first starts it, done or dropped ends it,
+      todo starts it over.
+  jun tool task delete <id>
+      Takes out a task still to do; drop any other.
+  An agent that adds or changes a task is recorded in its sessions,
+  from the agent's variables, once a session.
 
 Running commands, each in a terminal of its own, in the caller's
 project, with no tab unless asked for:
@@ -237,7 +303,7 @@ and Pi let it through.
 var errHelp = errors.New("help")
 
 // commands are the words that may follow "tool", those parse takes.
-var commands = []string{"help", "terminals", "watch", "screen", "open", "close", "back", "forward", "send", "message", "run", "join", "leave", "loop"}
+var commands = []string{"help", "terminals", "watch", "screen", "open", "close", "back", "forward", "send", "message", "goal", "task", "run", "join", "leave", "loop"}
 
 // MistakenCommand tells, for the words jun was started with, how to run
 // the tool command they look like when "tool" was left out, as "jun open
@@ -289,7 +355,7 @@ func Main(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(
 		fmt.Fprintf(stderr, "jun tool: %v\n", watch(path, stdout))
 		return 1
 	}
-	if req.Op == OpUpdateTerminal && req.Name != nil || req.Mine {
+	if req.Op == OpUpdateTerminal && req.Name != nil || req.Mine || slices.Contains(GoalOps, req.Op) {
 		req.Sessions = SessionsFrom(getenv)
 	}
 	if named := getenv(EnvTerminal); named != "" {
@@ -327,7 +393,7 @@ func output(w io.Writer, op Op, resp Response) error {
 		_, err = fmt.Fprintln(w, resp.Terminal)
 		return err
 	}
-	if op == OpMessage {
+	if op == OpMessage || op == OpAddGoal || op == OpAddTask {
 		_, err = fmt.Fprintln(w, resp.Created)
 		return err
 	}
@@ -340,6 +406,15 @@ func output(w io.Writer, op Op, resp Response) error {
 		list = append([]Message{}, resp.Messages...)
 	} else if op == OpRoles {
 		list = append([]Role{}, resp.Roles...)
+	} else if op == OpGoals {
+		list = append([]Goal{}, resp.Goals...)
+	} else if op == OpTasks {
+		list = append([]Task{}, resp.Tasks...)
+	} else if op == OpGoal || op == OpTask {
+		list = struct {
+			Goals []Goal `json:"goals"`
+			Tasks []Task `json:"tasks"`
+		}{append([]Goal{}, resp.Goals...), append([]Task{}, resp.Tasks...)}
 	} else {
 		if resp.Message != "" {
 			_, err = fmt.Fprintln(w, resp.Message)

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/bencode/jun/internal/config"
+	"github.com/bencode/jun/internal/goals"
 	"github.com/bencode/jun/internal/history"
 	"github.com/bencode/jun/internal/layout"
 	"github.com/bencode/jun/internal/roles"
@@ -84,6 +85,8 @@ type app struct {
 	names           map[terminal.ID]string      // what agents call terminals, given with terminals update
 	roles           roles.Book                  // names that last, with their sessions
 	rolesPath       string                      // the file roles are kept in; none: they are not
+	goals           goals.Book                  // what the user means to get done, kept across runs
+	goalsPath       string                      // the file goals are kept in; none: they are not
 	timers          map[terminal.ID]agentTimer  // when to signal the agents in terminals, set with terminals update
 	ttys            map[terminal.ID]string
 	agentPolling    bool
@@ -154,6 +157,7 @@ func Run() error {
 	} else {
 		a.restoreConfig(path)
 		a.restoreRoles(path)
+		a.restoreGoals(path)
 	}
 	removeOldMessages(path)
 	a.startPrefs()

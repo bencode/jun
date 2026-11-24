@@ -64,35 +64,13 @@ func Save(path string, b Book) error {
 	}
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "{\n  \"version\": %d,\n  \"roles\": ", version)
-	if err := lines(&buf, b.Roles); err != nil {
+	if err := config.JSONLines(&buf, b.Roles); err != nil {
 		return err
 	}
 	buf.WriteString(",\n  \"sessions\": ")
-	if err := lines(&buf, b.Sessions); err != nil {
+	if err := config.JSONLines(&buf, b.Sessions); err != nil {
 		return err
 	}
 	buf.WriteString("\n}\n")
 	return config.WriteFile(path, buf.Bytes())
-}
-
-// lines writes the array an element a line, for a person to read.
-func lines[T any](buf *bytes.Buffer, items []T) error {
-	if len(items) == 0 {
-		buf.WriteString("[]")
-		return nil
-	}
-	buf.WriteString("[")
-	for i, item := range items {
-		line, err := json.Marshal(item)
-		if err != nil {
-			return err
-		}
-		if i > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString("\n    ")
-		buf.Write(line)
-	}
-	buf.WriteString("\n  ]")
-	return nil
 }

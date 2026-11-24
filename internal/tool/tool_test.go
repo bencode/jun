@@ -76,6 +76,15 @@ func TestMainUsage(t *testing.T) {
 		{"roles", "42"}, {"roles", "a", "b"}, {"roles", "--mine", "x"}, {"roles", "a", "--limit"}, {"roles", "a", "--limit", "0"}, {"roles", "a", "--limit", "x"},
 		{"roles", "--open", "x"}, {"roles", "--team"}, {"roles", "--team", "a", "b"}, {"roles", "--team", "42"},
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
+		{"message", "--task", "0", "hi"}, {"message", "update", "3", "--task", "x"},
+		{"goal", "0"}, {"goal", "x"}, {"goal", "--all", "--state", "open"}, {"goal", "--state", "later"}, {"goal", "--owner", "a"},
+		{"goal", "add"}, {"task", "update"}, {"goal", "add", "x"}, {"goal", "add", "--outcome", "o"}, {"goal", "add", "--outcome", "o", "a", "b"}, {"goal", "add", "--goal", "1", "--outcome", "o", "x"},
+		{"goal", "add", "--outcome", "a\nb", "x"}, {"goal", "add", "--outcome", "o", "--link", "terminal:3", "x"}, {"goal", "add", "--outcome", "o", "--parent", "-1", "x"},
+		{"goal", "update", "1"}, {"goal", "update", "1", "x"}, {"goal", "update", "1", "--state", "doing"}, {"goal", "update", "1", "--rank", "0"},
+		{"goal", "update", "1", "--title", ""}, {"goal", "update", "1", "--title", "a", "--title", "b"}, {"goal", "delete"}, {"goal", "delete", "1", "2"},
+		{"task", "add", "x"}, {"task", "add", "--goal", "0", "x"}, {"task", "add", "--goal", "1", "--due", "2026-11-28", "x"},
+		{"task", "update", "1", "--state", "open"}, {"task", "update", "1", "--parent", "2"}, {"task", "--goal", "x"}, {"task", "--owner", " "},
+		{"task", "--match", "a", "--match", "b"},
 		{"terminals", "update"}, {"terminals", "update", "3"}, {"terminals", "update", "3", "达芬奇"}, {"terminals", "update", "0", "--name", "a"},
 		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
 		{"terminals", "update", "3", "--name", strings.Repeat("x", MaxName+1)}, {"terminals", "update", "3", "--name", "a", "b"},
@@ -100,6 +109,101 @@ func TestMainUsage(t *testing.T) {
 	}
 	if code, _, stderr := run(socketPath(t), "terminals"); code != 1 || !strings.Contains(stderr, "cannot reach Jun") {
 		t.Fatalf("without Jun: %d %q", code, stderr)
+	}
+}
+
+// goal and task send what they say to Jun, with the caller's sessions
+// when they change something, and print a list, an item with the goals
+// above it, or a new id.
+func TestGoalAndTaskCommands(t *testing.T) {
+	path := socketPath(t)
+	var got []Request
+	s, err := Start(path, func(req Request, _ []int) Response {
+		got = append(got, req)
+		return map[Op]Response{
+			OpAddGoal: {Created: 3}, OpAddTask: {Created: 8},
+			OpGoals: {Goals: []Goal{{ID: 1, Title: "Ship"}}}, OpTasks: {Tasks: []Task{{ID: 8, Goal: 1}}},
+			OpTask: {Goals: []Goal{{ID: 1}}, Tasks: []Task{{ID: 8, Sessions: []TaskSession{{Agent: "claude", ID: "c1"}}}}},
+		}[req.Op]
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	here, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	withSession := func(stdin string, args ...string) (int, string) {
+		var stdout bytes.Buffer
+		code := Main(args, strings.NewReader(stdin), &stdout, &bytes.Buffer{}, func(name string) string {
+			return map[string]string{EnvAPI: path, "CLAUDE_CODE_SESSION_ID": "c1"}[name]
+		})
+		return code, stdout.String()
+	}
+	prints := map[string][]string{
+		"3\n": {"goal", "add", "--parent", "0", "--outcome", "PR merged", "--due", "2026-11-28", "--period", "2026-W48", "--link", "file:docs/a.md", "Ship goals"},
+		"8\n": {"task", "add", "--goal", "3", "--owner", "高斯", "--text", "-", "Write the parser"},
+		"":    {"task", "update", "8", "--owner", "高斯", "--state", "doing", "--rank", "1", "--link", ""},
+	}
+	for want, args := range prints {
+		if code, out := withSession("Line one\nLine two\n", args...); code != 0 || out != want {
+			t.Fatalf("%q: %d %q", args, code, out)
+		}
+	}
+	for _, args := range [][]string{{"goal", "update", "3", "--state", "done"}, {"goal", "delete", "3"}, {"task", "delete", "8"},
+		{"message", "--task", "8", "Asks"}, {"message", "update", "4", "--task", "8"}} {
+		if code, _ := withSession("", args...); code != 0 {
+			t.Fatalf("%q: %d", args, code)
+		}
+	}
+	var goals []Goal
+	if code, out := withSession("", "goal", "--state", "done", "--state", "dropped", "--match", "ship"); code != 0 ||
+		json.Unmarshal([]byte(out), &goals) != nil || len(goals) != 1 {
+		t.Fatalf("goals: %d %q", code, out)
+	}
+	var tasks []Task
+	if code, out := withSession("", "task", "--all", "--owner", "高斯", "--project", "jun", "--goal", "3"); code != 0 ||
+		json.Unmarshal([]byte(out), &tasks) != nil || len(tasks) != 1 {
+		t.Fatalf("tasks: %d %q", code, out)
+	}
+	var one struct {
+		Goals []Goal `json:"goals"`
+		Tasks []Task `json:"tasks"`
+	}
+	if code, out := withSession("", "task", "8"); code != 0 || json.Unmarshal([]byte(out), &one) != nil || len(one.Goals) != 1 || one.Tasks[0].Sessions[0].ID != "c1" {
+		t.Fatalf("task: %d %q", code, out)
+	}
+	if code, out := withSession("", "goal", "1"); code != 0 || out != "{\n  \"goals\": [],\n  \"tasks\": []\n}\n" {
+		t.Fatalf("goal: %d %q", code, out)
+	}
+
+	session := Sessions{Claude: AgentSession{ID: "c1"}}
+	byOp := map[Op][]Request{}
+	for _, req := range got {
+		byOp[req.Op] = append(byOp[req.Op], req)
+	}
+	want := map[Op][]Request{
+		OpAddGoal: {{Op: OpAddGoal, Sessions: session, Item: &Item{Parent: ptr(0), Outcome: ptr("PR merged"), Due: ptr("2026-11-28"),
+			Period: ptr("2026-W48"), Link: ptr("file:" + filepath.Join(here, "docs", "a.md")), Title: ptr("Ship goals")}}},
+		OpAddTask:       {{Op: OpAddTask, Sessions: session, Item: &Item{Goal: ptr(3), Owner: ptr("高斯"), Text: ptr("Line one\nLine two"), Title: ptr("Write the parser")}}},
+		OpUpdateTask:    {{Op: OpUpdateTask, Sessions: session, Item: &Item{ID: 8, Owner: ptr("高斯"), State: ptr("doing"), Rank: 1, Link: ptr("")}}},
+		OpUpdateGoal:    {{Op: OpUpdateGoal, Sessions: session, Item: &Item{ID: 3, State: ptr("done")}}},
+		OpDeleteGoal:    {{Op: OpDeleteGoal, Sessions: session, Item: &Item{ID: 3}}},
+		OpDeleteTask:    {{Op: OpDeleteTask, Sessions: session, Item: &Item{ID: 8}}},
+		OpMessage:       {{Op: OpMessage, Task: 8, Text: "Asks"}},
+		OpUpdateMessage: {{Op: OpUpdateMessage, Message: 4, Task: 8}},
+		OpGoals:         {{Op: OpGoals, Filter: &Filter{States: []string{"done", "dropped"}, Match: "ship"}}},
+		OpTasks:         {{Op: OpTasks, Filter: &Filter{All: true, Owner: "高斯", Project: "jun", Goal: 3}}},
+		OpTask:          {{Op: OpTask, Item: &Item{ID: 8}}},
+		OpGoal:          {{Op: OpGoal, Item: &Item{ID: 1}}},
+	}
+	if !reflect.DeepEqual(byOp, want) {
+		t.Fatalf("requests %+v", got)
 	}
 }
 
@@ -435,7 +539,7 @@ func TestTail(t *testing.T) {
 	}
 }
 
-func ptr(s string) *string { return &s }
+func ptr[T any](v T) *T { return &v }
 
 func TestAtIsTheNextTimeTheClockReadsSo(t *testing.T) {
 	now := time.Date(2026, 11, 20, 14, 30, 0, 0, time.Local)

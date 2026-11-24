@@ -29,6 +29,7 @@ type message struct {
 	Text    string
 	Project *layout.Project // the link's, told when it came; a pointer, as a project's name may change
 	Link    *tool.Target    // where it takes the user; none for plain news
+	Task    int             // the task it is about, if any
 	Replies []tool.Reply    // what was added later, the oldest first
 	Whole   bool            // a long text and all the replies show
 }
@@ -70,15 +71,19 @@ func (a *app) toolMessage(req tool.Request, callers []int) (uint64, error) {
 			return 0, err
 		}
 	}
+	if err := a.checkTask(req.Task); err != nil {
+		return 0, err
+	}
 	a.lastMessage++
 	a.messages = append(a.messages, message{ID: a.lastMessage, Time: time.Now(), Kind: kind, Title: req.Title,
-		Text: req.Text, Project: project, Link: req.Target})
+		Text: req.Text, Project: project, Link: req.Target, Task: req.Task})
 	a.messages = a.messages[max(0, len(a.messages)-messagesKept):]
 	return a.lastMessage, nil
 }
 
-// toolUpdateMessage changes a message's kind, adds a reply, or both. A reply
-// is news, so the message moves to the top; a new kind alone leaves it there.
+// toolUpdateMessage changes a message's kind or task, adds a reply, or any
+// of them. A reply is news, so the message moves to the top; the rest alone
+// leave it there.
 func (a *app) toolUpdateMessage(req tool.Request, callers []int) error {
 	if _, err := a.toolCaller(callers, req.Caller); err != nil {
 		return err
@@ -86,15 +91,18 @@ func (a *app) toolUpdateMessage(req tool.Request, callers []int) error {
 	if req.Kind != "" && !slices.Contains(tool.MessageKinds, req.Kind) {
 		return fmt.Errorf("no kind %q", req.Kind)
 	}
-	if len(req.Text) > tool.MaxMessage || req.Kind == "" && strings.TrimSpace(req.Text) == "" {
-		return fmt.Errorf("a kind or a text of at most %d bytes, not blank", tool.MaxMessage)
+	if len(req.Text) > tool.MaxMessage || req.Kind == "" && req.Task == 0 && strings.TrimSpace(req.Text) == "" {
+		return fmt.Errorf("a kind, a task or a text of at most %d bytes, not blank", tool.MaxMessage)
+	}
+	if err := a.checkTask(req.Task); err != nil {
+		return err
 	}
 	i := slices.IndexFunc(a.messages, func(m message) bool { return m.ID == req.Message })
 	if i < 0 {
 		return fmt.Errorf("no message %d", req.Message)
 	}
 	m := a.messages[i]
-	m.Kind = cmp.Or(req.Kind, m.Kind)
+	m.Kind, m.Task = cmp.Or(req.Kind, m.Kind), cmp.Or(req.Task, m.Task)
 	if strings.TrimSpace(req.Text) == "" {
 		a.messages[i] = m
 		return nil
@@ -105,11 +113,19 @@ func (a *app) toolUpdateMessage(req tool.Request, callers []int) error {
 	return nil
 }
 
+// checkTask tells whether the task a message is about is there: none is.
+func (a *app) checkTask(id int) error {
+	if _, ok := a.goals.Task(id); id != 0 && !ok {
+		return fmt.Errorf("no task T%d", id)
+	}
+	return nil
+}
+
 // toolMessages lists the messages as the view does, the latest first.
 func (a *app) toolMessages() []tool.Message {
 	list := make([]tool.Message, 0, len(a.messages))
 	for _, m := range slices.Backward(a.messages) {
-		item := tool.Message{ID: m.ID, Time: m.Time, Kind: m.Kind, Title: m.Title, Text: m.Text, Replies: m.Replies}
+		item := tool.Message{ID: m.ID, Time: m.Time, Kind: m.Kind, Title: m.Title, Text: m.Text, Task: m.Task, Replies: m.Replies}
 		if m.Project != nil {
 			item.Project = m.Project.Name
 		}

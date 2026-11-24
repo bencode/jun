@@ -71,6 +71,12 @@ func (a *app) handleTool(stop <-chan struct{}, req tool.Request, callers []int) 
 	if req.Op == tool.OpMessage && req.Target != nil && req.Target.Kind == tool.TargetFile && !a.await(stop, onUI, a.reposLoading) {
 		return closing
 	}
+	if req.Item == nil && (req.Op == tool.OpGoal || req.Op == tool.OpTask || slices.Contains(tool.GoalOps, req.Op)) {
+		return tool.Response{Error: fmt.Sprintf("%s needs the goal or task", req.Op)}
+	}
+	if req.Filter == nil {
+		req.Filter = &tool.Filter{}
+	}
 	if answer, ok := a.uiAnswers(req, callers)[req.Op]; ok {
 		var resp tool.Response
 		if !onUI(func() { resp = answer() }) {
@@ -127,6 +133,18 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		}
 		return tool.Response{Terminal: uint64(id)}
 	}
+	created := func(id uint64, err error) tool.Response {
+		if err != nil {
+			return outcome(err)
+		}
+		return tool.Response{Created: id}
+	}
+	detail := func(goals []tool.Goal, tasks []tool.Task, err error) tool.Response {
+		if err != nil {
+			return outcome(err)
+		}
+		return tool.Response{Goals: goals, Tasks: tasks}
+	}
 	layout := func() tool.Response { return a.toolLayout(req, callers) }
 	return map[tool.Op]func() tool.Response{
 		tool.OpTerminals: func() tool.Response { return tool.Response{Terminals: a.toolTerminals(callers, req.Caller)} },
@@ -136,10 +154,7 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpForward:   layout,
 		tool.OpMessage: func() tool.Response {
 			id, err := a.toolMessage(req, callers)
-			if err != nil {
-				return outcome(err)
-			}
-			return tool.Response{Created: id}
+			return created(id, err)
 		},
 		tool.OpMessages:       func() tool.Response { return tool.Response{Messages: a.toolMessages()} },
 		tool.OpUpdateMessage:  func() tool.Response { return outcome(a.toolUpdateMessage(req, callers)) },
@@ -150,6 +165,25 @@ func (a *app) uiAnswers(req tool.Request, callers []int) map[tool.Op]func() tool
 		tool.OpJoin:           func() tool.Response { return outcome(a.toolJoin(req, callers)) },
 		tool.OpLeave:          func() tool.Response { return outcome(a.toolLeave(req, callers)) },
 		tool.OpUpdateTerminal: func() tool.Response { return outcome(a.toolUpdateTerminal(req, callers)) },
+		tool.OpGoals:          func() tool.Response { return tool.Response{Goals: a.toolGoals(req)} },
+		tool.OpGoal:           func() tool.Response { return detail(a.toolGoalDetail(req)) },
+		tool.OpAddGoal: func() tool.Response {
+			id, err := a.toolAddGoal(req, callers)
+			return created(uint64(id), err)
+		},
+		tool.OpUpdateGoal: func() tool.Response { return outcome(a.toolUpdateGoal(req, callers)) },
+		tool.OpDeleteGoal: func() tool.Response { return outcome(a.toolDeleteGoal(req, callers)) },
+		tool.OpTasks: func() tool.Response {
+			tasks, err := a.toolTasks(req)
+			return detail(nil, tasks, err)
+		},
+		tool.OpTask: func() tool.Response { return detail(a.toolTaskDetail(req)) },
+		tool.OpAddTask: func() tool.Response {
+			id, err := a.toolAddTask(req, callers)
+			return created(uint64(id), err)
+		},
+		tool.OpUpdateTask: func() tool.Response { return outcome(a.toolUpdateTask(req, callers)) },
+		tool.OpDeleteTask: func() tool.Response { return outcome(a.toolDeleteTask(req, callers)) },
 		tool.OpRoles: func() tool.Response {
 			list, err := a.toolRoles(req)
 			if err != nil {
