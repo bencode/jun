@@ -61,6 +61,12 @@ func parse(args []string, stdin io.Reader) (Request, error) {
 	if command == "message" {
 		return parseMessage(rest, stdin)
 	}
+	if command == "goal" {
+		return parseGoal(rest, stdin)
+	}
+	if command == "task" {
+		return parseTask(rest, stdin)
+	}
 	if command == "run" {
 		return parseRun(rest)
 	}
@@ -157,6 +163,10 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 			req.Target = &target
 			return nil
 		},
+		"--task": func(id string) (err error) {
+			req.Task, err = itemID("task", id)
+			return err
+		},
 	}
 	for len(args) > 1 && flags[args[0]] != nil {
 		if err := flags[args[0]](args[1]); err != nil {
@@ -169,7 +179,7 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 		return req, nil
 	}
 	if len(args) != 1 || isFlag(args[0]) {
-		return Request{}, errors.New("message takes a text, or - for standard input, after --title <title>, --kind <kind> and --link <resource>, all optional")
+		return Request{}, errors.New("message takes a text, or - for standard input, after --title <title>, --kind <kind>, --link <resource> and --task <id>, all optional")
 	}
 	text, err := readText(args[0], stdin, MaxMessage)
 	if errors.Is(err, errBlank) && req.Title != "" {
@@ -183,27 +193,34 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 }
 
 // parseUpdateMessage reads what follows `message update`: an id, then a
-// kind, a reply or both.
+// kind, a task, a reply or any of them.
 func parseUpdateMessage(args []string, stdin io.Reader) (Request, error) {
+	const usage = "message update takes an id, then --kind <kind>, --task <id>, a text or - for standard input, at least one"
 	id, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil || id == 0 {
 		return Request{}, fmt.Errorf("message id must be a positive integer: %q", args[0])
 	}
 	req, rest := Request{Op: OpUpdateMessage, Message: id}, args[1:]
-	if len(rest) > 1 && rest[0] == "--kind" {
-		if req.Kind, err = parseKind(rest[1]); err != nil {
+	for len(rest) > 1 && (rest[0] == "--kind" && req.Kind == "" || rest[0] == "--task" && req.Task == 0) {
+		if rest[0] == "--kind" {
+			req.Kind, err = parseKind(rest[1])
+		} else {
+			req.Task, err = itemID("task", rest[1])
+		}
+		if err != nil {
 			return Request{}, err
 		}
 		rest = rest[2:]
 	}
-	if len(rest) == 0 && req.Kind != "" {
+	changed := req.Kind != "" || req.Task != 0
+	if len(rest) == 0 && changed {
 		return req, nil
 	}
 	if len(rest) != 1 || isFlag(rest[0]) {
-		return Request{}, errors.New("message update takes an id, then --kind <kind>, a text or - for standard input, or both")
+		return Request{}, errors.New(usage)
 	}
 	text, err := readText(rest[0], stdin, MaxMessage)
-	if errors.Is(err, errBlank) && req.Kind != "" {
+	if errors.Is(err, errBlank) && changed {
 		return req, nil
 	}
 	if err != nil {

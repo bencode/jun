@@ -26,6 +26,7 @@ const (
 	MaxReplies   = 50      // the replies a message keeps, the latest
 	MaxName      = 64      // the bytes a terminal's name takes
 	MaxTimerText = 500     // the bytes a terminal's timer text takes
+	MaxOutcome   = 500     // the bytes a goal's or task's outcome takes
 )
 
 type Op string
@@ -60,7 +61,97 @@ const (
 	// before the ones it leads; with Request.Mine, the role of the caller's
 	// session, if any.
 	OpRoles Op = "roles"
+	// The goals and tasks: listed by Request.Filter; one by Request.Item.ID,
+	// with the goals above it; added, updated and deleted from Request.Item.
+	OpGoals      Op = "goals"
+	OpGoal       Op = "goal"
+	OpAddGoal    Op = "add-goal"
+	OpUpdateGoal Op = "update-goal"
+	OpDeleteGoal Op = "delete-goal"
+	OpTasks      Op = "tasks"
+	OpTask       Op = "task"
+	OpAddTask    Op = "add-task"
+	OpUpdateTask Op = "update-task"
+	OpDeleteTask Op = "delete-task"
 )
+
+// GoalOps change the goals and tasks: the caller's sessions go with them,
+// for a task to record the agent's.
+var GoalOps = []Op{OpAddGoal, OpUpdateGoal, OpDeleteGoal, OpAddTask, OpUpdateTask, OpDeleteTask}
+
+// Item is what goal and task add and update set: nil leaves a field as it
+// is, "" clears an optional one. Link is file:<absolute path> or
+// project:<name>, the resources that last.
+type Item struct {
+	ID      int     `json:"id,omitempty"`
+	Parent  *int    `json:"parent,omitempty"` // a goal's, 0 for none
+	Goal    *int    `json:"goal,omitempty"`   // a task's
+	Title   *string `json:"title,omitempty"`
+	Outcome *string `json:"outcome,omitempty"`
+	Text    *string `json:"text,omitempty"`
+	Link    *string `json:"link,omitempty"`
+	Due     *string `json:"due,omitempty"`
+	Period  *string `json:"period,omitempty"`
+	Project *string `json:"project,omitempty"`
+	Owner   *string `json:"owner,omitempty"`
+	State   *string `json:"state,omitempty"`
+	Rank    int     `json:"rank,omitempty"` // the place among its siblings, from 1
+}
+
+// Filter picks goals or tasks: those not ended, unless All or States says;
+// the others narrow it.
+type Filter struct {
+	All     bool     `json:"all,omitempty"`
+	States  []string `json:"states,omitempty"`
+	Owner   string   `json:"owner,omitempty"`
+	Project string   `json:"project,omitempty"`
+	Goal    int      `json:"goal,omitempty"` // that goal's tasks and those under it
+	Match   string   `json:"match,omitempty"`
+}
+
+// Goal is a goal as goal and task give it.
+type Goal struct {
+	ID      int        `json:"id"`
+	Parent  int        `json:"parent,omitempty"`
+	Title   string     `json:"title"`
+	Outcome string     `json:"outcome"`
+	Text    string     `json:"text,omitempty"`
+	Link    string     `json:"link,omitempty"`
+	Due     string     `json:"due,omitempty"`
+	Period  string     `json:"period,omitempty"`
+	State   string     `json:"state"`
+	Created time.Time  `json:"createdAt"`
+	Ended   *time.Time `json:"endedAt,omitempty"`
+}
+
+// Task is a task as task gives it; a list leaves out its text and
+// sessions.
+type Task struct {
+	ID       int           `json:"id"`
+	Goal     int           `json:"goal"`
+	Title    string        `json:"title"`
+	Outcome  string        `json:"outcome,omitempty"`
+	Text     string        `json:"text,omitempty"`
+	Link     string        `json:"link,omitempty"`
+	Project  string        `json:"project,omitempty"`
+	Owner    string        `json:"owner,omitempty"`
+	State    string        `json:"state"`
+	Created  time.Time     `json:"createdAt"`
+	Started  *time.Time    `json:"startedAt,omitempty"`
+	Ended    *time.Time    `json:"endedAt,omitempty"`
+	Sessions []TaskSession `json:"sessions,omitempty"`
+}
+
+// TaskSession is an agent's session that touched a task.
+type TaskSession struct {
+	Role   string    `json:"role,omitempty"` // its role then
+	Agent  string    `json:"agent"`
+	ID     string    `json:"id"`
+	Home   string    `json:"home,omitempty"`
+	Dir    string    `json:"dir"`
+	At     time.Time `json:"at"` // when it first touched the task
+	Resume string    `json:"resume,omitempty"`
+}
 
 // Sessions are the agent sessions a command runs in, from the variables
 // agents give their commands: a name given from there records the session
@@ -156,6 +247,7 @@ type Message struct {
 	Text    string      `json:"text,omitempty"`
 	Project string      `json:"project,omitempty"`
 	Link    string      `json:"link,omitempty"` // as --link takes it
+	Task    int         `json:"task,omitempty"` // the task it is about
 	Replies []Reply     `json:"replies,omitempty"`
 }
 
@@ -194,6 +286,9 @@ type Request struct {
 	Away     bool      `json:"away,omitempty"`    // roles: the open roles no running terminal has
 	At       time.Time `json:"at,omitzero"`       // update-terminal: when a timer first fires
 	NoTimer  bool      `json:"noTimer,omitempty"` // update-terminal: drops the terminal's timer
+	Item     *Item     `json:"item,omitempty"`    // goal and task ops
+	Filter   *Filter   `json:"filter,omitempty"`  // goals, tasks
+	Task     int       `json:"task,omitempty"`    // message, update-message: the task it is about
 }
 
 type Response struct {
@@ -203,9 +298,11 @@ type Response struct {
 	Message   string     `json:"message,omitempty"`  // what a change done leaves pending, such as the user's confirmation
 	Terminal  uint64     `json:"terminal,omitempty"` // run, loop: the new terminal, which is the loop's id
 	Loops     []Loop     `json:"loops,omitempty"`
-	Created   uint64     `json:"created,omitempty"` // message: the new message's ID
+	Created   uint64     `json:"created,omitempty"` // message, goal add, task add: the new one's ID
 	Messages  []Message  `json:"messages,omitempty"`
 	Roles     []Role     `json:"roles,omitempty"`
+	Goals     []Goal     `json:"goals,omitempty"` // goals; goal and task: the goals above, the top one first
+	Tasks     []Task     `json:"tasks,omitempty"`
 }
 
 // Role is a name that lasts, as its sessions are its memory.

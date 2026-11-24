@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,5 +88,27 @@ func WriteFile(path string, data []byte) (err error) {
 	if err := os.Rename(file.Name(), path); err != nil {
 		return fmt.Errorf("replace %q: %w", path, err)
 	}
+	return nil
+}
+
+// JSONLines writes the array an element a line, for a person to read.
+func JSONLines[T any](buf *bytes.Buffer, items []T) error {
+	if len(items) == 0 {
+		buf.WriteString("[]")
+		return nil
+	}
+	buf.WriteString("[")
+	for i, item := range items {
+		line, err := json.Marshal(item)
+		if err != nil {
+			return err
+		}
+		if i > 0 {
+			buf.WriteString(",")
+		}
+		buf.WriteString("\n    ")
+		buf.Write(line)
+	}
+	buf.WriteString("\n  ]")
 	return nil
 }
