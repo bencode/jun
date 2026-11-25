@@ -162,7 +162,7 @@ func (a *app) taskHeading(r taskRow) string {
 func (a *app) goalRowContent(c *ui.Context, g goals.Goal, chosen bool) {
 	muted := a.messageMuted(chosen)
 	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
-	title := ui.Text(c, g.Title).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
+	title := ui.Text(c, g.Title).FontWeight(600).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if g.State != goals.GoalOpen {
 		title.TextColor(muted)
 	}
