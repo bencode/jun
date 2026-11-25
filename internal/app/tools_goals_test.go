@@ -37,7 +37,7 @@ func TestTasksRecordTheAgentsThatTouchThem(t *testing.T) {
 	if _, err := add(tool.Item{Project: ptr("web")}); err == nil {
 		t.Fatal("project that is not there taken")
 	}
-	task, err := add(tool.Item{Owner: ptr("高斯")})
+	task, err := add(tool.Item{Owner: ptr("高斯"), Priority: ptr("P1")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,8 @@ func TestTasksRecordTheAgentsThatTouchThem(t *testing.T) {
 		item.ID = task
 		return a.toolUpdateTask(tool.Request{Item: &item, Sessions: sessions}, from)
 	}
-	if err := update(shellOf(t, claude), own, tool.Item{State: ptr("doing")}); err != nil {
+	// P2, the default, is kept as none.
+	if err := update(shellOf(t, claude), own, tool.Item{State: ptr("doing"), Priority: ptr("P2")}); err != nil {
 		t.Fatal(err)
 	}
 	// Codex, in a terminal of no role, works on it too; a shell with no
@@ -73,7 +74,7 @@ func TestTasksRecordTheAgentsThatTouchThem(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := tasks[0]
-		if len(goals) != 1 || got.Owner != "高斯" || got.Project != "Jun" || got.State != "doing" || got.Started == nil ||
+		if len(goals) != 1 || got.Owner != "高斯" || got.Project != "Jun" || got.State != "doing" || got.Priority != "" || got.Started == nil ||
 			len(got.Sessions) != 2 || got.Sessions[0].Role != "高斯" || got.Sessions[0].ID != "c1" ||
 			got.Sessions[1].Role != "" || got.Sessions[1].Agent != "codex" || got.Sessions[0].Resume == "" {
 			t.Fatalf("task: %+v", got)

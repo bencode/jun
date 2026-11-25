@@ -161,6 +161,7 @@ func TestChangesThatBreakTheBookAreRefused(t *testing.T) {
 		"due":          second(UpdateGoal(b, g, GoalChange{Due: ptr("11-28")}, start)),
 		"week 53":      second(UpdateGoal(b, g, GoalChange{Period: ptr("2025-W53")}, start)),
 		"state":        second(UpdateTask(b, id, TaskChange{State: ptr(TaskState("later"))}, start)),
+		"priority":     second(UpdateTask(b, id, TaskChange{Priority: ptr(Priority("P3"))}, start)),
 		"missing task": second(UpdateTask(b, 99, TaskChange{}, start)),
 	}
 	for name, err := range refused {
@@ -171,6 +172,12 @@ func TestChangesThatBreakTheBookAreRefused(t *testing.T) {
 	for _, period := range []string{"2026-11", "2026-W53", "2026-W48", "2026-11-23"} {
 		if _, err := UpdateGoal(b, g, GoalChange{Period: ptr(period)}, start); err != nil {
 			t.Errorf("period %s: %v", period, err)
+		}
+	}
+	for _, p := range []Priority{P0, P1, P2} {
+		next := must[Book](t)(UpdateTask(b, id, TaskChange{Priority: ptr(p)}, start))
+		if task, _ := next.Task(id); task.Priority != p {
+			t.Errorf("priority %q: got %q", p, task.Priority)
 		}
 	}
 	if err := Check(b); err != nil || len(b.Goals) != 2 || len(b.Tasks) != 1 {

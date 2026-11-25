@@ -221,20 +221,23 @@ do them. Any terminal may change any of them.
       and doing, unless --all or --state says (todo, doing, done,
       dropped). --goal keeps that goal's and those of the goals under it;
       the others as goal's; all of them together. Each has id, goal,
-      title, outcome, link, project, owner, state, createdAt, startedAt
-      (when it first became doing) and endedAt; task <id> adds text and
-      sessions.
+      title, outcome, link, project, owner, state, priority (P0 or P1;
+      none is P2), createdAt, startedAt (when it first became doing) and
+      endedAt; task <id> adds text and sessions.
   jun tool task <id>
       {"goals": the task's goal and those above it, the top one first,
       "tasks": the task}, with sessions: the agents' sessions that touched
       it, the first first, each with its role then, agent, id, home, dir,
       at and resume, the shell command that resumes it.
-  jun tool task add --goal <id> [--owner <role>] [--project <name>] [--outcome <outcome>]
-                    [--link <resource>] [--text <text>|-] <title>
+  jun tool task add --goal <id> [--owner <role>] [--project <name>] [--priority P0|P1|P2]
+                    [--outcome <outcome>] [--link <resource>] [--text <text>|-] <title>
       Adds a task to do, the last of its goal's, and prints its id. The
       owner is a role's name; the project is the caller's unless given.
-  jun tool task update <id> [--state todo|doing|done|dropped] [--owner <role>]
-                    [--goal <id>] [--project <name>] [--title <title>]
+      The priority says how much it matters beside the other tasks,
+      whatever their goals: P0 urgent, P1 important, P2, the default, as
+      the rest.
+  jun tool task update <id> [--state todo|doing|done|dropped] [--priority P0|P1|P2]
+                    [--owner <role>] [--goal <id>] [--project <name>] [--title <title>]
                     [--outcome <outcome>] [--link <resource>] [--text <text>|-] [--rank <n>]
       Changes the task, as goal update does; '' clears owner, outcome,
       link and text. To take one: --owner <your name> --state doing. Jun

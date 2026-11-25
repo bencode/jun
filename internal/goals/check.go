@@ -68,6 +68,9 @@ func checkTask(t Task) error {
 	if (t.State == TaskDone || t.State == TaskDropped) != (t.Ended != nil) {
 		return fmt.Errorf("endedAt goes with done and dropped only")
 	}
+	if !slices.Contains(Priorities, t.Priority) {
+		return fmt.Errorf("no priority %q", t.Priority)
+	}
 	if t.State == TaskTodo && t.Started != nil {
 		return fmt.Errorf("a task to do has no startedAt")
 	}
