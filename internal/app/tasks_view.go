@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,7 +162,7 @@ func (a *app) taskHeading(r taskRow) string {
 
 func (a *app) goalRowContent(c *ui.Context, g goals.Goal, chosen bool) {
 	muted := a.messageMuted(chosen)
-	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, fmt.Sprintf("G%d", a.goals.LastGoal))).Shrink(0)
+	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, "G", a.goals.LastGoal)).Shrink(0)
 	title := ui.Text(c, g.Title).FontWeight(600).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if g.State != goals.GoalOpen {
 		title.TextColor(muted)
@@ -181,7 +182,7 @@ func (a *app) goalWhen(g goals.Goal) string {
 func (a *app) taskRowContent(c *ui.Context, t goals.Task, chosen bool) {
 	muted := a.messageMuted(chosen)
 	ui.Text(c, taskStateMark[t.State]).TextColor(a.taskStateColor(t.State, chosen)).Width(a.theme.Rem(1)).Shrink(0)
-	ui.Text(c, taskNumber(t.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, taskNumber(a.goals.LastTask))).Shrink(0)
+	ui.Text(c, taskNumber(t.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, "T", a.goals.LastTask)).Shrink(0)
 	title := ui.Text(c, t.Title).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if taskEnded(t) && !chosen {
 		title.TextColor(a.theme.TextMuted)
@@ -197,9 +198,11 @@ func (a *app) taskRowContent(c *ui.Context, t goals.Task, chosen bool) {
 	}
 }
 
-// numberWidth is the width of the widest number given yet, for the titles
-// after the numbers to line up.
-func numberWidth(c *ui.Context, widest string) float32 {
+// numberWidth is the width of a number with as many digits as the last
+// given, all 0s, one of the widest digits, for the titles after the
+// numbers to line up where a font's digits differ in width.
+func numberWidth(c *ui.Context, prefix string, last int) float32 {
+	widest := prefix + strings.Repeat("0", len(strconv.Itoa(last)))
 	w, _ := c.MeasureText(0, ui.Span{Text: widest, Size: theme.Caption})
 	return w
 }
