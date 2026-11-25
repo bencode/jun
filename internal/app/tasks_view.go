@@ -119,11 +119,11 @@ func (a *app) toggleFold(r taskRow, open bool) {
 
 // taskRowView draws the row and reports a click on it.
 func (a *app) taskRowView(c *ui.Context, r taskRow, chosen bool) bool {
-	muted, caption, size := a.messageMuted(chosen), a.messageCaption(), a.textSize()
+	muted := a.messageMuted(chosen)
 	row := ui.Column(c).FillWidth().Padding(4, 6, 4, 6+float32(r.Depth)*memberIndent).Radius(4).Gap(2)
 	row.Children(func() {
 		if r.Kind == rowHeading {
-			ui.Text(c, a.taskHeading(r)).FontSize(caption).Bold().TextColor(muted)
+			ui.Text(c, a.taskHeading(r)).FontSize(theme.Caption).TextColor(muted)
 			return
 		}
 		if r.Kind == rowEnded || r.Kind == rowEndedGoals {
@@ -132,7 +132,7 @@ func (a *app) taskRowView(c *ui.Context, r taskRow, chosen bool) bool {
 			if r.Kind == rowEndedGoals {
 				label = a.text("Ended goals %d", "已结束的目标 %d")
 			}
-			ui.Text(c, fmt.Sprintf(label, r.Count)+mark).FontSize(caption).TextColor(muted)
+			ui.Text(c, fmt.Sprintf(label, r.Count)+mark).FontSize(theme.Caption).TextColor(muted)
 			return
 		}
 		ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Center).Children(func() {
@@ -143,10 +143,10 @@ func (a *app) taskRowView(c *ui.Context, r taskRow, chosen bool) bool {
 			a.taskRowContent(c, r.Task, chosen)
 		})
 		if r.Now {
-			ui.Text(c, r.Goal.Title).FontSize(caption).TextColor(muted).SingleLine().Ellipsis("…").Padding(0, 0, 0, size+messageGap)
+			ui.Text(c, r.Goal.Title).FontSize(theme.Caption).TextColor(muted).SingleLine().Ellipsis("…").Padding(0, 0, 0, a.theme.Rem(1)+messageGap)
 		}
 		if when := a.goalWhen(r.Goal); r.Kind == rowGoal && when != "" {
-			ui.Text(c, when).FontSize(caption).TextColor(muted).SingleLine().Ellipsis("…")
+			ui.Text(c, when).FontSize(theme.Caption).TextColor(muted).SingleLine().Ellipsis("…")
 		}
 	})
 	return row.Clicked()
@@ -160,9 +160,9 @@ func (a *app) taskHeading(r taskRow) string {
 }
 
 func (a *app) goalRowContent(c *ui.Context, g goals.Goal, chosen bool) {
-	muted, caption := a.messageMuted(chosen), a.messageCaption()
-	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(caption).TextColor(muted).Shrink(0)
-	title := ui.Text(c, g.Title).FontSize(a.textSize()).Bold().SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
+	muted := a.messageMuted(chosen)
+	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
+	title := ui.Text(c, g.Title).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if g.State != goals.GoalOpen {
 		title.TextColor(muted)
 	}
@@ -179,18 +179,18 @@ func (a *app) goalWhen(g goals.Goal) string {
 }
 
 func (a *app) taskRowContent(c *ui.Context, t goals.Task, chosen bool) {
-	muted, caption := a.messageMuted(chosen), a.messageCaption()
-	ui.Text(c, taskStateMark[t.State]).FontSize(a.textSize()).TextColor(a.taskStateColor(t.State, chosen)).Width(a.textSize()).Shrink(0)
-	ui.Text(c, taskNumber(t.ID)).FontSize(caption).TextColor(muted).Shrink(0)
-	title := ui.Text(c, t.Title).FontSize(a.textSize()).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
+	muted := a.messageMuted(chosen)
+	ui.Text(c, taskStateMark[t.State]).TextColor(a.taskStateColor(t.State, chosen)).Width(a.theme.Rem(1)).Shrink(0)
+	ui.Text(c, taskNumber(t.ID)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
+	title := ui.Text(c, t.Title).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if taskEnded(t) && !chosen {
 		title.TextColor(a.theme.TextMuted)
 	}
 	if n := a.openAsks(t.ID); n > 0 {
-		ui.Text(c, fmt.Sprintf("ask %d", n)).FontSize(caption).Bold().TextColor(a.askColor(chosen)).Shrink(0)
+		ui.Text(c, fmt.Sprintf("ask %d", n)).FontSize(theme.Caption).Bold().TextColor(a.askColor(chosen)).Shrink(0)
 	}
 	if t.Owner != "" {
-		ui.Text(c, t.Owner).FontSize(caption).TextColor(muted).SingleLine().Shrink(0)
+		ui.Text(c, t.Owner).FontSize(theme.Caption).TextColor(muted).SingleLine().Shrink(0)
 	}
 }
 

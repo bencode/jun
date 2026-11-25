@@ -86,7 +86,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 
   - A message whose terminal has ended, or whose project is gone, cannot be clicked.
 - A long text shows four lines and a message its last three replies. **Show more** opens it where it is, and **Show less** folds it.
-- Messages use the [text size](shortcuts.md#text-size) of terminals.
+- Messages, like Agents and Tasks, keep the size of Jun's own text, whatever the [text size](shortcuts.md#text-size) of terminals.
 - **Tab** from the title of Messages, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** acts as a click, and **→** and **←** open and fold a long text.
 - Messages last until Jun quits. It keeps the last 500.
 

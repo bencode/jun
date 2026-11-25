@@ -84,10 +84,10 @@ func (a *app) messageList(c *ui.Context) {
 
 // messageRow reports a click on the row or on its fold control.
 func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (clicked bool) {
-	width, size := a.messagesWidth-2*(messagePadding+messageBorder), a.textSize()
+	width, size := a.messagesWidth-2*(messagePadding+messageBorder), a.messageSize()
 	textWidth := width
 	if m.Title == "" {
-		number, _ := c.MeasureText(0, ui.Span{Text: m.number(), Size: a.messageCaption()})
+		number, _ := c.MeasureText(0, ui.Span{Text: m.number(), Size: theme.Caption})
 		textWidth -= a.messageIconSize() + number + 2*messageGap
 	}
 	folds := messageFolds(c, m.Text, textWidth, size) || a.repliesFold(c, m, width, now)
@@ -129,10 +129,10 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 // messageFoot closes the row with its tag, fold control and age, and
 // reports a click on the control.
 func (a *app) messageFoot(c *ui.Context, m message, now time.Time, folds, chosen bool) (clicked bool) {
-	muted, caption := a.messageMuted(chosen), a.messageCaption()
+	muted := a.messageMuted(chosen)
 	ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Center).Children(func() {
 		if m.Link != nil {
-			ui.Text(c, messageLinks[m.Link.Kind].label(a, m)).FontSize(caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…").
+			ui.Text(c, messageLinks[m.Link.Kind].label(a, m)).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…").
 				MinWidth(0).Padding(1, 6).Radius(4).Background(a.theme.Surface)
 		}
 		if m.Task != 0 {
@@ -142,7 +142,7 @@ func (a *app) messageFoot(c *ui.Context, m message, now time.Time, folds, chosen
 			clicked = a.foldControl(c, m, muted) || clicked
 		}
 		ui.Spacer(c)
-		ui.Text(c, a.messageAge(now, m.Time)).FontSize(caption).TextColor(muted).Shrink(0)
+		ui.Text(c, a.messageAge(now, m.Time)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
 	})
 	return clicked
 }
@@ -157,7 +157,7 @@ func (a *app) messageTask(c *ui.Context, id int) bool {
 		label += " " + t.Title
 	}
 	tag := ui.Box(c).MinWidth(0).Shrink(1).Padding(1, 6).Radius(4).Background(a.theme.Surface).Children(func() {
-		ui.Text(c, label).FontSize(a.messageCaption()).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
+		ui.Text(c, label).FontSize(theme.Caption).TextColor(a.theme.TextMuted).SingleLine().Ellipsis("…")
 	})
 	if !ok || !tag.Clicked() {
 		return false
@@ -172,11 +172,11 @@ func (m message) name() string { return cmp.Or(m.Title, m.Text) }
 // number is what the user and agents call the message.
 func (m message) number() string { return fmt.Sprintf("M%d", m.ID) }
 
-// messageCaption is the size of what goes with a message's text, a step
-// under it, as the rest of Jun's captions are.
-func (a *app) messageCaption() float32 { return max(theme.Caption, a.textSize()-2) }
+// messageSize is the size of a message's text: the size of Jun's lists,
+// as Agents and Tasks have it, not the terminals'.
+func (a *app) messageSize() float32 { return a.theme.Rem(1) }
 
-func (a *app) messageIconSize() float32 { return a.textSize() + 1 }
+func (a *app) messageIconSize() float32 { return a.messageSize() + 1 }
 
 func (a *app) messageMuted(chosen bool) ui.Color {
 	if chosen {
@@ -186,9 +186,8 @@ func (a *app) messageMuted(chosen bool) ui.Color {
 }
 
 func (a *app) messageNumber(c *ui.Context, m message, chosen bool) {
-	caption := a.messageCaption()
-	ui.Box(c).Padding((a.textSize()-caption)/2, 0, 0, 0).Shrink(0).Children(func() { // down to the first line's middle
-		ui.Text(c, m.number()).FontSize(caption).TextColor(a.messageMuted(chosen))
+	ui.Box(c).Padding((a.messageSize()-theme.Caption)/2, 0, 0, 0).Shrink(0).Children(func() { // down to the first line's middle
+		ui.Text(c, m.number()).FontSize(theme.Caption).TextColor(a.messageMuted(chosen))
 	})
 }
 
@@ -218,7 +217,7 @@ func (a *app) foldControl(c *ui.Context, m message, color ui.Color) bool {
 		label = a.text("Show less", "收起")
 	}
 	control := ui.Box(c).Shrink(0).Padding(1, 4).Radius(4).Children(func() {
-		ui.Text(c, label).FontSize(a.messageCaption()).TextColor(color)
+		ui.Text(c, label).FontSize(theme.Caption).TextColor(color)
 	})
 	if !control.Clicked() {
 		return false

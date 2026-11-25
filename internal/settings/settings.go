@@ -22,7 +22,7 @@ type Settings struct {
 	Language string `yaml:"language,omitempty"` // "en" or "zh"
 	Theme    string `yaml:"theme,omitempty"`    // a Ghostty theme's name; Jun's own when empty
 	Font     struct {
-		Size float32 `yaml:"size,omitempty"` // terminals', file tabs' and Messages' text size in DIPs
+		Size float32 `yaml:"size,omitempty"` // terminals' and file tabs' text size in DIPs
 	} `yaml:"font,omitempty"`
 	Markdown struct {
 		Width string `yaml:"width,omitempty"` // one of MarkdownWidths; medium when empty
