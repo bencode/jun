@@ -50,7 +50,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 - The bar counts the tasks doing and to do, and **All Tasks** opens the [tab of every task](#all-tasks).
 - **Now**, on top, is the tasks doing, however long ago they started, and those that ended today, each with the title of its goal.
 - **Goals** is the open goals as a tree, each with its tasks to do and doing. Goals show their number, such as `G2`, their period and their due date.
-  - A task shows its state (○ to do, ◐ doing, ✓ done, × dropped), its number, such as `T4`, its [priority](agent-tools.md#goal-and-task) when it is `P0`, in red, or `P1`, in orange, its title, `ask N` when N messages about it still ask for you, and who follows it.
+  - A task shows its state (○ to do, ◐ doing, ✓ done, × dropped), its number, such as `T4`, its title, its [priority](agent-tools.md#goal-and-task) when it is `P0`, in red, or `P1`, in orange, `ask N` when N messages about it still ask for you, and who follows it.
   - **Ended N** under a goal folds its tasks done and dropped; **Ended goals N**, at the bottom, folds the goals done and dropped with all their tasks.
 - **Click a task** to choose it: the messages about it and the row of the agent that follows it light up. Click a fold, or a goal for its ended tasks, to open or close it.
 - **Tab** from the title of Tasks, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** opens what the task links to, else [peeks](#peek) at the agent that follows it, and **→** and **←** open and close a fold, or a goal's ended tasks.
