@@ -83,19 +83,20 @@ var GoalOps = []Op{OpAddGoal, OpUpdateGoal, OpDeleteGoal, OpAddTask, OpUpdateTas
 // is, "" clears an optional one. Link is file:<absolute path> or
 // project:<name>, the resources that last.
 type Item struct {
-	ID      int     `json:"id,omitempty"`
-	Parent  *int    `json:"parent,omitempty"` // a goal's, 0 for none
-	Goal    *int    `json:"goal,omitempty"`   // a task's
-	Title   *string `json:"title,omitempty"`
-	Outcome *string `json:"outcome,omitempty"`
-	Text    *string `json:"text,omitempty"`
-	Link    *string `json:"link,omitempty"`
-	Due     *string `json:"due,omitempty"`
-	Period  *string `json:"period,omitempty"`
-	Project *string `json:"project,omitempty"`
-	Owner   *string `json:"owner,omitempty"`
-	State   *string `json:"state,omitempty"`
-	Rank    int     `json:"rank,omitempty"` // the place among its siblings, from 1
+	ID       int     `json:"id,omitempty"`
+	Parent   *int    `json:"parent,omitempty"` // a goal's, 0 for none
+	Goal     *int    `json:"goal,omitempty"`   // a task's
+	Title    *string `json:"title,omitempty"`
+	Outcome  *string `json:"outcome,omitempty"`
+	Text     *string `json:"text,omitempty"`
+	Link     *string `json:"link,omitempty"`
+	Due      *string `json:"due,omitempty"`
+	Period   *string `json:"period,omitempty"`
+	Project  *string `json:"project,omitempty"`
+	Owner    *string `json:"owner,omitempty"`
+	State    *string `json:"state,omitempty"`
+	Priority *string `json:"priority,omitempty"` // a task's: P0, P1 or P2
+	Rank     int     `json:"rank,omitempty"`     // the place among its siblings, from 1
 }
 
 // Filter picks goals or tasks: those not ended, unless All or States says;
@@ -136,6 +137,7 @@ type Task struct {
 	Project  string        `json:"project,omitempty"`
 	Owner    string        `json:"owner,omitempty"`
 	State    string        `json:"state"`
+	Priority string        `json:"priority,omitempty"` // P0 or P1; none is P2
 	Created  time.Time     `json:"createdAt"`
 	Started  *time.Time    `json:"startedAt,omitempty"`
 	Ended    *time.Time    `json:"endedAt,omitempty"`

@@ -30,13 +30,16 @@ func parseTask(args []string, stdin io.Reader) (Request, error) {
 		name: "task", list: OpTasks, one: OpTask, add: OpAddTask, update: OpUpdateTask, remove: OpDeleteTask,
 		states:  []string{"todo", "doing", "done", "dropped"},
 		filters: []string{"--owner", "--project", "--goal", "--match"},
-		adds:    []string{"--goal", "--owner", "--project", "--outcome", "--link", "--text"},
-		updates: []string{"--state", "--owner", "--goal", "--project", "--title", "--outcome", "--link", "--text", "--rank"},
+		adds:    []string{"--goal", "--owner", "--project", "--priority", "--outcome", "--link", "--text"},
+		updates: []string{"--state", "--priority", "--owner", "--goal", "--project", "--title", "--outcome", "--link", "--text", "--rank"},
 		usage: "task takes nothing, --all or --state <state> (again for more), --owner <role>, --project <name>, --goal <id> and --match <text>; <id>; " +
-			"add --goal <id> [--owner <role>] [--project <name>] [--outcome <outcome>] [--link <resource>] [--text <text>|-] <title>; " +
-			"update <id> with --state, --owner, --goal, --project, --title, --outcome, --link, --text or --rank; or delete <id>",
+			"add --goal <id> [--owner <role>] [--project <name>] [--priority P0|P1|P2] [--outcome <outcome>] [--link <resource>] [--text <text>|-] <title>; " +
+			"update <id> with --state, --priority, --owner, --goal, --project, --title, --outcome, --link, --text or --rank; or delete <id>",
 	})
 }
+
+// priorities are what --priority takes: P0 most, P2 the default.
+var priorities = []string{"P0", "P1", "P2"}
 
 // itemCommand is what goal and task each take.
 type itemCommand struct {
@@ -139,7 +142,8 @@ func parseItemFilter(args []string, c itemCommand) (Request, error) {
 func parseItemFlags(args []string, stdin io.Reader, c itemCommand, allowed []string) (Item, []string, error) {
 	item := Item{}
 	strs := map[string]**string{"--title": &item.Title, "--outcome": &item.Outcome, "--text": &item.Text, "--link": &item.Link,
-		"--due": &item.Due, "--period": &item.Period, "--project": &item.Project, "--owner": &item.Owner, "--state": &item.State}
+		"--due": &item.Due, "--period": &item.Period, "--project": &item.Project, "--owner": &item.Owner, "--state": &item.State,
+		"--priority": &item.Priority}
 	seen := map[string]bool{}
 	for len(args) > 1 && slices.Contains(allowed, args[0]) && !seen[args[0]] {
 		flag, value := args[0], args[1]
@@ -179,6 +183,12 @@ func itemValue(flag, value string, stdin io.Reader, c itemCommand) (string, erro
 	if flag == "--state" {
 		if !slices.Contains(c.states, value) {
 			return "", fmt.Errorf("state must be one of %v, not %q", c.states, value)
+		}
+		return value, nil
+	}
+	if flag == "--priority" {
+		if !slices.Contains(priorities, value) {
+			return "", fmt.Errorf("priority must be one of %v, not %q", priorities, value)
 		}
 		return value, nil
 	}

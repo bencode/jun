@@ -60,8 +60,8 @@ When a command fails, its error says what to do next: follow it.
 | `goal add [--parent <id>] --outcome <outcome> [--due <date>] [--period <period>] [--link <resource>] [--text <text>\|-] <title>` | Adds a goal; prints its id |
 | `goal update <id> […] [--rank <n>] [--state open\|done\|dropped]` / `goal delete <id>` | Changes a goal, with the options of `add` and `--title` / takes out one nothing is under |
 | `task [--all \| --state <state>…] [--owner <role>] [--project <name>] [--goal <id>] [--match <text>]` / `task <id>` | The tasks as JSON, by their goals / a task, whole, with its goals and the `sessions` that touched it |
-| `task add --goal <id> [--owner <role>] [--project <name>] [--outcome <o>] [--link <resource>] [--text <text>\|-] <title>` | Adds a task to a goal; prints its id |
-| `task update <id> [--state todo\|doing\|done\|dropped] [--owner <role>] [--goal <id>] […] [--rank <n>]` / `task delete <id>` | Changes a task / takes out one still to do |
+| `task add --goal <id> [--owner <role>] [--project <name>] [--priority P0\|P1\|P2] [--outcome <o>] [--link <resource>] [--text <text>\|-] <title>` | Adds a task to a goal; prints its id |
+| `task update <id> [--state todo\|doing\|done\|dropped] [--priority P0\|P1\|P2] [--owner <role>] [--goal <id>] […] [--rank <n>]` / `task delete <id>` | Changes a task / takes out one still to do |
 | `run [--project <name>] [--dir <path>] [--open] <command…>` | Starts a terminal running the command, in your project or the one named; prints its id |
 | `join <id>` / `leave` | Makes the agent in that terminal your lead / drops your lead |
 | `loop <every> [--dir <path>] <command…>` | Runs the command every interval (at least `1m`) in a terminal of its own; prints the loop's id |
@@ -195,6 +195,7 @@ printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" 
 - **What you work for**: `task <id>` gives the task, then in `goals` its goal and those above it, the top one first. Each goal's `outcome` says when it is done.
 - **Your tasks**: `task --owner <your name>`; `task` alone lists the ones not ended. A list leaves out `text` and `sessions`.
 - **Taking one**: `task update <id> --owner <your name> --state doing`. When its outcome holds, `--state done`; given up, `--state dropped`. Jun keeps the times.
+- **Priority**: `--priority P0` when the user says a task is urgent, `P1` when important; `P2`, the default, for the rest. It holds across goals; `--rank` orders a goal's tasks.
 - **Breaking a goal into tasks**, as a lead: `task add --goal <id> --owner <member's name> '<title>'`, then `--rank` to order them.
 - **A message about a task**: `message --task <id> …`, so the user sees what it is for.
 - **Details** go in a file: `--link file:<path>`; a text has at most 4 KiB.

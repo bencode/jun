@@ -135,7 +135,7 @@ func (a *app) toolAddTask(req tool.Request, callers []int) (int, error) {
 		return 0, err
 	}
 	t := goals.Task{Goal: value(it.Goal), Title: value(it.Title), Outcome: value(it.Outcome), Text: value(it.Text),
-		Link: value(fields.Link), Project: value(fields.Project), Owner: value(fields.Owner)}
+		Link: value(fields.Link), Project: value(fields.Project), Owner: value(fields.Owner), Priority: value(priority(it.Priority))}
 	next, id, err := goals.AddTask(a.goals, t, toolNow())
 	if err != nil {
 		return 0, err
@@ -157,7 +157,7 @@ func (a *app) toolUpdateTask(req tool.Request, callers []int) error {
 		return err
 	}
 	c := goals.TaskChange{Title: it.Title, Outcome: it.Outcome, Text: it.Text, Link: fields.Link, Project: fields.Project,
-		Owner: fields.Owner, Goal: it.Goal, State: state[goals.TaskState](it.State), Rank: it.Rank}
+		Owner: fields.Owner, Goal: it.Goal, State: state[goals.TaskState](it.State), Priority: priority(it.Priority), Rank: it.Rank}
 	next, err := goals.UpdateTask(a.goals, it.ID, c, toolNow())
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func toolGoal(g goals.Goal) tool.Goal {
 // sessions and how to resume them, or as a list has it.
 func (a *app) toolTask(t goals.Task, whole bool) tool.Task {
 	item := tool.Task{ID: t.ID, Goal: t.Goal, Title: t.Title, Outcome: t.Outcome, Link: t.Link, Project: t.Project, Owner: t.Owner,
-		State: string(t.State), Created: t.Created, Started: t.Started, Ended: t.Ended}
+		State: string(t.State), Priority: string(t.Priority), Created: t.Created, Started: t.Started, Ended: t.Ended}
 	if !whole {
 		return item
 	}
@@ -279,6 +279,18 @@ func state[S ~string](s *string) *S {
 	}
 	v := S(*s)
 	return &v
+}
+
+// priority is the priority an option names, P2 kept as none.
+func priority(name *string) *goals.Priority {
+	if name == nil {
+		return nil
+	}
+	p := goals.Priority(*name)
+	if *name == "P2" {
+		p = goals.P2
+	}
+	return &p
 }
 
 func states[S ~string](list []string) []S { return mapped(list, func(s string) S { return S(s) }) }

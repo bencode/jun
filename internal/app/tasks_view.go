@@ -161,7 +161,7 @@ func (a *app) taskHeading(r taskRow) string {
 
 func (a *app) goalRowContent(c *ui.Context, g goals.Goal, chosen bool) {
 	muted := a.messageMuted(chosen)
-	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
+	ui.Text(c, fmt.Sprintf("G%d", g.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, fmt.Sprintf("G%d", a.goals.LastGoal))).Shrink(0)
 	title := ui.Text(c, g.Title).FontWeight(600).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if g.State != goals.GoalOpen {
 		title.TextColor(muted)
@@ -181,10 +181,13 @@ func (a *app) goalWhen(g goals.Goal) string {
 func (a *app) taskRowContent(c *ui.Context, t goals.Task, chosen bool) {
 	muted := a.messageMuted(chosen)
 	ui.Text(c, taskStateMark[t.State]).TextColor(a.taskStateColor(t.State, chosen)).Width(a.theme.Rem(1)).Shrink(0)
-	ui.Text(c, taskNumber(t.ID)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
+	ui.Text(c, taskNumber(t.ID)).FontSize(theme.Caption).TextColor(muted).MinWidth(numberWidth(c, taskNumber(a.goals.LastTask))).Shrink(0)
 	title := ui.Text(c, t.Title).SingleLine().Ellipsis("…").Grow(1).MinWidth(0)
 	if taskEnded(t) && !chosen {
 		title.TextColor(a.theme.TextMuted)
+	}
+	if t.Priority != goals.P2 {
+		ui.Text(c, string(t.Priority)).FontSize(theme.Caption).Bold().TextColor(a.priorityColor(t, chosen)).Shrink(0)
 	}
 	if n := a.openAsks(t.ID); n > 0 {
 		ui.Text(c, fmt.Sprintf("ask %d", n)).FontSize(theme.Caption).Bold().TextColor(a.askColor(chosen)).Shrink(0)
@@ -192,6 +195,13 @@ func (a *app) taskRowContent(c *ui.Context, t goals.Task, chosen bool) {
 	if t.Owner != "" {
 		ui.Text(c, t.Owner).FontSize(theme.Caption).TextColor(muted).SingleLine().Shrink(0)
 	}
+}
+
+// numberWidth is the width of the widest number given yet, for the titles
+// after the numbers to line up.
+func numberWidth(c *ui.Context, widest string) float32 {
+	w, _ := c.MeasureText(0, ui.Span{Text: widest, Size: theme.Caption})
+	return w
 }
 
 var taskStateMark = map[goals.TaskState]string{goals.TaskTodo: "○", goals.TaskDoing: "◐", goals.TaskDone: "✓", goals.TaskDropped: "×"}
@@ -202,6 +212,21 @@ func (a *app) taskStateColor(s goals.TaskState, chosen bool) ui.Color {
 	}
 	return map[goals.TaskState]ui.Color{goals.TaskTodo: a.theme.TextMuted, goals.TaskDoing: a.theme.Accent,
 		goals.TaskDone: a.theme.Success, goals.TaskDropped: a.theme.TextMuted}[s]
+}
+
+// priorityColor marks P0 as a danger and P1 as a warning, while the task
+// is open.
+func (a *app) priorityColor(t goals.Task, chosen bool) ui.Color {
+	if chosen {
+		return a.theme.AccentText
+	}
+	if taskEnded(t) {
+		return a.theme.TextMuted
+	}
+	if t.Priority == goals.P0 {
+		return a.theme.Danger
+	}
+	return a.theme.Warning
 }
 
 func (a *app) askColor(chosen bool) ui.Color {
@@ -220,7 +245,11 @@ func (a *app) taskRowLabel(r taskRow) string {
 		return fmt.Sprintf("G%d %s", r.Goal.ID, r.Goal.Title)
 	}
 	if r.Kind == rowTask {
-		return fmt.Sprintf("%s %s, %s", taskNumber(r.Task.ID), r.Task.Title, r.Task.State)
+		label := fmt.Sprintf("%s %s, %s", taskNumber(r.Task.ID), r.Task.Title, r.Task.State)
+		if r.Task.Priority != goals.P2 {
+			label += ", " + string(r.Task.Priority)
+		}
+		return label
 	}
 	return fmt.Sprintf(a.text("Ended %d", "已结束 %d"), r.Count)
 }

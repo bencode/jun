@@ -33,9 +33,20 @@ const (
 	TaskDropped TaskState = "dropped"
 )
 
+// Priority says how much a task matters beside the others, whatever
+// their goals: P0 most. P2, the default, is kept as none.
+type Priority string
+
+const (
+	P0 Priority = "P0" // urgent
+	P1 Priority = "P1" // important
+	P2 Priority = ""   // as the rest
+)
+
 var (
 	GoalStates = []GoalState{GoalOpen, GoalDone, GoalDropped}
 	TaskStates = []TaskState{TaskTodo, TaskDoing, TaskDone, TaskDropped}
+	Priorities = []Priority{P0, P1, P2}
 )
 
 // Goal is something the user means to get done. Its parent is the goal
@@ -65,6 +76,7 @@ type Task struct {
 	Project  string     `json:"project,omitempty"`
 	Owner    string     `json:"owner,omitempty"`
 	State    TaskState  `json:"state"`
+	Priority Priority   `json:"priority,omitempty"`
 	Created  time.Time  `json:"createdAt"`
 	Started  *time.Time `json:"startedAt,omitempty"` // when it first became doing
 	Ended    *time.Time `json:"endedAt,omitempty"`   // when it became done or dropped
@@ -106,6 +118,7 @@ type TaskChange struct {
 	Title, Outcome, Text, Link, Project, Owner *string
 	Goal                                       *int
 	State                                      *TaskState
+	Priority                                   *Priority
 	Rank                                       int
 }
 
@@ -209,6 +222,9 @@ func UpdateTask(b Book, id int, c TaskChange, now time.Time) (Book, error) {
 	moved := c.Goal != nil && *c.Goal != t.Goal
 	if c.Goal != nil {
 		t.Goal = *c.Goal
+	}
+	if c.Priority != nil {
+		t.Priority = *c.Priority
 	}
 	if c.State != nil && *c.State != t.State {
 		t.State, t.Ended = *c.State, endedAt(*c.State == TaskDone || *c.State == TaskDropped, now)

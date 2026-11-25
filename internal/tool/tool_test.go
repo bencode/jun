@@ -84,7 +84,8 @@ func TestMainUsage(t *testing.T) {
 		{"goal", "update", "1", "--title", ""}, {"goal", "update", "1", "--title", "a", "--title", "b"}, {"goal", "delete"}, {"goal", "delete", "1", "2"},
 		{"task", "add", "x"}, {"task", "add", "--goal", "0", "x"}, {"task", "add", "--goal", "1", "--due", "2026-11-28", "x"},
 		{"task", "update", "1", "--state", "open"}, {"task", "update", "1", "--parent", "2"}, {"task", "--goal", "x"}, {"task", "--owner", " "},
-		{"task", "--match", "a", "--match", "b"},
+		{"task", "--match", "a", "--match", "b"}, {"task", "update", "1", "--priority", "P3"}, {"task", "update", "1", "--priority", "p0"},
+		{"task", "update", "1", "--priority", ""}, {"goal", "update", "1", "--priority", "P0"},
 		{"terminals", "update"}, {"terminals", "update", "3"}, {"terminals", "update", "3", "达芬奇"}, {"terminals", "update", "0", "--name", "a"},
 		{"terminals", "update", "x", "--name", "a"}, {"terminals", "update", "3", "--name", "42"}, {"terminals", "update", "3", "--name", "a\nb"},
 		{"terminals", "update", "3", "--name", strings.Repeat("x", MaxName+1)}, {"terminals", "update", "3", "--name", "a", "b"},
@@ -148,7 +149,7 @@ func TestGoalAndTaskCommands(t *testing.T) {
 	prints := map[string][]string{
 		"3\n": {"goal", "add", "--parent", "0", "--outcome", "PR merged", "--due", "2026-11-28", "--period", "2026-W48", "--link", "file:docs/a.md", "Ship goals"},
 		"8\n": {"task", "add", "--goal", "3", "--owner", "高斯", "--text", "-", "Write the parser"},
-		"":    {"task", "update", "8", "--owner", "高斯", "--state", "doing", "--rank", "1", "--link", ""},
+		"":    {"task", "update", "8", "--owner", "高斯", "--state", "doing", "--priority", "P0", "--rank", "1", "--link", ""},
 	}
 	for want, args := range prints {
 		if code, out := withSession("Line one\nLine two\n", args...); code != 0 || out != want {
@@ -191,7 +192,7 @@ func TestGoalAndTaskCommands(t *testing.T) {
 		OpAddGoal: {{Op: OpAddGoal, Sessions: session, Item: &Item{Parent: ptr(0), Outcome: ptr("PR merged"), Due: ptr("2026-11-28"),
 			Period: ptr("2026-W48"), Link: ptr("file:" + filepath.Join(here, "docs", "a.md")), Title: ptr("Ship goals")}}},
 		OpAddTask:       {{Op: OpAddTask, Sessions: session, Item: &Item{Goal: ptr(3), Owner: ptr("高斯"), Text: ptr("Line one\nLine two"), Title: ptr("Write the parser")}}},
-		OpUpdateTask:    {{Op: OpUpdateTask, Sessions: session, Item: &Item{ID: 8, Owner: ptr("高斯"), State: ptr("doing"), Rank: 1, Link: ptr("")}}},
+		OpUpdateTask:    {{Op: OpUpdateTask, Sessions: session, Item: &Item{ID: 8, Owner: ptr("高斯"), State: ptr("doing"), Priority: ptr("P0"), Rank: 1, Link: ptr("")}}},
 		OpUpdateGoal:    {{Op: OpUpdateGoal, Sessions: session, Item: &Item{ID: 3, State: ptr("done")}}},
 		OpDeleteGoal:    {{Op: OpDeleteGoal, Sessions: session, Item: &Item{ID: 3}}},
 		OpDeleteTask:    {{Op: OpDeleteTask, Sessions: session, Item: &Item{ID: 8}}},
