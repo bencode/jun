@@ -211,24 +211,24 @@ func (a *app) allTaskLabel(r allTaskRow) string {
 
 // allTaskRowView draws the row and reports a click on it.
 func (a *app) allTaskRowView(c *ui.Context, st *allTasksState, r allTaskRow, chosen bool) bool {
-	muted, caption := a.messageMuted(chosen), a.messageCaption()
+	muted := a.messageMuted(chosen)
 	row := ui.Row(c).FillWidth().Padding(4, 6).Radius(4).Gap(messageGap).AlignItems(ui.Center)
 	row.Children(func() {
 		if r.task == nil {
 			mark := map[bool]string{false: " ▸", true: " ▾"}[st.open[r.group.Month] || st.query != ""]
-			ui.Text(c, fmt.Sprintf("%s %d%s", a.monthName(r.group.Month), len(r.group.Tasks), mark)).FontSize(caption).Bold().TextColor(muted)
+			ui.Text(c, fmt.Sprintf("%s %d%s", a.monthName(r.group.Month), len(r.group.Tasks), mark)).FontSize(theme.Caption).TextColor(muted)
 			return
 		}
 		t := *r.task
 		a.taskRowContent(c, t, chosen)
 		if g, ok := a.goals.Goal(t.Goal); ok {
-			ui.Text(c, g.Title).FontSize(caption).TextColor(muted).SingleLine().Ellipsis("…").MaxWidth(200).Shrink(1)
+			ui.Text(c, g.Title).FontSize(theme.Caption).TextColor(muted).SingleLine().Ellipsis("…").MaxWidth(200).Shrink(1)
 		}
 		if t.Project != "" {
-			ui.Text(c, t.Project).FontSize(caption).TextColor(muted).Shrink(0)
+			ui.Text(c, t.Project).FontSize(theme.Caption).TextColor(muted).Shrink(0)
 		}
 		if t.Ended != nil {
-			ui.Text(c, t.Ended.Local().Format(time.DateOnly)).FontSize(caption).TextColor(muted).Shrink(0)
+			ui.Text(c, t.Ended.Local().Format(time.DateOnly)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
 		}
 	})
 	return row.Clicked()

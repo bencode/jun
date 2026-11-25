@@ -667,23 +667,3 @@ func TestRepliesFold(t *testing.T) {
 		t.Fatalf("opened: %v", tt.Texts())
 	}
 }
-
-func TestMessagesFoldAtTheTextSize(t *testing.T) {
-	a, tt, sessions := agentsApp(t)
-	a.state.GlobalVisible = true
-	tt.Frame()
-	tt.Frame()
-	// A title keeps the text's width, whatever the size of the row's icon.
-	post(t, a, sessions[0], tool.Request{Title: "Report", Text: strings.Repeat("word ", int(a.messagesWidth/12))})
-	tt.Frame()
-	tt.Frame()
-	if tt.HasText("Show more") {
-		t.Fatal("it folds at the default size")
-	}
-	a.prefs.Font.Size = 40
-	tt.Frame()
-	tt.Frame()
-	if !tt.HasText("Show more") {
-		t.Fatalf("it does not fold at 40: %v", tt.Texts())
-	}
-}

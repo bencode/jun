@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/bencode/jun/internal/theme"
 	"github.com/bencode/jun/internal/tool"
 	"github.com/egoist/mygo/ui"
 )
@@ -24,7 +25,7 @@ func shownReplies(m message) []tool.Reply {
 // replyWidth is the room a reply's text has beside its age, in a row of the
 // width, past the indent and the line.
 func (a *app) replyWidth(c *ui.Context, width float32, age string) float32 {
-	measured, _ := c.MeasureText(0, ui.Span{Text: age, Size: a.messageCaption()})
+	measured, _ := c.MeasureText(0, ui.Span{Text: age, Size: theme.Caption})
 	return width - a.messageIconSize() - 2*messageGap - measured
 }
 
@@ -34,7 +35,7 @@ func (a *app) repliesFold(c *ui.Context, m message, width float32, now time.Time
 		return true
 	}
 	return slices.ContainsFunc(m.Replies, func(r tool.Reply) bool {
-		return messageFolds(c, r.Text, a.replyWidth(c, width, a.messageAge(now, r.Time)), a.textSize())
+		return messageFolds(c, r.Text, a.replyWidth(c, width, a.messageAge(now, r.Time)), a.messageSize())
 	})
 }
 
@@ -44,27 +45,27 @@ func (a *app) messageReplies(c *ui.Context, m message, now time.Time, chosen boo
 	if len(m.Replies) == 0 {
 		return
 	}
-	icon, caption, muted := a.messageIconSize(), a.messageCaption(), a.messageMuted(chosen)
+	icon, muted := a.messageIconSize(), a.messageMuted(chosen)
 	shown := shownReplies(m)
 	ui.Row(c).FillWidth().Gap(icon/2+messageGap-1).AlignItems(ui.Stretch).Padding(0, 0, 0, icon/2).Children(func() {
 		ui.Box(c).Width(1).Shrink(0).Background(a.theme.Border)
 		ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
 			if hidden := len(m.Replies) - len(shown); hidden > 0 {
-				ui.Text(c, fmt.Sprintf(a.text("%d earlier", "还有 %d 条"), hidden)).FontSize(caption).TextColor(muted)
+				ui.Text(c, fmt.Sprintf(a.text("%d earlier", "还有 %d 条"), hidden)).FontSize(theme.Caption).TextColor(muted)
 			}
 			for _, r := range shown {
-				a.messageReply(c, r, m.Whole, now, caption, muted)
+				a.messageReply(c, r, m.Whole, now, muted)
 			}
 		})
 	})
 }
 
-func (a *app) messageReply(c *ui.Context, r tool.Reply, whole bool, now time.Time, caption float32, muted ui.Color) {
+func (a *app) messageReply(c *ui.Context, r tool.Reply, whole bool, now time.Time, muted ui.Color) {
 	ui.Row(c).FillWidth().Gap(messageGap).AlignItems(ui.Start).Children(func() {
-		text := ui.Text(c, r.Text).FontSize(a.textSize()).LineHeight(1.4).Grow(1).MinWidth(0)
+		text := ui.Text(c, r.Text).FontSize(a.messageSize()).LineHeight(1.4).Grow(1).MinWidth(0)
 		if !whole {
 			text.MaxLines(messageLines)
 		}
-		ui.Text(c, a.messageAge(now, r.Time)).FontSize(caption).TextColor(muted).Shrink(0)
+		ui.Text(c, a.messageAge(now, r.Time)).FontSize(theme.Caption).TextColor(muted).Shrink(0)
 	})
 }
