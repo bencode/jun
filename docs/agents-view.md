@@ -88,6 +88,7 @@ The **Agents** view, in Global, shows every coding agent running in Jun's termin
 - A long text shows four lines and a message its last three replies. **Show more** opens it where it is, and **Show less** folds it.
 - Messages, like Agents and Tasks, keep the size of Jun's own text, whatever the [text size](shortcuts.md#text-size) of terminals.
 - **Tab** from the title of Messages, past its ⋯ if it has one, reaches the list: **↑** and **↓** move through it, **↩** acts as a click, and **→** and **←** open and fold a long text.
+- **Delete** in a message's context menu, or **⌫** on the row chosen, takes the message out at once, with no question: a message lasts only until Jun quits anyway. The choice goes to the message below, or above for the last one. What it links to stays, and its number is not given again. Agents delete one with [`jun tool message delete`](agent-tools.md#deleting-a-message).
 - Messages last until Jun quits. It keeps the last 500.
 
 Global shows its views together, without tabs:

@@ -19,7 +19,7 @@ const usage = "usage: jun tool help | terminals | watch |\n" +
 	"  terminals update <id> [--name <name>] [--every <every>] [--at <HH:MM>] [--text <text>] [--no-timer] |\n" +
 	"  screen <id> [--lines N] | open <target> [--in <perspective>] [--peek] | close <target> | back | forward |\n" +
 	"  send <id> <text> | send <id> - | message [--title <title>] [--kind <kind>] [--link <resource>] [<text|->] |\n" +
-	"  message | message update <id> [--kind <kind>] [--task <id>] [<text|->] |\n" +
+	"  message | message update <id> [--kind <kind>] [--task <id>] [<text|->] | message delete <id> |\n" +
 	"  goal [--all | --state <state>…] [--match <text>] | goal <id> | goal add … <title> | goal update <id> … | goal delete <id> |\n" +
 	"  task [--all | --state <state>…] [--owner <role>] [--project <name>] [--goal <id>] [--match <text>] |\n" +
 	"  task <id> | task add --goal <id> … <title> | task update <id> … | task delete <id> |\n" +
@@ -177,6 +177,11 @@ Sending:
       it, or any of them: ask becoming done tells the user it is handled. A reply moves
       the message to the top; a message keeps its last 50. Any terminal
       may, whoever sent it. No such message is status 1. Prints nothing.
+  jun tool message delete <id>
+      Takes the message out, for one sent by mistake. A matter handled
+      is no mistake: make its message done, for the user to read. Its
+      number is not given again. Any terminal may, whoever sent it. No
+      such message is status 1. Prints nothing.
   jun tool message
       The messages, the latest first, as a JSON array: id, time, kind,
       title, text, project, link, as --link takes it, task, and replies,

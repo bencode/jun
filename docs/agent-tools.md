@@ -35,6 +35,7 @@ Or copy the folders in `skills/` to `~/.claude/skills/` for Claude Code (`$CLAUD
 | `jun tool send <id> <text>` / `jun tool send <id> -` | Submits the text to the agent in the terminal, or holds it while the user is typing there. Prints nothing, `sent, not started yet` or `held: …`. |
 | `jun tool message [--title <title>] [--kind <kind>] [--link <resource>] <text>`, or `-` for the text | Shows the text to the user, in [Messages](agents-view.md#messages). Prints the message's id. |
 | `jun tool message update <id> [--kind <kind>] [--task <id>] [<text>]`, or `-` for the text | Changes the message's kind or task, adds a reply, or any of them. Prints nothing. |
+| `jun tool message delete <id>` | Takes the message out, as one sent by mistake. Prints nothing. |
 | `jun tool message` | The messages, as a JSON array, the latest first |
 | `jun tool goal [--all \| --state <state>…] [--match <text>]` / `goal <id>` | The [goals](#goal-and-task), as a JSON array, each followed by those under it / a goal with those above it and its tasks |
 | `jun tool goal add …` / `goal update <id> …` / `goal delete <id>` | Adds a goal and prints its id / changes it / takes it out. The others print nothing. |
@@ -234,6 +235,19 @@ Opening another terminal gives it the focus, so you are then with that terminal:
 - **The text**: as for `message`. A message keeps its last 50 replies.
 - **Who may update**: any terminal of Jun, whoever sent the message. Outside Jun's terminals it is refused.
 - **A message that does not exist** is status 1, as is one Jun no longer keeps.
+
+#### Deleting a message
+
+`message delete` takes a message out of Messages, for one sent by mistake or by a loop gone wrong. The user can do the same in [Messages](agents-view.md#messages).
+
+```sh
+"$JUN_BIN" tool message delete 12
+```
+
+- **A matter handled is no mistake**: make its message `done`, for the user to read, rather than deleting it.
+- **Its number** is not given again: the next message still gets the next number, and `update` or `delete` of `12` is then status 1, as for a message that does not exist.
+- **Only the message goes**: the terminal, Diff, file or project it links to stays as it was, and so does its task.
+- **Who may delete**: any terminal of Jun, whoever sent the message. Outside Jun's terminals it is refused.
 
 #### Reading messages back
 

@@ -77,6 +77,7 @@ func TestMainUsage(t *testing.T) {
 		{"roles", "--open", "x"}, {"roles", "--team"}, {"roles", "--team", "a", "b"}, {"roles", "--team", "42"},
 		{"join"}, {"join", "0"}, {"join", "x"}, {"join", "1", "2"}, {"leave", "1"},
 		{"message", "--task", "0", "hi"}, {"message", "update", "3", "--task", "x"},
+		{"message", "delete", "0"}, {"message", "delete", "x"}, {"message", "delete", "7", "8"},
 		{"goal", "0"}, {"goal", "x"}, {"goal", "--all", "--state", "open"}, {"goal", "--state", "later"}, {"goal", "--owner", "a"},
 		{"goal", "add"}, {"task", "update"}, {"goal", "add", "x"}, {"goal", "add", "--outcome", "o"}, {"goal", "add", "--outcome", "o", "a", "b"}, {"goal", "add", "--goal", "1", "--outcome", "o", "x"},
 		{"goal", "add", "--outcome", "a\nb", "x"}, {"goal", "add", "--outcome", "o", "--link", "terminal:3", "x"}, {"goal", "add", "--outcome", "o", "--parent", "-1", "x"},
@@ -324,6 +325,12 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 	if code, _, _ := run(path, "message", "update"); code != 0 {
 		t.Fatalf("the one word update is a text: %d", code)
 	}
+	if code, out, _ := run(path, "message", "delete", "7"); code != 0 || out != "" {
+		t.Fatalf("delete: %d %q", code, out)
+	}
+	if code, _, _ := run(path, "message", "delete"); code != 0 {
+		t.Fatalf("the one word delete is a text: %d", code)
+	}
 	if code, _, _ := run(path, "message", "--title", "Done"); code != 0 {
 		t.Fatalf("message with a title alone: %d", code)
 	}
@@ -399,6 +406,7 @@ func TestToolsAnswerOverTheSocket(t *testing.T) {
 		{Op: OpMessage, Title: "Asks", Kind: MessageAsk, Target: &Target{Kind: TargetTerminal, ID: 3}, Text: "It waits"},
 		{Op: OpMessages}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone, Text: "Answered"}, {Op: OpUpdateMessage, Message: 7, Kind: MessageDone},
 		{Op: OpUpdateMessage, Message: 7, Text: "a\nb"}, {Op: OpMessage, Text: "update"},
+		{Op: OpDeleteMessage, Message: 7}, {Op: OpMessage, Text: "delete"},
 		{Op: OpMessage, Title: "Done"}, {Op: OpMessage, Text: "-- deploy failed"}, {Op: OpMessage, Title: "Quiet"}, {Op: OpMessage, Text: "a\nb"},
 		{Op: OpRun, Command: "codex --full-auto", Dir: here, Open: true},
 		{Op: OpRun, Command: "codex", Project: "Web"}, {Op: OpRun, Command: "codex", Project: "web", Dir: filepath.Join(here, "sub")},

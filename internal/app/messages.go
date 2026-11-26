@@ -113,6 +113,33 @@ func (a *app) toolUpdateMessage(req tool.Request, callers []int) error {
 	return nil
 }
 
+// toolDeleteMessage takes a message out, as the user does in Messages.
+func (a *app) toolDeleteMessage(req tool.Request, callers []int) error {
+	if _, err := a.toolCaller(callers, req.Caller); err != nil {
+		return err
+	}
+	if !a.deleteMessage(req.Message) {
+		return fmt.Errorf("no message %d", req.Message)
+	}
+	return nil
+}
+
+// deleteMessage takes the message out, and reports whether there was one.
+// Its number stays used. Its row chosen, the choice goes to the next older
+// row, or the newer one past the last; the list follows any other.
+func (a *app) deleteMessage(id uint64) bool {
+	i := slices.IndexFunc(a.messages, func(m message) bool { return m.ID == id })
+	if i < 0 {
+		return false
+	}
+	row := len(a.messages) - 1 - i
+	a.messages = slices.Delete(a.messages, i, i+1)
+	if row == a.messageSelected {
+		a.messagesList.Choose(min(row, len(a.messages)-1))
+	}
+	return true
+}
+
 // checkTask tells whether the task a message is about is there: none is.
 func (a *app) checkTask(id int) error {
 	if _, ok := a.goals.Task(id); id != 0 && !ok {

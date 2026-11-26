@@ -55,6 +55,7 @@ When a command fails, its error says what to do next: follow it.
 | `back` / `forward` | Steps through where the user has been |
 | `message [--title <t>] [--kind ask\|warn\|done\|info] [--link <resource>] <text>` / `… -` | Tells the user, in Messages in Global, without disturbing them, and prints the message's id; `-` reads standard input, and with a title the text may go |
 | `message update <id> [--kind <kind>] [--task <id>] [<text>]` / `… -` | Changes the message's kind or task, adds the text as a reply, or any of them |
+| `message delete <id>` | Takes the message out of Messages, for one sent by mistake; its number is not given again |
 | `message` | The messages as JSON, the latest first: `id`, `time`, `kind`, `title`, `text`, `project`, `link`, `task`, `replies` |
 | `goal [--all \| --state <state>…] [--match <text>]` / `goal <id>` | The user's goals as JSON, each followed by those under it / a goal with those above it and its tasks |
 | `goal add [--parent <id>] --outcome <outcome> [--due <date>] [--period <period>] [--link <resource>] [--text <text>\|-] <title>` | Adds a goal; prints its id |
@@ -174,11 +175,12 @@ Give `--link` whenever the message is about something: without it, the message i
 printf '%s\n' "$long_message" | "$JUN_BIN" tool message --link "file:report.md" -
 ```
 
-**Follow a message up.** `message` prints the id; the user sees `12` as `M12`, and may call it that. A message is one matter: `ask` means the user has something to do, so when they have done it, make it `done`. Add what happens next as replies, rather than new messages. A reply moves the message to the top. Any terminal may update any message.
+**Follow a message up.** `message` prints the id; the user sees `12` as `M12`, and may call it that. A message is one matter: `ask` means the user has something to do, so when they have done it, make it `done`. Add what happens next as replies, rather than new messages. A reply moves the message to the top. Any terminal may update any message. Delete only one sent by mistake, such as a wrong link or a loop that repeated itself; a matter handled stays, as `done`, for the user to read. A deleted message's number is not given again.
 
 ```sh
 "$JUN_BIN" tool message update 12 --kind done 'You agreed; it goes on.'
 "$JUN_BIN" tool message update 12 'PR #53 is open, the tests pass.'
+"$JUN_BIN" tool message delete 13                                 # sent by mistake
 "$JUN_BIN" tool message | jq -c '.[] | select(.kind == "ask")'    # what still waits for the user
 ```
 
