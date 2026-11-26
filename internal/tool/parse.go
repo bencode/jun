@@ -139,6 +139,13 @@ func parseMessage(args []string, stdin io.Reader) (Request, error) {
 	if args[0] == "update" && len(args) > 1 {
 		return parseUpdateMessage(args[1:], stdin)
 	}
+	if args[0] == "delete" && len(args) > 1 {
+		id, err := strconv.ParseUint(args[1], 10, 64)
+		if err != nil || id == 0 || len(args) > 2 {
+			return Request{}, errors.New("message delete takes one id, a positive integer")
+		}
+		return Request{Op: OpDeleteMessage, Message: id}, nil
+	}
 	req := Request{Op: OpMessage}
 	flags := map[string]func(string) error{
 		"--title": func(title string) error {

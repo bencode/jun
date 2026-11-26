@@ -608,6 +608,89 @@ func TestARefusedUpdateChangesNothing(t *testing.T) {
 	}
 }
 
+func deleteMessage(a *app, from []int, id uint64) tool.Response {
+	return a.uiAnswers(tool.Request{Op: tool.OpDeleteMessage, Message: id}, from)[tool.OpDeleteMessage]()
+}
+
+func TestAMessageSentByMistakeGoes(t *testing.T) {
+	a, _, sessions := agentsApp(t)
+	shell := shellOf(t, sessions[0])
+	say(t, a, sessions[0], "Oldest")
+	mistake := say(t, a, sessions[0], "By mistake").Created
+	say(t, a, sessions[0], "Newest")
+	if resp := deleteMessage(a, nil, mistake); !strings.HasPrefix(resp.Error, "caller is not a terminal of this Jun") {
+		t.Fatalf("from outside Jun: %q", resp.Error)
+	}
+	if resp := deleteMessage(a, shell, mistake); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+	if got := messageTexts(a); !slices.Equal(got, []string{"Newest", "Oldest"}) {
+		t.Fatalf("rows %v", got)
+	}
+	gone := fmt.Sprintf("no message %d", mistake)
+	if resp := deleteMessage(a, shell, mistake); resp.Error != gone {
+		t.Fatalf("deleted twice: %q", resp.Error)
+	}
+	if resp := update(t, a, sessions[0], tool.Request{Message: mistake, Text: "x"}); resp.Error != gone {
+		t.Fatalf("updated once gone: %q", resp.Error)
+	}
+	if id := say(t, a, sessions[0], "Next").Created; id != mistake+2 {
+		t.Fatalf("the next message is M%d", id)
+	}
+}
+
+// The menu and ⌫ take a message out; the choice goes to the next older
+// row, or the newer one past the last, and stays with a message that
+// stays.
+func TestTheUserDeletesAMessage(t *testing.T) {
+	a, tt, sessions := agentsApp(t)
+	a.state.GlobalVisible = true
+	for _, text := range []string{"Oldest", "Older", "Middle", "Newer", "Newest"} {
+		say(t, a, sessions[0], text)
+	}
+	tt.Frame()
+	if err := tt.RightClick("Newer"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem("Delete"); err != nil {
+		t.Fatalf("%v in %q", err, tt.Menu())
+	}
+	tt.Frame()
+	if got := messageTexts(a); !slices.Equal(got, []string{"Newest", "Middle", "Older", "Oldest"}) {
+		t.Fatalf("rows %v", got)
+	}
+	a.focusRegion(a.state.Global.ID)
+	tt.Frame()
+	tt.Key(ui.Super, ui.Key3)
+	tt.Frame()
+	tt.Key(0, ui.KeyTab)
+	tt.Frame()
+	for range 2 {
+		tt.Key(0, ui.KeyDown)
+		tt.Frame()
+	}
+	tt.Key(0, ui.KeyBackspace)
+	tt.Frame()
+	if got := messageTexts(a); !slices.Equal(got, []string{"Newest", "Older", "Oldest"}) || a.messageSelected != 1 {
+		t.Fatalf("rows %v, row %d chosen", got, a.messageSelected)
+	}
+	shell := shellOf(t, sessions[0])
+	if resp := deleteMessage(a, shell, a.messages[len(a.messages)-1].ID); resp.Error != "" {
+		t.Fatal(resp.Error)
+	}
+	tt.Frame()
+	if got := messageTexts(a); !slices.Equal(got, []string{"Older", "Oldest"}) || a.messageSelected != 0 {
+		t.Fatalf("the choice left its message: row %d", a.messageSelected)
+	}
+	tt.Key(0, ui.KeyDown)
+	tt.Frame()
+	tt.Key(0, ui.KeyDelete)
+	tt.Frame()
+	if got := messageTexts(a); !slices.Equal(got, []string{"Older"}) || a.messageSelected != 0 {
+		t.Fatalf("past the last: rows %v, row %d chosen", got, a.messageSelected)
+	}
+}
+
 func TestAMessageKeepsItsLatestReplies(t *testing.T) {
 	a, _, sessions := agentsApp(t)
 	id := say(t, a, sessions[0], "Busy").Created

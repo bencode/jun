@@ -40,7 +40,8 @@ func (a *app) messagesView(c *ui.Context) {
 }
 
 // messageList keeps the keyboard on the list: its rows take no focus, so
-// ↩, → and ← always act on the row chosen, which a click chooses too.
+// ↩, →, ← and ⌫ always act on the row chosen, which a click chooses too.
+// A message goes once the list is built, whose rows it would move.
 func (a *app) messageList(c *ui.Context) {
 	at := func(row int) message { return a.messages[len(a.messages)-1-row] }
 	st := &a.messagesList
@@ -53,15 +54,25 @@ func (a *app) messageList(c *ui.Context) {
 	st.KeepOffset = first == 0 // the latest shows as it comes; scrolled away, the rows stay
 	st.Label = func(row int) string { return at(row).name() }
 	now := time.Now()
-	clicked := false
+	clicked, deleted := false, uint64(0)
 	list := ui.List(c, st, len(a.messages), func(row int) {
-		if a.messageRow(c, at(row), now, row == a.messageSelected) {
+		m := at(row)
+		click, remove := a.messageRow(c, m, now, row == a.messageSelected)
+		if click {
 			a.messageSelected, clicked = row, true
+		}
+		if remove {
+			deleted = m.ID
 		}
 	}).Gap(8).Dividers(1, a.theme.Border).Grow(1).FillWidth()
 	if clicked {
 		list.Focus()
 		c.Invalidate()
+	}
+	if deleted != 0 {
+		a.deleteMessage(deleted)
+		c.Invalidate()
+		return
 	}
 	chosen := a.messageSelected
 	if chosen < 0 || chosen >= len(a.messages) {
@@ -80,10 +91,15 @@ func (a *app) messageList(c *ui.Context) {
 		a.setMessageWhole(m.ID, false)
 		c.Invalidate()
 	}
+	if list.Shortcut(0, ui.KeyBackspace) || list.Shortcut(0, ui.KeyDelete) {
+		a.deleteMessage(m.ID)
+		c.Invalidate()
+	}
 }
 
-// messageRow reports a click on the row or on its fold control.
-func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (clicked bool) {
+// messageRow reports a click on the row or on its fold control, and Delete
+// chosen in its menu.
+func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (clicked, deleted bool) {
 	width, size := a.messagesWidth-2*(messagePadding+messageBorder), a.messageSize()
 	textWidth := width
 	if m.Title == "" {
@@ -95,7 +111,9 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 	if m.Link != nil && m.Link.Kind == tool.TargetTerminal && terminal.ID(m.Link.ID) == a.peek.id {
 		border = a.theme.Accent
 	}
-	row := ui.Column(c).FillWidth().Gap(4).Padding(6, messagePadding).Radius(6).Border(messageBorder, border)
+	row := ui.Column(c).FillWidth().Gap(4).Padding(6, messagePadding).Radius(6).Border(messageBorder, border).ContextMenu(func(menu *ui.Menu) {
+		deleted = menu.Item(a.text("Delete", "删除")).Chosen()
+	})
 	if m.Task != 0 && m.Task == a.selectedTask {
 		row.Background(a.taskTint())
 	}
@@ -121,9 +139,9 @@ func (a *app) messageRow(c *ui.Context, m message, now time.Time, chosen bool) (
 	}
 	if live && row.Clicked() {
 		a.openMessage(m, row.ClickModifiers()&ui.Super != 0)
-		return true
+		return true, deleted
 	}
-	return clicked
+	return clicked, deleted
 }
 
 // messageFoot closes the row with its tag, fold control and age, and

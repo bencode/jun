@@ -44,6 +44,7 @@ const (
 	// OpUpdateMessage adds a reply to the message of Request.Message, or
 	// changes its kind, or both.
 	OpUpdateMessage Op = "update-message"
+	OpDeleteMessage Op = "delete-message" // takes out the message of Request.Message
 	OpRun           Op = "run"
 	OpLoop          Op = "loop"        // registers one
 	OpLoops         Op = "loops"       // lists them
@@ -269,7 +270,8 @@ type Request struct {
 	Text  string      `json:"text,omitempty"`  // send: to submit, its line breaks kept; message: to show; update-terminal: the timer's
 	Title string      `json:"title,omitempty"` // message
 	Kind  MessageKind `json:"kind,omitempty"`  // message, none being MessageInfo; update-message, none leaving it
-	// Message is the ID of the message update-message changes.
+	// Message is the ID of the message update-message changes, or
+	// delete-message takes out.
 	Message uint64 `json:"message,omitempty"`
 	// Command is the shell command line run and loop run, in Dir, an
 	// absolute path.
